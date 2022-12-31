@@ -3,7 +3,7 @@ import Popover from '@mui/material/Popover';
 import { makeStyles } from '@mui/material/styles';
 
 import './App.css';
-import {GraphData, getNeighbourhood, GraphDataToArray, getRootNode} from './Orgchart';
+import {GraphData, getNeighbourhood, GraphDataToArray, getRootNode} from './LoadGraph';
 import { DrawGraph, } from './DrawGraph';
 import axios from "axios";
 import { response } from 'express';
@@ -25,7 +25,7 @@ export const AppInner =() =>{
   // var s = new XMLSerializer();
   // var str = s.serializeToString(DrawGraph("Awan"));
   // console.log("image text", str)
-  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "parentIds": [], "loaded": false}}as GraphData);
+  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "name":"Enter","parentIds": [], "childIds":[],  "loaded": false}}as GraphData);
   var [hoverId, setHoverId] = useState("");
 
  

@@ -2,10 +2,27 @@ import * as d3Base from 'd3';
 import {useState} from 'react';
 
 import * as d3Dag from 'd3-dag';
-import {GraphData, GraphDataToArray} from './Orgchart';
+import {DagNode} from 'd3-dag';
+
+import {GraphData, GraphDataToArray, NodeData} from './LoadGraph';
 var svg = require('svg');
 
+function applyTreeStructure(root : DagNode){
+    console.log("root", root)
+    var node = root.data as NodeData;
+    console.log("data?", node.childIds)
 
+    for (var treeChild in node.childIds){
+        for (var dagChild in root.ichildLinks()){
+            if (dagChild.id == treeChild.id){
+                // this is a tree child,
+                applyTreeStructure(root.children[dagChild])
+            }
+        }
+        console.log("hello")
+        // dag.roots()[0].ichildLinks()
+    }
+}
 
 export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: any, handleMouseOut: any) =>{
     const nodeRadius = 35;
@@ -97,25 +114,30 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     if (dag_data === undefined) {
         return
     }
-    var dag = reader(GraphDataToArray(dag_data));
 
-    const dag_data2 : GraphData = {
-        "Seth":{
-        "id": "Seth",
-        "parentIds" : [],
-        "childIds": [ "Awan"],
-        "loaded": false
+    var dag = reader(GraphDataToArray(dag_data));
+    applyTreeStructure(dag.roots()[0]);
+    
+    
+
+
+    // const dag_data2 : GraphData = {
+    //     "Seth":{
+    //     "id": "Seth",
+    //     "parentIds" : [],
+    //     "childIds": [ "Awan"],
+    //     "loaded": false
   
-      },
-        "Awan":{
-        "id": "Awan",
-        "parentIds": ["Seth"],
-        "childIds": [],
-        "loaded": false
+    //   },
+    //     "Awan":{
+    //     "id": "Awan",
+    //     "parentIds": ["Seth"],
+    //     "childIds": [],
+    //     "loaded": false
   
-      },
-    }
-    var dag2 = reader(GraphDataToArray(dag_data2));
+    //   },
+    // }
+    // var dag2 = reader(GraphDataToArray(dag_data2));
 
 
     //laidout
@@ -142,7 +164,7 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     // const { width, height, time, dag } = laidout;
     
     // This code only handles rendering
-    const templateString = `<svg width="800" height="400"></svg>`;
+    const templateString = `<svg width="800" height="1200"></svg>`;
     const svgNode = svg(templateString);
     // `<svg width= ${Width} height= ${Height}></svg>`;
     
@@ -179,7 +201,6 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     
     
     // Plot type 1 edges
-    
     svgSelection
         .append("g")
         .selectAll("path")
@@ -286,7 +307,7 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     // Add text to nodes
     nodes
         .append("text")
-        .text((d) => d.data.id)
+        .text((d) => d.data.name)
         .attr("fontWeight", "bold")
         .attr("fontFamily", "sans-serif")
         .attr("text-anchor", "middle")
