@@ -7,22 +7,6 @@ import {DagNode} from 'd3-dag';
 import {GraphData, GraphDataToArray, NodeData} from './LoadGraph';
 var svg = require('svg');
 
-function applyTreeStructure(root : DagNode){
-    console.log("root", root)
-    var node = root.data as NodeData;
-    console.log("data?", node.childIds)
-
-    for (var treeChild in node.childIds){
-        for (var dagChild in root.ichildLinks()){
-            if (dagChild.id == treeChild.id){
-                // this is a tree child,
-                applyTreeStructure(root.children[dagChild])
-            }
-        }
-        console.log("hello")
-        // dag.roots()[0].ichildLinks()
-    }
-}
 
 export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: any, handleMouseOut: any) =>{
     const nodeRadius = 35;
@@ -116,7 +100,7 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     }
 
     var dag = reader(GraphDataToArray(dag_data));
-    applyTreeStructure(dag.roots()[0]);
+    // applyTreeStructure(dag.roots()[0]);
     
     
 
@@ -145,8 +129,9 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     const layout = d3Dag
     .sugiyama()
     .layering(d3Dag.layeringSimplex())
-    .decross(d3Dag.decrossTwoLayer().order(d3Dag.twolayerGreedy().base(d3Dag.twolayerAgg())))
-    .coord(d3Dag.coordSimplex())
+    .decross(d3Dag.decrossOpt())
+    // .decross(d3Dag.decrossTwoLayer().order(d3Dag.twolayerGreedy().base(d3Dag.twolayerAgg())))
+    .coord(d3Dag.coordCenter())
     .nodeSize(()=>[1.5*2*nodeRadius, 1.2*1.5*2*nodeRadius]);
     // const start   = performance.now();
         const { width, height } = layout(dag);
@@ -164,7 +149,7 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     // const { width, height, time, dag } = laidout;
     
     // This code only handles rendering
-    const templateString = `<svg width="800" height="1200"></svg>`;
+    const templateString = `<svg width="750" height="750"></svg>`;
     const svgNode = svg(templateString);
     // `<svg width= ${Width} height= ${Height}></svg>`;
     
@@ -200,7 +185,6 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
         .y((d) => d.y);
     
     
-    // Plot type 1 edges
     svgSelection
         .append("g")
         .selectAll("path")
@@ -209,11 +193,11 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
         .append("path")
         .attr("d", ({ points }) => line(points))
         .attr("fill", "none")
-        .attr("stroke-width", ({ target }) => {
-            if (target.data.id=="C9") {
+        .attr("stroke-width", ({ source, target }) => {
+            if ( graph[target.data.id].treeParentId==source.data.id) {
                 return 6
             } else {
-                return 3
+                return 2
             }
         })
         .attr("stroke", ({ source, target }) => {
@@ -250,7 +234,7 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
         .append("g")
         .attr("transform", ({ x, y }) => `translate(${x}, ${y})`)
         .on("click", (n) => {handleClick(n.target.__data__.data.id)})
-        .on("mouseover", (n)=>handleMouseOver(n, n.target.__data__.data.id))
+        .on("mouseover", (n)=>handleMouseOver(n, n.target.__data__.data))
         .on("mouseout",  handleMouseOut);
         
     

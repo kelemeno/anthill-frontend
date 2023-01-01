@@ -3,52 +3,35 @@ import Popover from '@mui/material/Popover';
 import { makeStyles } from '@mui/material/styles';
 
 import './App.css';
-import {GraphData, getNeighbourhood, GraphDataToArray, getRootNode} from './LoadGraph';
+import {GraphData, getNeighbourhood, GraphDataToArray, getRootNode, NodeData} from './LoadGraph';
 import { DrawGraph, } from './DrawGraph';
-import axios from "axios";
-import { response } from 'express';
 
-
-// const useStyles = makeStyles(theme => ({
-//   popover: {
-//     pointerEvents: 'none',
-//   },
-//   popoverContent: {
-//     pointerEvents: 'auto',
-//   },
-// }));
+import detectEthereumProvider from '@metamask/detect-provider';
 
 
 
 export const AppInner =() =>{
   const svg  = React.useRef<HTMLDivElement>(null);
-  // var s = new XMLSerializer();
-  // var str = s.serializeToString(DrawGraph("Awan"));
-  // console.log("image text", str)
-  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "name":"Enter","parentIds": [], "childIds":[],  "loaded": false}}as GraphData);
-  var [hoverId, setHoverId] = useState("");
-
  
-
+  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[]}}as GraphData);
   const handleClick = (id2: string) => {
     getNeighbourhood(id2).then(response=>setGraph(response));
   }
 
 
+  var [hoverNode, setHoverNode] = useState({"id":"Enter", "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[]} as NodeData);
+  var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
+  var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
 
-  const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
-  const [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
 
-
-  const handleMouseOver = (event: React.MouseEvent<HTMLElement>, id: string) => {
-    setHoverId(id);
+  const handleMouseOver = (event: React.MouseEvent<HTMLElement>, node: NodeData) => {
+    setHoverNode(node);
     setAnchorEl(event.currentTarget);
     setAnchorElSaver(event.currentTarget);
 
   };
 
   const handleMouseStay = (event: React.MouseEvent<HTMLElement>,) => {
-    // setHoverId(id);
     setAnchorEl(anchorElSaver);
   };
 
@@ -57,7 +40,10 @@ export const AppInner =() =>{
   };
 
   const open = Boolean(anchorEl);
-  // const classes = useStyles();
+
+
+
+
 
   React.useEffect(()=>{
 
@@ -89,23 +75,9 @@ export const AppInner =() =>{
       onMouseLeave: handleMouseOut, 
       sx: {pointerEvents: 'auto',}
     }}
-    // disableRestoreFocus
   >
-    <div className='Popover'>I use Popover over {hoverId}.</div>
+    <div className='Popover'>I use Popover over {hoverNode.name}. {}</div>
   </Popover>
   </div>
   );
 }
-
-// export default class App extends React.Component {
-
-//   render(){
-//     // var s = new XMLSerializer();
-//     // var str = s.serializeToString(this.Image);
-//     // console.log("image text", str)    
-    
-//     return (
-//       <AppInner />
-//     )
-//   }
-// }

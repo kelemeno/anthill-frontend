@@ -1,7 +1,8 @@
 import axios from "axios";
 
  export type GraphData= {[id: string]: NodeData;}
- export type NodeData = {"id":string,"name": string, "parentIds":string[], childIds:string[], loaded: boolean}
+ // currently we store dag and tree votes in parentIds, but only treevotes in childIds. When renderint, we push all parents to parentIds. 
+ export type NodeData = {"id":string,"name": string, "parentIds":string[], "treeParentId": string,  "childIds":string[]}
 
  var anthillGraph : GraphData = {};
  var relRootDepth = 0;
@@ -11,93 +12,12 @@ import axios from "axios";
   relRootDepth = response;
 }
 
- export async function getRootNode(): Promise<GraphData>{
-  var response = await axios.get("http://localhost:5000/root").then(response => {SaveGraph(response.data.id, response.data.graphData); return response.data}); 
-
-  return response.graphData
+ export async function getRootNode(): Promise<string>{
+  return await axios.get("http://localhost:5000/root").then(response => {anthillGraph[response.data.id] = response.data; return response.data.id}); 
 }
 
- export async function getNeighbourhood(id: string): Promise<GraphData> {
-    if (id == "Enter"){
-      await getRelRootDepth();   
-      return await getRootNode();
-    }
-    
-    var newGraphData  = await checkSaved(id)
-    return newGraphData
-}
-
-
-export async function checkSaved(id: string): Promise<GraphData>{
-    
-    var node = anthillGraph[id];
-    
-    if (!node.loaded) {
-      var graphPromise= loadNeighbourhoodFromServer(id)
-      return graphPromise
-    }
-
-    var graph = returnSavedNeighbourhood(id)
-
-    return graph
-}
-
-function returnSavedNeighbourhood(id : string) : GraphData{
-    var neighbourhood = {} as GraphData;
-    var node = anthillGraph[id];
-    neighbourhood[id] = node;
-    var parent = node;
-    for (var i = 0; i < relRootDepth; i++) {
-      
-      if (parent.parentIds.length == 0) {
-        break;
-      }
-
-      var newParentId = parent.parentIds[0];
-      const newParent :NodeData= {"id": newParentId, "name": anthillGraph[newParentId].name,  "parentIds": [], "childIds": [parent.id], "loaded" : false}
-
-      neighbourhood[newParentId] = newParent;
-      neighbourhood[parent.id].parentIds = [newParentId];
-      parent = anthillGraph[newParentId];
-
-      
-    }
-
-    for (var i = 0; i < node.childIds.length; i++) {
-        var childId = node.childIds[i];
-        neighbourhood[childId] = anthillGraph[childId];
-    }
-    // console.log("neighbourhood", neighbourhood)
-    return neighbourhood;
-}
-
-
-function loadNeighbourhoodFromServer(id: string): Promise<GraphData> {
-  return axios.get("http://localhost:5000/"+id).then(response => {SaveGraph(id, response.data); return  response.data});
-}
-
-function SaveGraph(id: string, graph: GraphData){
-
-  // we should only be calling this if anthillGraph[id].loaded == false
-  for (const key in graph) {
-    SaveNode(graph[key])
-  }
-
-  anthillGraph[id].loaded = true
-}
-
-function SaveNode(node: NodeData){
-  
-  if (anthillGraph[node.id] == undefined ){
-    anthillGraph[node.id] = node;
-  } else if (anthillGraph[node.id].loaded == true){
-    return
-  } else if (anthillGraph[node.id].parentIds.length == 0) {
-    // if we don't have parents, we can replace them
-    anthillGraph[node.id].parentIds = node.parentIds;
-  } else if (anthillGraph[node.id].childIds.length == 0){
-    anthillGraph[node.id].childIds = node.childIds;
-  }
+function loadNodeFromServer(id: string) {
+  return axios.get("http://localhost:5000/id/"+id).then(response => {anthillGraph[response.data.id] = response.data;});
 }
 
 export function GraphDataToArray(graph: GraphData): NodeData[]{
@@ -106,27 +26,97 @@ export function GraphDataToArray(graph: GraphData): NodeData[]{
   for (const key in graph) {
     var node = graph[key] as NodeData;
     array.push(node)
-    // console.log("nodedata?:", graph[key] as NodeData)
-    // console.log(array)
+
   }
 
-  // console.log("array", array)
   return array
 }
 
- 
-  
-  
-// function  loadGraph(address: string, url: string): GraphData{
-
+// every graph we load is focused on a node, with specified id. We note for each node whether it has been focused, so totally loaded yet. 
+export async function getNeighbourhood(id: string): Promise<GraphData> {
+    if (id == "Enter"){
+      await getRelRootDepth();   
+      id = await getRootNode();
+    }
     
-// }
+    var newGraphData  = await renderNeighbourhood(id)
+    return newGraphData
+}
 
-// const DevnetUrl = "http://localhost:8545";
-// const AnthillAddress = ;
+// we return a partial graph from the whole graph, focused on node with id. Here the hard part is selecting which parts to include. 
+// we fully download every node we render. If it is in our data 
+async function renderNeighbourhood(id : string) : Promise<GraphData>{
+  var neighbourhood = {} as GraphData;
+  // we are focusing on this node, so we display all its connections.
+  var node = anthillGraph[id];
+  neighbourhood[id] = node;
 
-// const anthillGraph = loadGraph(AnthillAddress, DevnetUrl)
+  // add dag votes
+  for (var i = 0; i < node.parentIds.length; i++) {
+      var parentId = node.parentIds[i];
+      var parentName = parentId.slice(-4);
 
-// export default anthillGraph
+      if (anthillGraph[parentId] == undefined) {
+        await loadNodeFromServer(parentId);
+      } 
 
- 
+      // this node will not have all its connections, as we only want to show the connections of the node we are focusing on
+      const parent :NodeData= {"id": parentId, "name": parentName, "parentIds": [], "treeParentId": "", "childIds": []}
+      neighbourhood[parentId] = parent;
+
+      // node already has the details, no need to modify it
+  }
+
+  var parent = node;
+  // add tree parents
+  for (var i = 0; i < relRootDepth; i++) { 
+      if (parent.treeParentId == "") {
+        break;
+      }
+
+      var newParentId = parent.treeParentId;
+
+      if (anthillGraph[newParentId] === undefined) {
+        await loadNodeFromServer(newParentId);
+      }
+
+      const newParent :NodeData= {"id": newParentId, "name": anthillGraph[newParentId].name,  "parentIds": [], "treeParentId":"", "childIds": [parent.id]}
+
+      // we are mixing dag and tree votes, we check if this was already added as a dag vote to node, if so we remove it, as we want it in the parent chain
+      if (neighbourhood[newParentId] !== undefined) {
+        delete neighbourhood[newParentId];
+        for (var j = 0; j < node.parentIds.length; j++) {
+          if (node.parentIds[j] == newParentId) {
+            node.parentIds.splice(j, 1);
+            break;
+          }
+        }
+      }
+
+      neighbourhood[newParentId] = newParent;
+      // we mixed dag and tree votes, so we need the following line.
+      // we put it in the middle, hopufully it renders nicely 
+
+      // neighbourhood[parent.id].parentIds.push(newParentId);
+      // or
+      neighbourhood[parent.id].parentIds.splice(neighbourhood[parent.id].parentIds.length/2, 0, newParentId);
+      
+      neighbourhood[parent.id].treeParentId = newParentId;
+      parent = anthillGraph[newParentId];
+    }
+
+    for (var i = 0; i < node.childIds.length; i++) {
+        var childId = node.childIds[i];
+
+        if (anthillGraph[childId] === undefined) {
+          await loadNodeFromServer(childId);
+        }
+
+        neighbourhood[childId] = {"id": childId, "name": anthillGraph[childId].name,  "parentIds": [node.id], "treeParentId":node.id, "childIds": []} as NodeData;
+        // neighbourhood[childId] = anthillGraph[childId];
+    }
+    return neighbourhood;
+}
+
+
+
