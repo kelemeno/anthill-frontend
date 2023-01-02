@@ -20,6 +20,55 @@ function loadNodeFromServer(id: string) {
   return axios.get("http://localhost:5000/id/"+id).then(response => {anthillGraph[response.data.id] = response.data;});
 }
 
+function findRelRoot(id: string): string {
+  var relRoot = id;
+  for (var i = 0; i < relRootDepth; i++) {
+      
+      var parentId = anthillGraph[relRoot].treeParentId;
+
+      if (parentId == "") {
+        break;
+      }
+      relRoot = parentId;
+
+      if (anthillGraph[relRoot] === undefined) {
+          loadNodeFromServer(relRoot);
+      }
+  }
+  return relRoot;
+}
+
+export function findDepthDiff(voter :string,  recipient : string): [boolean, number]{
+        
+  if ((anthillGraph[voter] === undefined) || (anthillGraph[recipient] === undefined)) {
+      return [false, 0];
+  }
+
+  var relRoot = findRelRoot(voter);
+  var recipientAncestor = recipient;
+
+  for (var i = 0; i < relRootDepth-1; i++) {
+      if (recipientAncestor == relRoot) {
+          return [true, relRootDepth-i];
+      }
+      
+      recipientAncestor = anthillGraph[recipientAncestor].treeParentId;
+
+      if (recipientAncestor == "") {
+          return [false, 0];
+      }
+  }
+  return [false, 0];
+}
+
+export function checkDagVote(voter: string, recipient: string): boolean{
+
+  if (anthillGraph[voter].parentIds.includes(recipient)) {
+      return true;
+  }
+  return false;
+}
+
 export function GraphDataToArray(graph: GraphData): NodeData[]{
   var array :NodeData[] = [];
   
