@@ -10,6 +10,10 @@
 .Popover{
   padding: 10px;
 }
+
+.PopoverButton{
+  align-items: right;
+}
 /* .container {
   top: 50%;
   left: 50%;

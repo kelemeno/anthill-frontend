@@ -1,93 +1,114 @@
 import React, {useState} from 'react';
 import Popover from '@mui/material/Popover';
-import { useAccount, useSigner, useProvider} from 'wagmi'
-import { usePrepareContractWrite, useContractWrite } from 'wagmi'
-import {  QueryClientProvider, QueryClient } from '@tanstack/react-query'
+
+import detectEthereumProvider from '@metamask/detect-provider';
+import { AbiItem } from 'web3-utils'
+import Web3 from 'web3';
+
+import AnthillJson from "./Anthill.json"
+
+
+// import { useAccount, useSigner, useProvider} from 'wagmi'
+// import { usePrepareContractWrite, useContractWrite } from 'wagmi'
+// import {  QueryClientProvider, QueryClient } from '@tanstack/react-query'
 
 
 
 
 import './App.css';
-import {GraphData, getNeighbourhood, GraphDataToArray, getRootNode, NodeData, findDepthDiff, checkDagVote} from './LoadGraph';
+import {GraphData, GetNeighbourhood, GraphDataToArray, getRootNode, NodeData, findDepthDiff, checkDagVote, getAnthillGraphNum} from './LoadGraph';
 import { DrawGraph, } from './DrawGraph';
 
 
-const DagVoteButton = (props :any)=>{
+const DagVoteButton = (props :any) => {
   var [isLocal, ] = findDepthDiff(props.voter, props.recipient)
-  const { address, isConnected } = useAccount()
-  // const signer =  useSigner();
-  const provider = useProvider();
-
-  const { config : addConfig} = usePrepareContractWrite({
-    address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
-    abi: [
-      {
-        name: 'mint',
-        type: 'function',
-        stateMutability: 'nonpayable',
-        inputs: [{ internalType: 'uint32', name: 'tokenId', type: 'uint32' }],
-        outputs: [],
-      },
-    ],
-    functionName: 'mint',
-    args: [69],
-  })
-  const { data:addData, isLoading:addIsLoading, isSuccess: addisSuccess, write: addWrite } = useContractWrite(addConfig)
-
-  const { config : removeConfig} = usePrepareContractWrite({
-    address: '0xFBA3912Ca04dd458c843e2EE08967fC04f3579c2',
-    abi: [
-      {
-        name: 'mint',
-        type: 'function',
-        stateMutability: 'nonpayable',
-        inputs: [{ internalType: 'uint32', name: 'tokenId', type: 'uint32' }],
-        outputs: [],
-      },
-    ],
-    functionName: 'mint',
-    args: [69],
-  })
-  const { data:removeData, isLoading:removeIsLoading, isSuccess: removeisSuccess, write: removeWrite } = useContractWrite(removeConfig)
-
   if (isLocal) {
+    
     if (checkDagVote(props.voter, props.recipient)) {
-     
-      return (<button disabled={!removeWrite} onClick={() => removeWrite?.()}>Remove Dag Vote</button>)
+      return ( <div className='Popover'><button className = 'PopoverButton' onClick={()=>props.RemoveDagVote(props.voter, props.recipient)} >Remove Dag Vote</button></div>)
     } 
     else {
-      
 
-
-      return (<button disabled={!addWrite} onClick={() => addWrite?.()}>Add Dag Vote</button>)
+      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>props.AddDagVote(props.voter, props.recipient)} >Add Dag Vote</button></div>)
     }
   }
   return  <div></div>
 }
 
-function RemoveDagVote(voter: string, recipient:string){
-  
 
-}
 
-function AddDagVote(voter: string, recipient:string){
-  
-}
 
-export const AppInner =() =>{
-  const { address, isConnected } = useAccount()
-  const queryClient = new QueryClient()
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+
+
+
+export const AppInner= ()=> {
 
   const svg  = React.useRef<HTMLDivElement>(null);
- 
-  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[]}}as GraphData);
+
+  
+
+  const antHillContractAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
+   
+
+  // var provider : any;
+  var AnthillContract: any; 
+  const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+  
+
+  var [account, setAccount ] = useState("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"); 
+  var [chainId, setChainId ] = useState(1337);
+  
+  AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], antHillContractAddress);
+
+
+  async function AddDagVote(voter: string, recipient:string){
+
+    await AnthillContract.methods.addDagVote(voter, recipient).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
+
+  }
+
+  async function RemoveDagVote(voter: string, recipient:string){
+
+    await AnthillContract.methods.removeDagVote(voter, recipient).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
+
+  }
+
+  var [anthillGraphNum, setAnthillGraphNum ]= useState(0);
+  var [currentId, setCurrentId]=useState("Enter");
+
+  var [graph, setGraph] = useState( {currentId:{"id":currentId, "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[], "loaded": true}}as GraphData);
+
+
+  var checkForUpdates = async () => {
+    await getAnthillGraphNum().then((res)=>
+        {
+          console.log("res, ", res,  anthillGraphNum)
+          if (res != anthillGraphNum) {
+            console.log("updating");
+            handleClick(currentId);
+          }
+        }
+      )
+    
+  }
+
+  // if (!checkerLaunched) {
+  //   console.log("launching checker")
+  //   checkerLaunched = true;
+  //   checkForUpdates();
+  // }
+  
+
+
   const handleClick = (id2: string) => {
-    getNeighbourhood(id2).then(response=>setGraph(response));
+    console.log("handling click", id2)
+    GetNeighbourhood(id2).then((response)=>{setGraph(response[0]); setAnthillGraphNum(response[1]); setCurrentId(id2) });
   }
 
 
-  var [hoverNode, setHoverNode] = useState({"id":"Enter", "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[]} as NodeData);
+  var [hoverNode, setHoverNode] = useState({"id":"Enter", "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[], "loaded": true} as NodeData);
   var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
 
@@ -112,7 +133,11 @@ export const AppInner =() =>{
 
     if (svg.current){
       svg.current.replaceChildren(DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut));
-    }
+    };
+    const interval = setInterval(async () => await checkForUpdates(), 2000);
+    return () => {
+    clearInterval(interval);
+  };
   }, [graph]);
 
   return (<div>
@@ -139,18 +164,14 @@ export const AppInner =() =>{
       sx: {pointerEvents: 'auto',}
     }}
   >
-    {/* <div className='Popover'>Name {hoverNode.name}.  </div>
+    <div className='Popover'>Name {hoverNode.name}.  Depth: </div>
     <div className='Popover'>Address link to blockexplorer </div>
     <div className='Popover'> Current reputation, onchain reputation </div>
-    <div className='Popover'> Current received reputation from metamask address, if loaded </div> */}
-    {/* <div className='Popover'> {address} </div> */}
-    <div className='Popover'> Button to send/remove Dag vote, if applicable </div>
-    <QueryClientProvider client={queryClient}>
-      <DagVoteButton voter="0x0000000000000000000000000000000000000008" recipient="0x0000000000000000000000000000000000000005"/>
-    </QueryClientProvider>
-    {/* <div className='Popover'> Button to move tree vote here, if applicable </div>
+    <div className='Popover'> Current received reputation from metamask address, if loaded </div>
+    <DagVoteButton voter="0x0000000000000000000000000000000000000008" recipient="0x0000000000000000000000000000000000000005" AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
+    <div className='Popover'> Button to move tree vote here, if applicable </div>
 
-    <div className='Popover'> Button to cause position switch with parent, if applicable </div> */}
+    <div className='Popover'> Button to cause position switch with parent, if applicable </div>
 
   </Popover>
   </div>

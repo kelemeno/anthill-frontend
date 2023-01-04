@@ -1,52 +1,44 @@
-// import * as React from 'react';
 import React from 'react';
-import {  QueryClientProvider, QueryClient } from '@tanstack/react-query'
-
-
 import * as client from 'react-dom/client';
+
+import detectEthereumProvider from '@metamask/detect-provider';
+import Web3 from 'web3';
+import { AbiItem } from 'web3-utils'
+
+
 import {AppInner} from './App';
-import { WagmiConfig, createClient } from 'wagmi'
-import { getDefaultProvider } from 'ethers'
-
-import { useAccount, useConnect, useDisconnect } from 'wagmi'
-import { InjectedConnector } from 'wagmi/connectors/injected'
-
 import './index.css';
+import AnthillJson from "./Anthill.json"
+
 
 const doc = document.getElementById('root')
 const root = client.createRoot(doc!);
 
-const client2 = createClient({
-    autoConnect: true,
-    provider: getDefaultProvider(),
-  })
+var address = "0x0000000000000000000000000000000000000000";
+
+async function getAccount() {
+    const accounts= provider.request({ method: 'eth_requestAccounts' });
+}
+
+var provider: any;
+
+function EthereumButton() {
+    detectEthereumProvider().then((res)=>{provider = res});
+    if (provider){
+        const accounts= provider.request({ method: 'eth_requestAccounts' });
+        console.log(accounts)
+        if (accounts) {
+            return <div></div>
+        }
+    }
+    return <button onClick={() => getAccount()}>Connect Wallet</button>
+}
+
 
 root.render(
+    
     <React.StrictMode>
-        <WagmiConfig client={client2}>
-        <Profile />
+        <EthereumButton />
         <AppInner/>
-
-
-        </WagmiConfig>
-
-
     </React.StrictMode>
 );
-
-function Profile() {
-    const { address, isConnected } = useAccount()
-    const { connect } = useConnect({
-      connector: new InjectedConnector(),
-    })
-    const { disconnect } = useDisconnect()
-   
-    if (isConnected)
-      return (
-         <div>
-          {/* Connected to {address}
-          <button onClick={() => disconnect()}>Disconnect</button> */}
-        </div>
-      )
-    return <button onClick={() => connect()}>Connect Wallet</button>
-  }
