@@ -20,7 +20,8 @@ import {GraphDataRendering, LoadNeighbourhood,  NodeData, isVotable, isDagVote, 
 import { DrawGraph, } from './DrawGraph';
 
 
-const DagVoteButton = (props :any) => {
+const DagVoteButton = (props :{"voter":NodeDataRendering, "recipient": NodeDataRendering, AddDagVote: any, RemoveDagVote: any}) => {
+  
   var votable= isVotable(props.voter, props.recipient)
   if (votable) {
     
@@ -62,16 +63,16 @@ export const AppInner= ()=> {
   
   AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], antHillContractAddress);
 
+  // these functions are the hard ones, we pass them in and they are used, but they cannot be typechecked easily
+  async function AddDagVote(voter: NodeDataRendering, recipient:NodeDataRendering){
 
-  async function AddDagVote(voter: string, recipient:string){
-
-    await AnthillContract.methods.addDagVote(voter, recipient).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
+    await AnthillContract.methods.addDagVote(voter.id, recipient.id).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
 
   }
 
-  async function RemoveDagVote(voter: string, recipient:string){
+  async function RemoveDagVote(voter: NodeDataRendering, recipient:NodeDataRendering){
 
-    await AnthillContract.methods.removeDagVote(voter, recipient).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
+    await AnthillContract.methods.removeDagVote(voter.id, recipient.id).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
 
   }
 
@@ -104,7 +105,7 @@ export const AppInner= ()=> {
 
   const handleClick = (id2: string) => {
     console.log("handling click", id2)
-    LoadNeighbourhood(id2).then((response)=>{setGraph(response[0]); setAnthillGraphNum(response[2]); console.log("after loadneighbourhood", response[0], id2);setClickedNode(response[0][response[1]]) });
+    LoadNeighbourhood(id2).then((response)=>{setGraph(response[0]); setAnthillGraphNum(response[2]); ;setClickedNode(response[0][response[1]]); setHoverNode(response[0][response[1]]); });
   }
 
 
@@ -164,14 +165,22 @@ export const AppInner= ()=> {
       sx: {pointerEvents: 'auto',}
     }}
   >
-    <div className='Popover'>Name {hoverNode.name}.  Depth: </div>
-    <div className='Popover'>Address link to blockexplorer </div>
-    <div className='Popover'> Current reputation, onchain reputation </div>
-    <div className='Popover'> Current received reputation from metamask address, if loaded </div>
-    <DagVoteButton voter={clickedNode} recipient={clickedNode} AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
-    <div className='Popover'> Button to move tree vote here, if applicable </div>
+    <div className='Popover'>Name: {hoverNode.name}.  </div>
+    <div className='Popover'>Depth: {hoverNode.depth}.  </div>
+    <div className='Popover'> Current reputation: {(hoverNode.currentRep/10**18).toFixed(2)} </div>
 
     <div className='Popover'> Button to cause position switch with parent, if applicable </div>
+
+    <DagVoteButton voter={clickedNode} recipient={hoverNode} AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
+    <div className='Popover'> Move tree vote and START AGAIN here  </div>
+    <div className='Popover'> Exit tree (all data lost) </div>
+
+    <div className='Popover'>Address: {hoverNode.id} </div>
+
+    OR
+
+     <div className='Popover'>Join tree here </div>
+
 
   </Popover>
   </div>

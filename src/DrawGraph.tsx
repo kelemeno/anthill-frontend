@@ -155,7 +155,9 @@ export const DrawGraph= (graph: GraphDataRendering, handleClick: any, handleMous
     // const { width, height, time, dag } = laidout;
     
     // This code only handles rendering
-    const templateString = `<svg width="750" height="750"></svg>`;
+    const nontemplatestring= '<svg width="'+width+'" height="'+height+'"></svg>'
+    const templateString = `${nontemplatestring}`;
+
     const svgNode = svg(templateString);
     // `<svg width= ${Width} height= ${Height}></svg>`;
     

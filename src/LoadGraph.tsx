@@ -3,7 +3,7 @@ import { max } from "d3";
 
  
 
- type DagVote = {'id': string, 'weight': number, 'otherPos': number}
+ type DagVote = {'id': string, 'weight': number, 'posInOther': number}
 
 
  export type NodeData = {"id":string, "name":string,  "totalWeight":number; "onchainRep":number, "currentRep": number, "depth":number,  "relRoot":string,  "sentTreeVote": string, "recTreeVotes":string[], "sentDagVotes":DagVote[], "recDagVotes": DagVote[]}
@@ -38,11 +38,11 @@ export async function getAnthillGraphNum(): Promise<number>{
 }
 
 async function getNodeFromServer(id: string) : Promise<NodeData>{
-  return await axios.get("http://localhost:5000/id/"+id).then(response => {anthillGraph[response.data.nodeData.id]= response.data.nodeData;anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
+  return await axios.get("http://localhost:5000/id/"+id).then(response => { anthillGraph[response.data.nodeData.id]= response.data.nodeData as NodeData; anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
 }
 
 async function getBareNodeFromServer(id: string):Promise<NodeDataBare>{
-  return await axios.get("http://localhost:5000/bareId/"+id).then(response => {anthillGraphBare[response.data.nodeData.id]= response.data.nodeData; return response.data.nodeData; }); 
+  return await axios.get("http://localhost:5000/bareId/"+id).then(response => {anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
 }
 
 
@@ -52,6 +52,7 @@ async function checkAnthillGraphNum(): Promise<boolean>{
   var newAnthillGraphNum = await getAnthillGraphNum();
   var outdated = (newAnthillGraphNum != anthillGraphNum) 
   if (outdated) {
+    console.log("we are outdated, clearing graphs")
     anthillGraphNum = newAnthillGraphNum;
     anthillGraph = {} as GraphData;
     anthillGraphBare = {} as GraphDataBare;
@@ -61,45 +62,68 @@ async function checkAnthillGraphNum(): Promise<boolean>{
 } 
 
 
-export function isVotable(voter :NodeData,  recipient : NodeDataBare): [boolean]{
-  console.log("voter",voter, "recipient", recipient)
-
-  if (recipient.depth<=voter.depth) {
-    return [false];
-  } else if (voter.depth+maxRelRootDepth < recipient.depth) {
-    return [false];
+export function isVotable(voter :NodeDataRendering,  recipient : NodeDataBare): boolean{
+  // console.log("voter",voter, "recipient", recipient)
+  if ((voter.id == "Enter")) {
+    return false;
   }
 
-  
+  if ((anthillGraph[voter.id] === undefined)) {
+    const error = new Error("isVotable called with undefined voter with id: "+ voter.id+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
+    throw error;
+  }
+
+  if (voter.depth<=recipient.depth) {
+    return false;
+  } else if (recipient.depth+maxRelRootDepth< voter.depth ) {
+
+    return false;
+  }  
 
   var relRootRecipient = recipient.relRoot;
   var relRootVoter = voter.relRoot;
 
-  console.log( "relRootRecipient", relRootRecipient, "relRootVoter", relRootVoter)
-  // We continue comparing the ancestors of relRootVoter until we find relRootRecipient.
-  // i is the depthDiff from relRootVoter to current Ancestor
-  var relRootVoterAncestor = anthillGraphBare[relRootVoter].sentTreeVote;
-  // then voterDepthDiff = MaxRelRootDepth 
-  for (var i = 1; i < maxRelRootDepth; i++) {
+  var relRootVoterAncestor = relRootVoter;
+  for (var i = 0; i < maxRelRootDepth; i++) {
+    
       if (relRootVoterAncestor == relRootRecipient) {
-          return [true];
+          return true;
       }
-      relRootVoterAncestor = anthillGraphBare[relRootVoterAncestor].sentTreeVote;
 
-      // if we are at the root, we can stop
-      if ((relRootVoterAncestor == "0x0000000000000000000000000000000000000001") || (relRootVoterAncestor == "")) {
-          return [false];
+      // if we are at the root, we can't take more anscestors
+      if ((relRootVoterAncestor == "0x0000000000000000000000000000000000000001")) {
+        return false;
       }
+
+      relRootVoterAncestor = anthillGraphBare[relRootVoterAncestor].sentTreeVote;   
   }
-  return [false];
+  return false;
 }
 
 // only called for voter = Metamask account, recipient = rendered node 
-export function isDagVote(voter: NodeData, recipient: NodeDataBare): boolean{  
-  if ((voter.sentDagVotes === undefined) || (voter.sentDagVotes.length == 0)) {
+export function isDagVote(voter: NodeDataRendering, recipient: NodeDataRendering): boolean{  
+
+  if ((voter.id == "Enter")) {
     return false;
   }
-  if (voter.sentDagVotes.map((r)=>r.id).includes(recipient.id)) {
+
+  if ((anthillGraph[voter.id] === undefined)) {
+    const error = new Error("isDagVote called with undefined voter with id: "+ voter.id+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
+    throw error;
+  }
+
+  if ((anthillGraphBare[recipient.id] === undefined)) {
+    const error = new Error("isDagVote called with undefined recipientwith id: "+ recipient.id+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
+    throw error;
+  }
+
+  var voterFull = anthillGraph[voter.id];
+
+  // console.log("In idDagVote, voter",voter, "recipient", recipient)
+  if ((voterFull.sentDagVotes === undefined) || (voterFull.sentDagVotes.length == 0)) {
+    return false;
+  }
+  if (voterFull.sentDagVotes.map((r)=>r.id).includes(recipient.id)) {
       return true;
   }
   return false;
@@ -112,12 +136,10 @@ export function isDagVote(voter: NodeData, recipient: NodeDataBare): boolean{
 // for these nodes we also want to know if we can DagVote on them, i.e, are they in the original neighbourhood. 
 // for this we can load the relative root from the database, and check if it is in the parents of the original accounts relative root.  
 async function checkSaveNeighbourHood(id : string) {
-  console.log("defined and loaded:", (anthillGraph[id]), (await checkAnthillGraphNum()))
-  console.log("anthillGraph",anthillGraph)
+
   if ((anthillGraph[id]) && (await checkAnthillGraphNum())) {
     return ;
   }
-  console.log("do we get here?")
   // we don't have the node, or it is not up to date.
   var node  = await getNodeFromServer(id);
 
@@ -128,10 +150,9 @@ async function checkSaveNeighbourHood(id : string) {
   await getBareParentsForDepth(node.sentTreeVote, 2*maxRelRootDepth);
 
   // saving each node
-  console.log("node", node)
   await checkSaveBareNodeArray(anthillGraph[id].recTreeVotes);
   await checkSaveBareNodeArray(anthillGraph[id].sentDagVotes.map((r)=>r.id));
-  await checkSaveBareNodeArray(anthillGraph[id].recDagVotes.map((r)=>r.id));
+  await checkSaveBareNodeArray(anthillGraph[id].recDagVotes.map((r)=> r.id));
 
 }
 
@@ -146,9 +167,7 @@ async function getBareParentsForDepth(sentTreeVote :string, depthDiff: number){
 }
 
 async function checkSaveBareNodeArray(ids: string[]){
-  console.log("ids", ids)
   for (const i in ids) {
-    console.log("ids[i]", ids[i])
     if ((ids[i] != "")&&(ids[i] != "0x0000000000000000000000000000000000000001")){
       await checkSaveBareNode(ids[i]);
     }
@@ -157,10 +176,7 @@ async function checkSaveBareNodeArray(ids: string[]){
 }
 
 async function checkSaveBareNode(id: string){
-  console.log("checkSaveBareNode, id: ", id)
   if ((anthillGraphBare[id] === undefined) ){
-    console.log("checkSaveBareNode, getting: ", id)
-
      await getBareNodeFromServer(id);
   } 
 }
@@ -179,12 +195,12 @@ export async function LoadNeighbourhood(id: string): Promise<[GraphDataRendering
 
     // this saves the data into our Database
     await checkSaveNeighbourHood(id)
-    console.log("anthillGraph: ", anthillGraph)
-    console.log("anthillGraphBare: ", anthillGraphBare)
+    // console.log("anthillGraph in LoadN for id:  ", id ,  anthillGraph)
+    // console.log("anthillGraphBare in Load N for id:",id,  anthillGraphBare)
    
     // this collect the elements it into a renderable graph
     newGraphDataRendering = renderNeighbourhood(id)
-    console.log("newGraphDataRendering: ", newGraphDataRendering)
+    // console.log("newGraphDataRendering: ", newGraphDataRendering)
   return [newGraphDataRendering, id, anthillGraphNum];
 
 }
@@ -198,6 +214,7 @@ function renderNeighbourhood(id : string) : GraphDataRendering{
   var node = anthillGraph[id];
   // console.log("id for", id,  anthillGraph, anthillGraph[id], node)
   neighbourhood[id] = renderingNodeData(node);
+
   // add sent dag votes
   node.sentDagVotes.map ((sDagVote)=>{
       var recipient = anthillGraphBare[sDagVote.id];      
@@ -260,32 +277,43 @@ function renderNeighbourhood(id : string) : GraphDataRendering{
 function renderingNodeData(node: NodeData): NodeDataRendering {
   var nodeRendering = {} as NodeDataRendering;
   nodeRendering.id = node.id;
-  nodeRendering.name = node.name;
+
+  if (node.name == "Name") {
+    nodeRendering.name = node.id.slice(0, 2)+".."+node.id.slice((node.id.length)-3);
+  } else {
+    nodeRendering.name = node.name;
+  }
+
   nodeRendering.onchainRep = node.onchainRep;
   nodeRendering.currentRep = node.currentRep;
   nodeRendering.depth = node.depth;
   nodeRendering.relRoot = node.relRoot;
 
-  if (node.sentTreeVote != "0x0000000000000000000000000000000000000001"){
-    nodeRendering.parentIds.push(node.sentTreeVote);
-    nodeRendering.sentTreeVote = node.sentTreeVote;
-  }
-  nodeRendering.parentIds = node.sentDagVotes.map(r=>r.id).filter(r=>r!=node.sentTreeVote);
-    
+  nodeRendering.sentTreeVote = node.sentTreeVote;
+
+  nodeRendering.parentIds =[];
+  // we add sentTreeVote along with the parent chain. 
+
+  nodeRendering.parentIds = nodeRendering.parentIds.concat(node.sentDagVotes.map(r=>r.id).filter(r=>r!=node.sentTreeVote));
   return nodeRendering;
 }
 
 function renderingNodeDataBare(node: NodeDataBare): NodeDataRendering {
   var nodeRendering = {} as NodeDataRendering;
   nodeRendering.id = node.id;
-  nodeRendering.name = node.name;
+  if (node.name == "Name") {
+    nodeRendering.name = node.id.slice(0, 2)+".."+node.id.slice((node.id.length)-3);
+  } else {
+    nodeRendering.name = node.name;
+  }
+  
   nodeRendering.onchainRep = node.onchainRep;
   nodeRendering.currentRep = node.currentRep;
   nodeRendering.depth = node.depth;
   nodeRendering.relRoot = node.relRoot;
-  if (node.sentTreeVote != "0x0000000000000000000000000000000000000001"){
-    nodeRendering.sentTreeVote = node.sentTreeVote;
-  }
+
+  nodeRendering.sentTreeVote = node.sentTreeVote;
+
   nodeRendering.parentIds = [];
   return nodeRendering;
 }
