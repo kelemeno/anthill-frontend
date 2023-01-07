@@ -1,250 +1,292 @@
 import axios from "axios";
+import { max } from "d3";
+
+ 
+
+ type DagVote = {'id': string, 'weight': number, 'otherPos': number}
+
+
+ export type NodeData = {"id":string, "name":string,  "totalWeight":number; "onchainRep":number, "currentRep": number, "depth":number,  "relRoot":string,  "sentTreeVote": string, "recTreeVotes":string[], "sentDagVotes":DagVote[], "recDagVotes": DagVote[]}
+ // Bare is for rendered but not clicked nodes
+ export type NodeDataBare =       {"id":string, "name":string,  "totalWeight":number; "onchainRep":number, "currentRep": number, "depth":number, "relRoot":string, "sentTreeVote": string,}
+ // we need parentIds for rendering
+ export type NodeDataRendering =  {"id":string, "name":string,  "totalWeight":number; "onchainRep":number, "currentRep": number, "depth":number,  "relRoot":string, "sentTreeVote": string, parentIds: string[]}
 
  export type GraphData= {[id: string]: NodeData;}
- // currently we store dag and tree votes in parentIds, but only treevotes in childIds. When renderint, we push all parents to parentIds. 
- export type NodeData = {"id":string,"name": string, "parentIds":string[], "treeParentId": string,  "childIds":string[], "loaded": boolean}
+ export type GraphDataBare= {[id: string]: NodeDataBare;}
+ export type GraphDataRendering= {[id: string]: NodeDataRendering;}
 
  var maxRelRootDepth = 0;
  var anthillGraphNum = 0;
  var anthillGraph : GraphData = {};
+ var anthillGraphBare : GraphDataBare = {};
+
  var rootAddress = "";
 
+ ///// getters
 
  export async function getMaxRelRootDepth(){
   maxRelRootDepth = await axios.get("http://localhost:5000/maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
+}
+
+export async function getRootNodeId(): Promise<string >{
+  return await axios.get("http://localhost:5000/rootId").then(response => {; return response.data.id;}); 
 }
 
 export async function getAnthillGraphNum(): Promise<number>{
   return await axios.get("http://localhost:5000/anthillGraphNum").then(response => {return response.data.anthillGraphNum}); 
 }
 
-export async function getRootNode(): Promise<[string , boolean]>{
-  return await axios.get("http://localhost:5000/root").then(response => {const success = saveNode(response.data.anthillGraphNum, response.data.nodeData); return [response.data.nodeData.id, success];}); 
+async function getNodeFromServer(id: string) : Promise<NodeData>{
+  return await axios.get("http://localhost:5000/id/"+id).then(response => {anthillGraph[response.data.nodeData.id]= response.data.nodeData;anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
 }
 
-export async function getRelRoot(id: string): Promise<[ NodeData, number,  boolean]>{
-  return await axios.get("http://localhost:5000/getRelRoot/"+id).then(response => {const success = saveNode(response.data.anthillGraphNum, response.data.nodeData); return [response.data.nodeData, response.data.depthDiff, success];}); 
+async function getBareNodeFromServer(id: string):Promise<NodeDataBare>{
+  return await axios.get("http://localhost:5000/bareId/"+id).then(response => {anthillGraphBare[response.data.nodeData.id]= response.data.nodeData; return response.data.nodeData; }); 
 }
 
-async function loadNodeFromServer(id: string): Promise<boolean> {
-  return await axios.get("http://localhost:5000/id/"+id).then(response => {const success = saveNode(response.data.anthillGraphNum, response.data.nodeData); return success;}); 
-}
 
-function saveNode(newAnthillGraphNum: number, node: NodeData) : boolean{
-  if (newAnthillGraphNum != anthillGraphNum){
+//// utils
+
+async function checkAnthillGraphNum(): Promise<boolean>{
+  var newAnthillGraphNum = await getAnthillGraphNum();
+  var outdated = (newAnthillGraphNum != anthillGraphNum) 
+  if (outdated) {
     anthillGraphNum = newAnthillGraphNum;
-    anthillGraph = {"node.id": node} as GraphData;
-    rootAddress = ""; 
-    return false
+    anthillGraph = {} as GraphData;
+    anthillGraphBare = {} as GraphDataBare;
+    rootAddress = "";
   }
-  anthillGraph[node.id] = node;
-  return true
+  return outdated
+} 
 
-}
 
-function findRelRoot(id: string): [string, number] {
-  var relRoot = id;
-  var relRootDiff = 0;
-  var success = true;
-  for ( relRootDiff= 0; relRootDiff < maxRelRootDepth; relRootDiff++) {
-      
-      var parentId = anthillGraph[relRoot].treeParentId;
+export function isVotable(voter :NodeData,  recipient : NodeDataBare): [boolean]{
+  console.log("voter",voter, "recipient", recipient)
 
-      if (parentId == "") {
-        break;
+  if (recipient.depth<=voter.depth) {
+    return [false];
+  } else if (voter.depth+maxRelRootDepth < recipient.depth) {
+    return [false];
+  }
+
+  
+
+  var relRootRecipient = recipient.relRoot;
+  var relRootVoter = voter.relRoot;
+
+  console.log( "relRootRecipient", relRootRecipient, "relRootVoter", relRootVoter)
+  // We continue comparing the ancestors of relRootVoter until we find relRootRecipient.
+  // i is the depthDiff from relRootVoter to current Ancestor
+  var relRootVoterAncestor = anthillGraphBare[relRootVoter].sentTreeVote;
+  // then voterDepthDiff = MaxRelRootDepth 
+  for (var i = 1; i < maxRelRootDepth; i++) {
+      if (relRootVoterAncestor == relRootRecipient) {
+          return [true];
       }
-      relRoot = parentId;
+      relRootVoterAncestor = anthillGraphBare[relRootVoterAncestor].sentTreeVote;
 
-      // if (anthillGraph[relRoot] === undefined) {
-          
-      //   throw eror here somehow! we should have loaded the rel Root of id
-      // }
-  }
-  return [relRoot , relRootDiff];
-}
-
-export function findDepthDiff(voter :string,  recipient : string): [boolean, number]{
-        
-  if ((anthillGraph[voter] === undefined) || (anthillGraph[recipient] === undefined)) {
-      return [false, 0];
-  }
-
-  var [relRoot, relRootDiff] = findRelRoot(voter);
-
-  var recipientAncestor = recipient;
-
-  for (var i = 0; i < relRootDiff; i++) {
-      if (recipientAncestor == relRoot) {
-          return [true, maxRelRootDepth-i];
-      }
-      
-      recipientAncestor = anthillGraph[recipientAncestor].treeParentId;
-
-      if (recipientAncestor == "") {
-          return [false, 0];
+      // if we are at the root, we can stop
+      if ((relRootVoterAncestor == "0x0000000000000000000000000000000000000001") || (relRootVoterAncestor == "")) {
+          return [false];
       }
   }
-  return [false, 0];
+  return [false];
 }
 
-export function checkDagVote(voter: string, recipient: string): boolean{
-
-  if (anthillGraph[voter].parentIds.includes(recipient)) {
+// only called for voter = Metamask account, recipient = rendered node 
+export function isDagVote(voter: NodeData, recipient: NodeDataBare): boolean{  
+  if ((voter.sentDagVotes === undefined) || (voter.sentDagVotes.length == 0)) {
+    return false;
+  }
+  if (voter.sentDagVotes.map((r)=>r.id).includes(recipient.id)) {
       return true;
   }
   return false;
 }
 
-export function GraphDataToArray(graph: GraphData): NodeData[]{
-  var array :NodeData[] = [];
-  
-  for (const key in graph) {
-    var node = graph[key] as NodeData;
-    array.push(node)
+//// check and savers
+
+// We need to save the neighbourhood when clicking on a node
+// We need to save the nodes that we will render: the clicked node with id, and the rec/sent tree/Dag votes. 
+// for these nodes we also want to know if we can DagVote on them, i.e, are they in the original neighbourhood. 
+// for this we can load the relative root from the database, and check if it is in the parents of the original accounts relative root.  
+async function checkSaveNeighbourHood(id : string) {
+  console.log("defined and loaded:", (anthillGraph[id]), (await checkAnthillGraphNum()))
+  console.log("anthillGraph",anthillGraph)
+  if ((anthillGraph[id]) && (await checkAnthillGraphNum())) {
+    return ;
   }
-  return array
+  console.log("do we get here?")
+  // we don't have the node, or it is not up to date.
+  var node  = await getNodeFromServer(id);
+
+  // var relRootNode = (await getBareNodeFromServer(node.relRoot));
+  // var relrelRootNode = (await getBareNodeFromServer(relRootNode.relRoot));
+  
+
+  await getBareParentsForDepth(node.sentTreeVote, 2*maxRelRootDepth);
+
+  // saving each node
+  console.log("node", node)
+  await checkSaveBareNodeArray(anthillGraph[id].recTreeVotes);
+  await checkSaveBareNodeArray(anthillGraph[id].sentDagVotes.map((r)=>r.id));
+  await checkSaveBareNodeArray(anthillGraph[id].recDagVotes.map((r)=>r.id));
+
 }
 
-// every graph we load is focused on a node, with specified id. We note for each node whether it has been focused, so totally loaded yet. 
-export async function GetNeighbourhood(id: string): Promise<[GraphData, number]> {
-  var success = false;
-  var newGraphData = {} as GraphData;
+async function getBareParentsForDepth(sentTreeVote :string, depthDiff: number){
+  if ((sentTreeVote != "0x0000000000000000000000000000000000000001") && (sentTreeVote != "")){
+    await checkSaveBareNode(sentTreeVote);
+    var newBareNode = anthillGraphBare[sentTreeVote];
+    if ((depthDiff>0) && (newBareNode.sentTreeVote != "0x0000000000000000000000000000000000000001") ){
+      await getBareParentsForDepth(newBareNode.sentTreeVote, depthDiff-1);
+    }
+  }
+}
+
+async function checkSaveBareNodeArray(ids: string[]){
+  console.log("ids", ids)
+  for (const i in ids) {
+    console.log("ids[i]", ids[i])
+    if ((ids[i] != "")&&(ids[i] != "0x0000000000000000000000000000000000000001")){
+      await checkSaveBareNode(ids[i]);
+    }
+  }
   
-  // here the assumption is we will not have lot of events, and the database can quickly update compared to our queries of it. 
-  while (!success) {
-    if (id == "Enter"){
+}
+
+async function checkSaveBareNode(id: string){
+  console.log("checkSaveBareNode, id: ", id)
+  if ((anthillGraphBare[id] === undefined) ){
+    console.log("checkSaveBareNode, getting: ", id)
+
+     await getBareNodeFromServer(id);
+  } 
+}
+
+////// main and rendering
+
+// every graph we load is focused on a node, that was clicked on. 
+export async function LoadNeighbourhood(id: string): Promise<[GraphDataRendering, string, number]> {
+  var newGraphDataRendering = {} as GraphDataRendering;
+   
+  if (id == "Enter"){
       await getMaxRelRootDepth();   
 
-      var [id, success] = await getRootNode();
-      if (!success) {continue}
+      var id = await getRootNodeId();
     }
 
-    success = await checkSaveNeighbourHood(id)
-    if (!success) {continue}
-    
-    newGraphData = renderNeighbourhood(id)
-  }
-
-  anthillGraph[id].loaded= true;
-  return [newGraphData, anthillGraphNum];
+    // this saves the data into our Database
+    await checkSaveNeighbourHood(id)
+    console.log("anthillGraph: ", anthillGraph)
+    console.log("anthillGraphBare: ", anthillGraphBare)
+   
+    // this collect the elements it into a renderable graph
+    newGraphDataRendering = renderNeighbourhood(id)
+    console.log("newGraphDataRendering: ", newGraphDataRendering)
+  return [newGraphDataRendering, id, anthillGraphNum];
 
 }
 
-
-async function checkSaveNeighbourHood(id : string) : Promise<boolean>{
-  
-
-  var [relRoot, depthDiff, success ] = await getRelRoot(id);
-
-  if (!success) {return success}
-
-  // getting all the nodes in the neighbourhood of id, above id
-  if (depthDiff > 0) {
-    var success = await checkSaveRecursive(relRoot.id, depthDiff -1 )
-  }
-  
-  // getting id and its children
-  var success = await checkSaveRecursive(id, 1)
-
-
-
-  return success
-}
-
-async function checkSaveRecursive(id: string, depth: number): Promise<boolean>{
-  var success = await checkSaveNode(id);
-  if (!success) {return success}
-
-  if (depth == 0) {return true}
-  for  (const i in anthillGraph[id].childIds)  {
-    success = await checkSaveRecursive(anthillGraph[id].childIds[i], depth -1)
-    if (!success) {return success}
-  }
-  return true
-}
-
-async function checkSaveNode(id: string): Promise<boolean>{
-  if (anthillGraph[id] === undefined) {
-    return await loadNodeFromServer(id);
-  } 
-  return true 
-}
 
 // we return a partial graph from the whole graph, focused on node with id. Here the hard part is selecting which parts to include. 
 // we fully download every node we render. If it is in our data 
-function renderNeighbourhood(id : string) : GraphData{
-  var neighbourhood = {} as GraphData;
+function renderNeighbourhood(id : string) : GraphDataRendering{
+  var neighbourhood = {} as GraphDataRendering;
   // we are focusing on this node, so we display all its connections.
   var node = anthillGraph[id];
-  neighbourhood[id] = node;
+  // console.log("id for", id,  anthillGraph, anthillGraph[id], node)
+  neighbourhood[id] = renderingNodeData(node);
+  // add sent dag votes
+  node.sentDagVotes.map ((sDagVote)=>{
+      var recipient = anthillGraphBare[sDagVote.id];      
+      neighbourhood[recipient.id] =  renderingNodeDataBare(recipient);
+    }
+  )
 
-  // add dag votes
-  for (var i = 0; i < node.parentIds.length; i++) {
-      var parentId = node.parentIds[i];
-      var parentName = parentId.slice(-4);
-
-      // if (anthillGraph[parentId] == undefined) {
-      //   throw error here this should not happen
-      // } 
-
-      // this node will not have all its connections, as we only want to show the connections of the node we are focusing on
-      const parent :NodeData= {"id": parentId, "name": parentName, "parentIds": [], "treeParentId": "", "childIds": [], "loaded": false}
-      neighbourhood[parentId] = parent;
-
-      // node already has the details, no need to modify it
-  }
-
-  var parent = node;
+  var parent = node as NodeDataBare;
   // add tree parents
   for (var i = 0; i < maxRelRootDepth; i++) { 
-      if (parent.treeParentId == "") {
-        break;
-      }
+    if ((parent.sentTreeVote == "") || (parent.sentTreeVote == "0x0000000000000000000000000000000000000001")){
+      break;
+    }
 
-      var newParentId = parent.treeParentId;
+    var newParentId = parent.sentTreeVote;
 
-      // if (anthillGraph[newParentId] === undefined) {
-      //   throw error here, we should have loaded the neighbourhood
-      // }
+    const newParent :NodeDataRendering= renderingNodeDataBare(anthillGraphBare[newParentId]); 
 
-      const newParent :NodeData= {"id": newParentId, "name": anthillGraph[newParentId].name,  "parentIds": [], "treeParentId":"", "childIds": [parent.id], "loaded": false}
+    // we are mixing dag and tree votes, we check if this was already added as a dag vote to node, if so we remove it, as we want it in the parent chain
+    // special case, we might remove and re-add the vote from node to its parent 
+    if (neighbourhood[newParentId] != undefined) {
+      // remove the extra node
+      delete neighbourhood[newParentId];
 
-      // we are mixing dag and tree votes, we check if this was already added as a dag vote to node, if so we remove it, as we want it in the parent chain
-      if (neighbourhood[newParentId] != undefined) {
-
-        delete neighbourhood[newParentId];
-        for (var j = 0; j < node.parentIds.length; j++) {
-          if (node.parentIds[j] == newParentId) {
-
-            node.parentIds.splice(j, 1);
-            break;
-          }
+      // remove link to extra vote
+      neighbourhood[id].parentIds.map((parentId, i)=>{
+        if (parentId == newParentId) {
+          neighbourhood[id].parentIds.splice(i, 1);
         }
-      }
-      neighbourhood[newParentId] = newParent;
-      // we mixed dag and tree votes, so we need the following line.
-      // we put it in the middle, hopufully it renders nicely 
+      })
 
-      // neighbourhood[parent.id].parentIds.push(newParentId);
-      // or
-      neighbourhood[parent.id].parentIds.splice(neighbourhood[parent.id].parentIds.length/2, 0, newParentId);
-      
-      neighbourhood[parent.id].treeParentId = newParentId;
-      parent = anthillGraph[newParentId];
     }
+    neighbourhood[newParentId] = newParent;
+    neighbourhood[parent.id].parentIds.push(newParentId);
+    neighbourhood[parent.id].sentTreeVote = newParentId;
+    var parent = anthillGraphBare[newParentId];
+  }
 
-    for (var i = 0; i < node.childIds.length; i++) {
-        var childId = node.childIds[i];
+  // add rec dag votes
+  node.recDagVotes.map((rDagVote)=>{
+    var voter = anthillGraphBare[rDagVote.id];      
+    neighbourhood[voter.id] =  renderingNodeDataBare(voter);
+    neighbourhood[voter.id].parentIds.push(id);
+  })
 
-        // if (anthillGraph[childId] === undefined) {
-        //   throw error here
-        // }
-
-        neighbourhood[childId] = {"id": childId, "name": anthillGraph[childId].name,  "parentIds": [node.id], "treeParentId":node.id, "childIds": [], "loaded": false} as NodeData;
-        // neighbourhood[childId] = anthillGraph[childId];
+  // add rec tree votes
+  node.recTreeVotes.map((id)=>{
+    var voter = anthillGraphBare[id];  
+    
+    if (neighbourhood[id] == undefined) {
+      neighbourhood[id] =  renderingNodeDataBare(voter);
+      neighbourhood[id].parentIds.push(node.id);
     }
-    return neighbourhood;
+  
+  })
+
+  return neighbourhood;
 }
 
+function renderingNodeData(node: NodeData): NodeDataRendering {
+  var nodeRendering = {} as NodeDataRendering;
+  nodeRendering.id = node.id;
+  nodeRendering.name = node.name;
+  nodeRendering.onchainRep = node.onchainRep;
+  nodeRendering.currentRep = node.currentRep;
+  nodeRendering.depth = node.depth;
+  nodeRendering.relRoot = node.relRoot;
 
+  if (node.sentTreeVote != "0x0000000000000000000000000000000000000001"){
+    nodeRendering.parentIds.push(node.sentTreeVote);
+    nodeRendering.sentTreeVote = node.sentTreeVote;
+  }
+  nodeRendering.parentIds = node.sentDagVotes.map(r=>r.id).filter(r=>r!=node.sentTreeVote);
+    
+  return nodeRendering;
+}
+
+function renderingNodeDataBare(node: NodeDataBare): NodeDataRendering {
+  var nodeRendering = {} as NodeDataRendering;
+  nodeRendering.id = node.id;
+  nodeRendering.name = node.name;
+  nodeRendering.onchainRep = node.onchainRep;
+  nodeRendering.currentRep = node.currentRep;
+  nodeRendering.depth = node.depth;
+  nodeRendering.relRoot = node.relRoot;
+  if (node.sentTreeVote != "0x0000000000000000000000000000000000000001"){
+    nodeRendering.sentTreeVote = node.sentTreeVote;
+  }
+  nodeRendering.parentIds = [];
+  return nodeRendering;
+}
 

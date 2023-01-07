@@ -2,13 +2,20 @@ import * as d3Base from 'd3';
 import {useState} from 'react';
 
 import * as d3Dag from 'd3-dag';
-import {DagNode} from 'd3-dag';
 
-import {GraphData, GraphDataToArray, NodeData} from './LoadGraph';
+import {GraphDataRendering,  NodeDataRendering} from './LoadGraph';
 var svg = require('svg');
 
+function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[]{
+    var array :NodeDataRendering[] = [];
+    for (const [key, value] of Object.entries(graph)) {    
+        var node = graph[key] as NodeDataRendering;
+        array.push(node)
+    }
+    return array
+  }
 
-export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: any, handleMouseOut: any) =>{
+export const DrawGraph= (graph: GraphDataRendering, handleClick: any, handleMouseOver: any, handleMouseOut: any) =>{
     const nodeRadius = 35;
     
     // const sources = new Map([
@@ -98,7 +105,6 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
     if (dag_data === undefined) {
         return
     }
-
     var dag = reader(GraphDataToArray(dag_data));
     // applyTreeStructure(dag.roots()[0]);
     
@@ -194,7 +200,7 @@ export const DrawGraph= (graph: GraphData, handleClick: any, handleMouseOver: an
         .attr("d", ({ points }) => line(points))
         .attr("fill", "none")
         .attr("stroke-width", ({ source, target }) => {
-            if ( graph[target.data.id].treeParentId==source.data.id) {
+            if ( graph[target.data.id].sentTreeVote==source.data.id) {
                 return 6
             } else {
                 return 2

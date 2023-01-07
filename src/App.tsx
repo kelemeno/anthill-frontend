@@ -16,15 +16,15 @@ import AnthillJson from "./Anthill.json"
 
 
 import './App.css';
-import {GraphData, GetNeighbourhood, GraphDataToArray, getRootNode, NodeData, findDepthDiff, checkDagVote, getAnthillGraphNum} from './LoadGraph';
+import {GraphDataRendering, LoadNeighbourhood,  NodeData, isVotable, isDagVote, getAnthillGraphNum, NodeDataRendering} from './LoadGraph';
 import { DrawGraph, } from './DrawGraph';
 
 
 const DagVoteButton = (props :any) => {
-  var [isLocal, ] = findDepthDiff(props.voter, props.recipient)
-  if (isLocal) {
+  var votable= isVotable(props.voter, props.recipient)
+  if (votable) {
     
-    if (checkDagVote(props.voter, props.recipient)) {
+    if (isDagVote(props.voter, props.recipient)) {
       return ( <div className='Popover'><button className = 'PopoverButton' onClick={()=>props.RemoveDagVote(props.voter, props.recipient)} >Remove Dag Vote</button></div>)
     } 
     else {
@@ -76,18 +76,18 @@ export const AppInner= ()=> {
   }
 
   var [anthillGraphNum, setAnthillGraphNum ]= useState(0);
-  var [currentId, setCurrentId]=useState("Enter");
+  var [clickedNode, setClickedNode]=useState({"id":"Enter", "name":"Enter", "totalWeight": 0,"onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": []} as NodeDataRendering);
 
-  var [graph, setGraph] = useState( {currentId:{"id":currentId, "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[], "loaded": true}}as GraphData);
+  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "name":"Enter", "totalWeight": 0,"onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": []}} as GraphDataRendering);
 
 
   var checkForUpdates = async () => {
     await getAnthillGraphNum().then((res)=>
         {
-          console.log("res, ", res,  anthillGraphNum)
+         
           if (res != anthillGraphNum) {
-            console.log("updating");
-            handleClick(currentId);
+            console.log("updating AnthillGraphNum",  res,  anthillGraphNum);
+            handleClick(clickedNode.id);
           }
         }
       )
@@ -104,16 +104,16 @@ export const AppInner= ()=> {
 
   const handleClick = (id2: string) => {
     console.log("handling click", id2)
-    GetNeighbourhood(id2).then((response)=>{setGraph(response[0]); setAnthillGraphNum(response[1]); setCurrentId(id2) });
+    LoadNeighbourhood(id2).then((response)=>{setGraph(response[0]); setAnthillGraphNum(response[2]); console.log("after loadneighbourhood", response[0], id2);setClickedNode(response[0][response[1]]) });
   }
 
 
-  var [hoverNode, setHoverNode] = useState({"id":"Enter", "name":"Enter","parentIds": [], "treeParentId":"",  "childIds":[], "loaded": true} as NodeData);
+  var [hoverNode, setHoverNode] = useState({"id":"Enter", "name":"Enter", "totalWeight": 0, "onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": []} as NodeDataRendering);
   var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
 
 
-  const handleMouseOver = (event: React.MouseEvent<HTMLElement>, node: NodeData) => {
+  const handleMouseOver = (event: React.MouseEvent<HTMLElement>, node: NodeDataRendering) => {
     setHoverNode(node);
     setAnchorEl(event.currentTarget);
     setAnchorElSaver(event.currentTarget);
@@ -168,7 +168,7 @@ export const AppInner= ()=> {
     <div className='Popover'>Address link to blockexplorer </div>
     <div className='Popover'> Current reputation, onchain reputation </div>
     <div className='Popover'> Current received reputation from metamask address, if loaded </div>
-    <DagVoteButton voter="0x0000000000000000000000000000000000000008" recipient="0x0000000000000000000000000000000000000005" AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
+    <DagVoteButton voter={clickedNode} recipient={clickedNode} AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
     <div className='Popover'> Button to move tree vote here, if applicable </div>
 
     <div className='Popover'> Button to cause position switch with parent, if applicable </div>
