@@ -20,6 +20,7 @@ import { max } from "d3";
  var anthillGraphNum = 0;
  var anthillGraph : GraphData = {};
  var anthillGraphBare : GraphDataBare = {};
+ var outdated= true; 
 
  var rootAddress = "";
 
@@ -42,7 +43,8 @@ async function getNodeFromServer(id: string) : Promise<NodeData>{
 }
 
 async function getBareNodeFromServer(id: string):Promise<NodeDataBare>{
-  return await axios.get("http://localhost:5000/bareId/"+id).then(response => {anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
+  // console.log("getting id: ", id)
+  return await axios.get("http://localhost:5000/bareId/"+id).then(response => {anthillGraphBare[(response.data.nodeData as NodeDataBare).id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
 }
 
 
@@ -50,14 +52,7 @@ async function getBareNodeFromServer(id: string):Promise<NodeDataBare>{
 
 async function checkAnthillGraphNum(): Promise<boolean>{
   var newAnthillGraphNum = await getAnthillGraphNum();
-  var outdated = (newAnthillGraphNum != anthillGraphNum) 
-  if (outdated) {
-    console.log("we are outdated, clearing graphs")
-    anthillGraphNum = newAnthillGraphNum;
-    anthillGraph = {} as GraphData;
-    anthillGraphBare = {} as GraphDataBare;
-    rootAddress = "";
-  }
+  outdated = (newAnthillGraphNum != anthillGraphNum)   
   return outdated
 } 
 
@@ -137,7 +132,20 @@ export function isDagVote(voter: NodeDataRendering, recipient: NodeDataRendering
 // for this we can load the relative root from the database, and check if it is in the parents of the original accounts relative root.  
 async function checkSaveNeighbourHood(id : string) {
 
-  if ((anthillGraph[id]) && (await checkAnthillGraphNum())) {
+
+  (await checkAnthillGraphNum());
+  
+  if (outdated){
+    
+    console.log("we are outdated, clearing graphs")
+    anthillGraphNum = await getAnthillGraphNum();
+    anthillGraph = {} as GraphData;
+    anthillGraphBare = {} as GraphDataBare;
+    rootAddress = "";
+    
+  }
+
+  if ((anthillGraph[id])) {
     return ;
   }
   // we don't have the node, or it is not up to date.

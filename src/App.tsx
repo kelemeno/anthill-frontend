@@ -135,7 +135,7 @@ export const AppInner= ()=> {
     if (svg.current){
       svg.current.replaceChildren(DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut));
     };
-    const interval = setInterval(async () => await checkForUpdates(), 2000);
+    const interval = setInterval(async () => await checkForUpdates(), 500);
     return () => {
     clearInterval(interval);
   };
@@ -174,6 +174,7 @@ export const AppInner= ()=> {
     <DagVoteButton voter={clickedNode} recipient={hoverNode} AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
     <div className='Popover'> Move tree vote and START AGAIN here  </div>
     <div className='Popover'> Exit tree (all data lost) </div>
+    <div className='Popover'>Relroot: {hoverNode.relRoot} </div>
 
     <div className='Popover'>Address: {hoverNode.id} </div>
 
