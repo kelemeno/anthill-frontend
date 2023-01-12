@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import Popover from '@mui/material/Popover';
 
-import detectEthereumProvider from '@metamask/detect-provider';
+// import detectEthereumProvider from '@metamask/detect-provider';
 import { AbiItem } from 'web3-utils'
 import Web3 from 'web3';
 
@@ -36,6 +36,14 @@ const DagVoteButton = (props :{"voter":NodeDataRendering, "recipient": NodeDataR
   return  <div></div>
 }
 
+const SwitchParentButton = (props :{"voter":NodeDataRendering, "recipient": NodeDataRendering, SwitchWithParent: any}) => {
+  
+  var switchable= (props.voter.sentTreeVote== props.recipient.id) && (props.voter.currentRep > props.recipient.currentRep)
+  if (switchable) {
+    return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>props.SwitchWithParent(props.voter)} >You can switch with your parent!</button></div>)
+  }
+  return  <div></div>
+}
 
 
 
@@ -73,6 +81,12 @@ export const AppInner= ()=> {
   async function RemoveDagVote(voter: NodeDataRendering, recipient:NodeDataRendering){
 
     await AnthillContract.methods.removeDagVote(voter.id, recipient.id).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
+
+  }
+
+  async function SwitchWithParent(voter: NodeDataRendering, recipient:NodeDataRendering){
+
+    await AnthillContract.methods.switchPositionWithParent(voter.id).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
 
   }
 
@@ -164,12 +178,14 @@ export const AppInner= ()=> {
       onMouseLeave: handleMouseOut, 
       sx: {pointerEvents: 'auto',}
     }}
-  >
-    <div className='Popover'>Name: {hoverNode.name}.  </div>
+    transitionDuration="auto"
+>
+    <div className='Popover' >Name: {hoverNode.name}.  </div>
     <div className='Popover'>Depth: {hoverNode.depth}.  </div>
     <div className='Popover'> Current reputation: {(hoverNode.currentRep/10**18).toFixed(2)} </div>
 
-    <div className='Popover'> Button to cause position switch with parent, if applicable </div>
+    <SwitchParentButton voter={clickedNode} recipient={hoverNode} SwitchWithParent={SwitchWithParent}/>
+
 
     <DagVoteButton voter={clickedNode} recipient={hoverNode} AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
     <div className='Popover'> Move tree vote and START AGAIN here  </div>
