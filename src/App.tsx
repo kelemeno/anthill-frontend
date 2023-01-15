@@ -7,21 +7,15 @@ import Web3 from 'web3';
 
 import AnthillJson from "./Anthill.json"
 
-
-// import { useAccount, useSigner, useProvider} from 'wagmi'
-// import { usePrepareContractWrite, useContractWrite } from 'wagmi'
-// import {  QueryClientProvider, QueryClient } from '@tanstack/react-query'
-
-
-
-
 import './App.css';
-import {GraphDataRendering, LoadNeighbourhood,  NodeData, isVotable, isDagVote, getAnthillGraphNum, NodeDataRendering} from './LoadGraph';
+import {GraphDataRendering, LoadNeighbourhood, isVotable, isDagVote, isSwitchable, getAnthillGraphNum, getBareNodeFromServer,  NodeDataRendering} from './LoadGraph';
 import { DrawGraph, } from './DrawGraph';
 
 
-const DagVoteButton = (props :{"voter":NodeDataRendering, "recipient": NodeDataRendering, AddDagVote: any, RemoveDagVote: any}) => {
+const DagVoteButton = (props :{"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, AddDagVote: any, RemoveDagVote: any}) => {
   
+  if (!props.isAccountInGraph) return (<div></div>)
+
   var votable= isVotable(props.voter, props.recipient)
   if (votable) {
     
@@ -36,97 +30,72 @@ const DagVoteButton = (props :{"voter":NodeDataRendering, "recipient": NodeDataR
   return  <div></div>
 }
 
-const SwitchParentButton = (props :{"voter":NodeDataRendering, "recipient": NodeDataRendering, SwitchWithParent: any}) => {
+const SwitchParentButton = (props :{"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, SwitchWithParent: any}) => {
   
-  var switchable= (props.voter.sentTreeVote== props.recipient.id) && (props.voter.currentRep > props.recipient.currentRep)
+  if (!props.isAccountInGraph) return (<div></div>)
+
+  var switchable= isSwitchable(props.voter , props.recipient) 
   if (switchable) {
     return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>props.SwitchWithParent(props.voter)} >You can switch with your parent!</button></div>)
   }
   return  <div></div>
 }
 
+const JoinTreeButton = (props :{"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, JoinTree: any}) => {
+  if (props.isAccountInGraph) return (<div></div>)
+  if (props.voter == "0x0000000000000000000000000000000000000000") return (<div></div>)
+  
+  var notFull = false
+  if (props.recipient.recTreeVotes !== undefined) {
+    notFull = (props.recipient.recTreeVotes.length < 2) 
+  }
+  if (notFull) {
+    return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>props.JoinTree(props.voter, props.recipient)} >Join tree here</button></div>)
+  }
+  return  <div></div>
+}
 
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-
-
-
-export const AppInner= ()=> {
+export const AppInner= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNode":NodeDataRendering, "setClickedNode":any})=> {
 
   const svg  = React.useRef<HTMLDivElement>(null);
-
-  
-
-  const antHillContractAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3";
-   
-
-  // var provider : any;
+  const antHillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
   var AnthillContract: any; 
   const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
-  
+  var [anthillGraphNum, setAnthillGraphNum ]= useState(0);
+  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "name":"Enter", "totalWeight": 0,"onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []}} as GraphDataRendering);
+  var [hoverNode, setHoverNode] = useState({"id":"Enter", "name":"Enter", "totalWeight": 0, "onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
 
-  var [account, setAccount ] = useState("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"); 
-  var [chainId, setChainId ] = useState(1337);
+  var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
+  var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
   
   AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], antHillContractAddress);
 
   // these functions are the hard ones, we pass them in and they are used, but they cannot be typechecked easily
   async function AddDagVote(voter: NodeDataRendering, recipient:NodeDataRendering){
-
-    await AnthillContract.methods.addDagVote(voter.id, recipient.id).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
-
+    await AnthillContract.methods.addDagVote(voter.id, recipient.id).send({from: props.account[0], chainId: props.chainId}).then((res:any)=>{console.log(res)});
   }
 
   async function RemoveDagVote(voter: NodeDataRendering, recipient:NodeDataRendering){
-
-    await AnthillContract.methods.removeDagVote(voter.id, recipient.id).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
-
+    await AnthillContract.methods.removeDagVote(voter.id, recipient.id).send({from: props.account[0], chainId:props.chainId}).then((res:any)=>{console.log(res)});
   }
 
   async function SwitchWithParent(voter: NodeDataRendering, recipient:NodeDataRendering){
-
-    await AnthillContract.methods.switchPositionWithParent(voter.id).send({from: account, chainId:chainId}).then((res:any)=>{console.log(res)});
-
+    await AnthillContract.methods.switchPositionWithParent(voter.id).send({from: props.account[0], chainId: props.chainId}).then((res:any)=>{console.log(res)});
   }
 
-  var [anthillGraphNum, setAnthillGraphNum ]= useState(0);
-  var [clickedNode, setClickedNode]=useState({"id":"Enter", "name":"Enter", "totalWeight": 0,"onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": []} as NodeDataRendering);
-
-  var [graph, setGraph] = useState( {"Enter":{"id":"Enter", "name":"Enter", "totalWeight": 0,"onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": []}} as GraphDataRendering);
-
-
-  var checkForUpdates = async () => {
-    await getAnthillGraphNum().then((res)=>
-        {
-         
-          if (res != anthillGraphNum) {
-            console.log("updating AnthillGraphNum",  res,  anthillGraphNum);
-            handleClick(clickedNode.id);
-          }
-        }
-      )
-    
+  async function JoinTree(voter: string, recipient:NodeDataRendering){
+    console.log(voter, recipient.id, props.account, props.chainId)
+    await AnthillContract.methods.joinTree(voter, "name", recipient.id).send({from:props.account[0]  , chainId: props.chainId}).then((res:any)=>{console.log(res)});
   }
-
-  // if (!checkerLaunched) {
-  //   console.log("launching checker")
-  //   checkerLaunched = true;
-  //   checkForUpdates();
-  // }
-  
-
 
   const handleClick = (id2: string) => {
-    console.log("handling click", id2)
-    LoadNeighbourhood(id2).then((response)=>{setGraph(response[0]); setAnthillGraphNum(response[2]); ;setClickedNode(response[0][response[1]]); setHoverNode(response[0][response[1]]); });
+    console.log("handling click", id2, props.account)
+    LoadNeighbourhood(id2,  props.account, props.isAccountInGraph, props.setIsAccountInGraph).then((response)=>{
+      setGraph(response[0]);
+       setAnthillGraphNum(response[2]); 
+       props.setClickedNode(response[0][response[1]]); setHoverNode(response[0][response[1]]); });
   }
-
-
-  var [hoverNode, setHoverNode] = useState({"id":"Enter", "name":"Enter", "totalWeight": 0, "onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": []} as NodeDataRendering);
-  var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
-  var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
-
 
   const handleMouseOver = (event: React.MouseEvent<HTMLElement>, node: NodeDataRendering) => {
     setHoverNode(node);
@@ -144,12 +113,32 @@ export const AppInner= ()=> {
 
   const open = Boolean(anchorEl);
 
+  // var checkAccountInGraph = async () => {
+  //   await getBareNodeFromServer(props.account).then((res)=>{
+  //     if (res != null) {
+  //       props.setIsAccountInGraph(true);
+  //     }
+  //   })
+  // }
+
+  var checkForUpdates = async () => {
+    await getAnthillGraphNum().then((res)=>{   
+        if (res != anthillGraphNum) {
+          console.log("updating AnthillGraphNum",  res,  anthillGraphNum);
+          handleClick(props.clickedNode.id);
+        }
+      }
+    )
+  }
+
   React.useEffect(()=>{
 
     if (svg.current){
       svg.current.replaceChildren(DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut));
     };
-    const interval = setInterval(async () => await checkForUpdates(), 500);
+
+    const interval = setInterval(async () => await checkForUpdates(), 200);
+
     return () => {
     clearInterval(interval);
   };
@@ -184,19 +173,15 @@ export const AppInner= ()=> {
     <div className='Popover'>Depth: {hoverNode.depth}.  </div>
     <div className='Popover'> Current reputation: {(hoverNode.currentRep/10**18).toFixed(2)} </div>
 
-    <SwitchParentButton voter={clickedNode} recipient={hoverNode} SwitchWithParent={SwitchWithParent}/>
+    <SwitchParentButton isAccountInGraph = {props.isAccountInGraph} voter={props.account} recipient={hoverNode} SwitchWithParent={SwitchWithParent}/>
+    <DagVoteButton isAccountInGraph = {props.isAccountInGraph} voter={props.account} recipient={hoverNode} AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
+    <JoinTreeButton isAccountInGraph = {props.isAccountInGraph} voter={props.account} recipient={hoverNode} JoinTree={JoinTree} />
 
-
-    <DagVoteButton voter={clickedNode} recipient={hoverNode} AddDagVote={AddDagVote} RemoveDagVote={RemoveDagVote}/>
     <div className='Popover'> Move tree vote and START AGAIN here  </div>
     <div className='Popover'> Exit tree (all data lost) </div>
-    <div className='Popover'>Relroot: {hoverNode.relRoot} </div>
+    <div className='Popover'> Relroot: {hoverNode.relRoot} </div>
 
-    <div className='Popover'>Address: {hoverNode.id} </div>
-
-    OR
-
-     <div className='Popover'>Join tree here </div>
+    <div className='Popover'> Address: {hoverNode.id} </div>
 
 
   </Popover>
