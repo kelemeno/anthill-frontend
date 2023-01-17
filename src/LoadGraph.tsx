@@ -1,7 +1,6 @@
 import axios from "axios";
 import { max } from "d3";
 // import { toChecksumAddress } from 'web3-utils'
-import {ethers} from  "ethers";
  
 
  type DagVote = {'id': string, 'weight': number, 'posInOther': number}
@@ -37,7 +36,7 @@ export async function getIsNodeInGraph(id:string){
 
 
 export async function getRootNodeId(): Promise<string >{
-  return await axios.get("http://localhost:5000/rootId").then(response => {; return response.data.id;}); 
+  return await axios.get("http://localhost:5000/rootId").then(response => { return response.data.id;}); 
 }
 
 export async function getAnthillGraphNum(): Promise<number>{
@@ -45,15 +44,19 @@ export async function getAnthillGraphNum(): Promise<number>{
 }
 
 async function getNodeFromServer(id: string) : Promise<NodeData>{
-  return await axios.get("http://localhost:5000/id/"+id).then(response => { anthillGraph[response.data.nodeData.id]= response.data.nodeData as NodeData; anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
+  return await axios.get("http://localhost:5000/id/"+id).then(response => {anthillGraph[response.data.nodeData.id]= response.data.nodeData as NodeData; anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
 }
 
 export async function getBareNodeFromServer(id: string):Promise<NodeDataBare>{
   return await axios.get("http://localhost:5000/bareId/"+id).then(response => {anthillGraphBare[(response.data.nodeData as NodeDataBare).id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
 }
 
+export async function getRandomLeaf():Promise<string>{
+  return await axios.get("http://localhost:5000/randomLeaf").then(response => {return response.data.randomLeaf}); 
+}
 
-//// utils
+
+//// utils, checkers
 
 async function checkAnthillGraphNum(): Promise<boolean>{
   var newAnthillGraphNum = await getAnthillGraphNum();
@@ -61,7 +64,9 @@ async function checkAnthillGraphNum(): Promise<boolean>{
   return outdated
 } 
 
-
+export function serveParent(voterId: string): string{
+  return anthillGraph[voterId].sentTreeVote;
+}
 export function isVotable(voterId :string,  recipient : NodeDataBare): boolean{
   // console.log("voter",voter, "recipient", recipient)
   // if ((voter.i == "Enter")) {
@@ -157,7 +162,7 @@ export function isSwitchable(voterId: string, recipient: NodeDataRendering): boo
   return false;
 }
 
-//// check and savers
+//// check saved and savers
 
 // We need to save the neighbourhood when clicking on a node
 // We need to save the nodes that we will render: the clicked node with id, and the rec/sent tree/Dag votes. 
@@ -182,11 +187,7 @@ async function checkSaveNeighbourHood(id : string) {
     return ;
   }
   // we don't have the node, or it is not up to date.
-  var node  = await getNodeFromServer(id);
-
-  // var relRootNode = (await getBareNodeFromServer(node.relRoot));
-  // var relrelRootNode = (await getBareNodeFromServer(relRootNode.relRoot));
-  
+  var node  = await getNodeFromServer(id);  
 
   await getBareParentsForDepth(node.sentTreeVote, 2*maxRelRootDepth);
 
@@ -222,26 +223,36 @@ async function checkSaveBareNode(id: string){
   } 
 }
 
-////// main and rendering
+////// main entrypoint and rendering/serving
 
 // every graph we load is focused on a node, that was clicked on. 
 export async function LoadNeighbourhood(id: string, account: string, accountInGraph :boolean, setAccountInGraph: any): Promise<[GraphDataRendering, string, number]> {
   var newGraphDataRendering = {} as GraphDataRendering;
-   
+
+  await getMaxRelRootDepth(); 
+  
   if (id == "Enter"){
-      await getMaxRelRootDepth();   
+        
 
-      var id = await getRootNodeId();
+       id = await getRandomLeaf();
+  } else {
+    var isIdInGraph = await getIsNodeInGraph(id);
+    if (!isIdInGraph){  id = await getRandomLeaf();}
   }
 
-  var isAccountInGraph = await getIsNodeInGraph(ethers.utils.getAddress(account) );
+
+  var isAccountInGraph = await getIsNodeInGraph(account );
   if (isAccountInGraph){
-    checkSaveNeighbourHood(account);
+    await checkSaveNeighbourHood(account);
   }
-  console.log("in loadneighbourhood", account, isAccountInGraph, accountInGraph)
-  if ((isAccountInGraph) && (accountInGraph == false)){
+  
+  // we want to XOR
+  if ((isAccountInGraph) && (!accountInGraph)){
     setAccountInGraph(true);
+  } else if ((!isAccountInGraph) && (accountInGraph)){
+    setAccountInGraph(false);
   }
+
 
   // this saves the data into our Database
   await checkSaveNeighbourHood(id)
