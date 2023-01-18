@@ -26,33 +26,36 @@ import { max } from "d3";
 
  ///// getters
 
+// const backendUrl = "http://localhost:5000/"
+const backendUrl = "https://anthill-db.herokuapp.com/"
+
 export async function getMaxRelRootDepth(){
-  maxRelRootDepth = await axios.get("http://localhost:5000/maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
+  maxRelRootDepth = await axios.get(backendUrl+"maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
 }
 
 export async function getIsNodeInGraph(id:string){
-  return await axios.get("http://localhost:5000/isNodeInGraph/"+id).then(response => {return response.data.isNodeInGraph}); 
+  return await axios.get(backendUrl+"isNodeInGraph/"+id).then(response => {return response.data.isNodeInGraph}); 
 }
 
 
 export async function getRootNodeId(): Promise<string >{
-  return await axios.get("http://localhost:5000/rootId").then(response => { return response.data.id;}); 
+  return await axios.get(backendUrl+"rootId").then(response => { return response.data.id;}); 
 }
 
 export async function getAnthillGraphNum(): Promise<number>{
-  return await axios.get("http://localhost:5000/anthillGraphNum").then(response => {return response.data.anthillGraphNum}); 
+  return await axios.get(backendUrl+"anthillGraphNum").then(response => {return response.data.anthillGraphNum}); 
 }
 
 async function getNodeFromServer(id: string) : Promise<NodeData>{
-  return await axios.get("http://localhost:5000/id/"+id).then(response => {anthillGraph[response.data.nodeData.id]= response.data.nodeData as NodeData; anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
+  return await axios.get(backendUrl+"id/"+id).then(response => {anthillGraph[response.data.nodeData.id]= response.data.nodeData as NodeData; anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
 }
 
 export async function getBareNodeFromServer(id: string):Promise<NodeDataBare>{
-  return await axios.get("http://localhost:5000/bareId/"+id).then(response => {anthillGraphBare[(response.data.nodeData as NodeDataBare).id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
+  return await axios.get(backendUrl+"bareId/"+id).then(response => {anthillGraphBare[(response.data.nodeData as NodeDataBare).id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
 }
 
 export async function getRandomLeaf():Promise<string>{
-  return await axios.get("http://localhost:5000/randomLeaf").then(response => {return response.data.randomLeaf}); 
+  return await axios.get(backendUrl+"randomLeaf").then(response => {return response.data.randomLeaf}); 
 }
 
 

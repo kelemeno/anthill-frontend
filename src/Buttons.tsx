@@ -9,7 +9,43 @@ import './App.css';
 import {getRandomLeaf, getIsNodeInGraph, LoadNeighbourhood, isVotable, isDagVote, isSwitchable,  NodeDataRendering, serveParent} from './LoadGraph';
 import { DrawGraph, } from './DrawGraph';
 
+const addNetwork = async (provider:any) => {
+    try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: "0x13881" }],
+        });
+      } catch (switchError:any) {
+        // This error code indicates that the chain has not been added to MetaMask.
+        if (switchError.code === 4902) {
+          try {
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [
+                {
+                    chainId: "0x13881",
+                    chainName:  "Mumbai Testnet",
+                    rpcUrls: ["https://rpc-mumbai.maticvigil.com/"],
+                    blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
+                    nativeCurrency: {
+                        name: "MATIC",
+                        symbol: "MATIC", // 2-6 characters long
+                        decimals: 18,
+                    },
+                },
+              ],
+            });
+          } catch (addError) {
+            // handle "add" error
+          }
+        }
+    
+    window.location.reload();
+  };
+}
+
 async function getAccount(props:{provider:any, setAccounts: any, setIsAccountInGraph :any}) {
+    addNetwork(props.provider);
     var acc = ethers.utils.getAddress((await (props.provider.request({ method: 'eth_requestAccounts' })))[0]);
     props.setAccounts(acc)
     var isInGraph = await getIsNodeInGraph(acc)

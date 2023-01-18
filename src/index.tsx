@@ -21,10 +21,12 @@ const root = client.createRoot(doc!);
 
 const  App = () => {
 
-    const antHillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512";
-    const chainId = 1337;
+    const antHillContractAddress = "0xE2C8d9C92eAb868C6078C778f12f794858147947";
+    // const chainId =1337;
+    const chainId = 80001;
     var AnthillContract: any; 
-    const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+    // const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+    const web3 = new Web3(Web3.givenProvider || "https://polygon-mumbai.infura.io/v3/4458cf4d1689497b9a38b1d6bbf05e78");
     AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], antHillContractAddress);
     
     const queryParameters = new URLSearchParams(window.location.search)
@@ -51,16 +53,23 @@ const  App = () => {
                 <Routes>
                 <Route path="/" element={
                         <>
-                        <div style={{textAlign:"left", margin : 10}}>
+                        <div style={{textAlign:"left", margin : 15}}>
                             <ConnectMetamaskButton provider={provider} setProvider={setProvider} accounts = {accounts} setAccounts={setAccounts} setIsAccountInGraph={setIsAccountInGraph} />
                             <GoHomeButton accounts={accounts} isAccountInGraph={isAccountInGraph} setClickedNodeId= {setClickedNodeId}/>
                             <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} accounts={accounts} isAccountInGraph= {isAccountInGraph} setClickedNodeId={setClickedNodeId}/>
-                        </div>
-                        <div style={{textAlign:"right"}}>
-                            <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
-                            <><a href= "https://faucet.polygon.technology/"> Get test tokens </a></>
-                        </div>
                         
+                        <div style={{textAlign:"right"}}>
+                            <><a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a></>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+                            <><a  href= "https://faucet.polygon.technology/"> Get test tokens </a></>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+
+                            <><a  href= "https://mumbai.polygonscan.com/address/0xe2c8d9c92eab868c6078c778f12f794858147947"> Link to Blockexplorer</a></>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+
+                            <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
+                        </div>
+                        </div>
                         <AppInner account={accounts} chainId={chainId} clickedNodeId = {clickedNodeId}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNodeId={setClickedNodeId}/>
                         </>
                     }/>
