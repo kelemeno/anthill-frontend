@@ -18,16 +18,23 @@ import { max } from "d3";
 
  var maxRelRootDepth = 0;
  var anthillGraphNum = 0;
+
  var anthillGraph : GraphData = {};
  var anthillGraphBare : GraphDataBare = {};
+
+ var anthillGraphServe : GraphData = {};
+  var anthillGraphBareServe : GraphDataBare = {};
+
  var outdated= true; 
+
+
 
  var rootAddress = "";
 
  ///// getters
 
-// const backendUrl = "http://localhost:5000/"
-const backendUrl = "https://anthill-db.herokuapp.com/"
+const backendUrl = "http://localhost:5000/"
+// const backendUrl = "https://anthill-db.herokuapp.com/"
 
 export async function getMaxRelRootDepth(){
   maxRelRootDepth = await axios.get(backendUrl+"maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
@@ -68,20 +75,21 @@ async function checkAnthillGraphNum(): Promise<boolean>{
 } 
 
 export function serveParent(voterId: string): string{
-  return anthillGraph[voterId].sentTreeVote;
+  return anthillGraphServe[voterId].sentTreeVote;
 }
+
 export function isVotable(voterId :string,  recipient : NodeDataBare): boolean{
   // console.log("voter",voter, "recipient", recipient)
   // if ((voter.i == "Enter")) {
   //   return false;
   // }
 
-  if ((anthillGraph[voterId] === undefined)) {
+  if ((anthillGraphServe[voterId] === undefined)) {
     const error = new Error("isVotable called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
     throw error;
   }
 
-  var voter = anthillGraph[voterId]; 
+  var voter = anthillGraphServe[voterId]; 
   if (voter.depth<=recipient.depth) {
     return false;
   } else if (recipient.depth+maxRelRootDepth< voter.depth ) {
@@ -104,7 +112,7 @@ export function isVotable(voterId :string,  recipient : NodeDataBare): boolean{
         return false;
       }
 
-      relRootVoterAncestor = anthillGraphBare[relRootVoterAncestor].sentTreeVote;   
+      relRootVoterAncestor = anthillGraphBareServe[relRootVoterAncestor].sentTreeVote;   
   }
   return false;
 }
@@ -116,17 +124,17 @@ export function isDagVote(voterId: string, recipient: NodeDataRendering): boolea
   //   return false;
   // }
 
-  if ((anthillGraph[voterId] === undefined)) {
+  if ((anthillGraphServe[voterId] === undefined)) {
     const error = new Error("isDagVote called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
     throw error;
   }
 
-  if ((anthillGraphBare[recipient.id] === undefined)) {
+  if ((anthillGraphBareServe[recipient.id] === undefined)) {
     const error = new Error("isDagVote called with undefined recipientwith id: "+ recipient.id+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
     throw error;
   }
 
-  var voterFull = anthillGraph[voterId];
+  var voterFull = anthillGraphServe[voterId];
 
   // console.log("In idDagVote, voter",voter, "recipient", recipient)
   if ((voterFull.sentDagVotes === undefined) || (voterFull.sentDagVotes.length == 0)) {
@@ -145,17 +153,17 @@ export function isSwitchable(voterId: string, recipient: NodeDataRendering): boo
   //   return false;
   // }
 
-  if ((anthillGraph[voterId] === undefined)) {
+  if ((anthillGraphServe[voterId] === undefined)) {
     const error = new Error("isDagVote called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
     throw error;
   }
 
-  if ((anthillGraphBare[recipient.id] === undefined)) {
+  if ((anthillGraphBareServe[recipient.id] === undefined)) {
     const error = new Error("isDagVote called with undefined recipientwith id: "+ recipient.id+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
     throw error;
   }
 
-  var voterFull = anthillGraph[voterId];
+  var voterFull = anthillGraphServe[voterId];
 
   // console.log("In idDagVote, voter",voter, "recipient", recipient)
   if ((voterFull.sentTreeVote == recipient.id) && (recipient.currentRep < voterFull.currentRep)) {
@@ -183,12 +191,11 @@ async function checkSaveNeighbourHood(id : string) {
     anthillGraph = {} as GraphData;
     anthillGraphBare = {} as GraphDataBare;
     rootAddress = "";
-    
-  }
-
-  if ((anthillGraph[id])) {
+  
+  } else if ((anthillGraphServe[id])) {
     return ;
   }
+
   // we don't have the node, or it is not up to date.
   var node  = await getNodeFromServer(id);  
 
@@ -199,6 +206,9 @@ async function checkSaveNeighbourHood(id : string) {
   await checkSaveBareNodeArray(anthillGraph[id].sentDagVotes.map((r)=>r.id));
   await checkSaveBareNodeArray(anthillGraph[id].recDagVotes.map((r)=> r.id));
 
+
+  anthillGraphServe = anthillGraph;
+  anthillGraphBareServe = anthillGraphBare;
 }
 
 async function getBareParentsForDepth(sentTreeVote :string, depthDiff: number){
@@ -275,13 +285,13 @@ export async function LoadNeighbourhood(id: string, account: string, accountInGr
 function renderNeighbourhood(id : string) : GraphDataRendering{
   var neighbourhood = {} as GraphDataRendering;
   // we are focusing on this node, so we display all its connections.
-  var node = anthillGraph[id];
+  var node = anthillGraphServe[id];
   // console.log("id for", id,  anthillGraph, anthillGraph[id], node)
   neighbourhood[id] = renderingNodeData(node);
 
   // add sent dag votes
   node.sentDagVotes.map ((sDagVote)=>{
-      var recipient = anthillGraphBare[sDagVote.id];      
+      var recipient = anthillGraphBareServe[sDagVote.id];      
       neighbourhood[recipient.id] =  renderingNodeDataBare(recipient);
     }
   )
@@ -295,7 +305,7 @@ function renderNeighbourhood(id : string) : GraphDataRendering{
 
     var newParentId = parent.sentTreeVote;
 
-    const newParent :NodeDataRendering= renderingNodeDataBare(anthillGraphBare[newParentId]); 
+    const newParent :NodeDataRendering= renderingNodeDataBare(anthillGraphBareServe[newParentId]); 
 
     // we are mixing dag and tree votes, we check if this was already added as a dag vote to node, if so we remove it, as we want it in the parent chain
     // special case, we might remove and re-add the vote from node to its parent 
@@ -314,19 +324,19 @@ function renderNeighbourhood(id : string) : GraphDataRendering{
     neighbourhood[newParentId] = newParent;
     neighbourhood[parent.id].parentIds.push(newParentId);
     neighbourhood[parent.id].sentTreeVote = newParentId;
-    var parent = anthillGraphBare[newParentId];
+    var parent = anthillGraphBareServe[newParentId];
   }
 
   // add rec dag votes
   node.recDagVotes.map((rDagVote)=>{
-    var voter = anthillGraphBare[rDagVote.id];      
+    var voter = anthillGraphBareServe[rDagVote.id];      
     neighbourhood[voter.id] =  renderingNodeDataBare(voter);
     neighbourhood[voter.id].parentIds.push(id);
   })
 
   // add rec tree votes
   node.recTreeVotes.map((id)=>{
-    var voter = anthillGraphBare[id];  
+    var voter = anthillGraphBareServe[id];  
     
     if (neighbourhood[id] == undefined) {
       neighbourhood[id] =  renderingNodeDataBare(voter);
