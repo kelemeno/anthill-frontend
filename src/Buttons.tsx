@@ -202,7 +202,7 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
   }
   
   async function AddDagVote(AnthillContract:any, chainId: number, account: string, recipient:string){
-    await AnthillContract.methods.addDagVote(account, recipient, 10).send({from: account, chainId: chainId}).then((res:any)=>{console.log(res)});
+    await AnthillContract.methods.addDagVote(account, recipient, 1).send({from: account, chainId: chainId}).then((res:any)=>{console.log(res)});
   }
   
   async function RemoveDagVote(AnthillContract:any, chainId: number, account: string, recipient:string){

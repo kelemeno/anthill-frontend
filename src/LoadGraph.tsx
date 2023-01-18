@@ -33,8 +33,8 @@ import { max } from "d3";
 
  ///// getters
 
-const backendUrl = "http://localhost:5000/"
-// const backendUrl = "https://anthill-db.herokuapp.com/"
+// const backendUrl = "http://localhost:5000/"
+const backendUrl = "https://anthill-db.herokuapp.com/"
 
 export async function getMaxRelRootDepth(){
   maxRelRootDepth = await axios.get(backendUrl+"maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
