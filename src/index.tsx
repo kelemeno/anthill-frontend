@@ -21,7 +21,8 @@ const root = client.createRoot(doc!);
 
 const  App = () => {
 
-    const antHillContractAddress = "0xE2C8d9C92eAb868C6078C778f12f794858147947";
+    const antHillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
+    // "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai 
     // const chainId =1337;
     const chainId = 80001;
     var AnthillContract: any; 
@@ -64,7 +65,7 @@ const  App = () => {
                             <><a  href= "https://faucet.polygon.technology/"> Get test tokens </a></>
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
-                            <><a  href= "https://mumbai.polygonscan.com/address/0xe2c8d9c92eab868c6078c778f12f794858147947"> Link to Blockexplorer</a></>
+                            <><a  href= {"https://mumbai.polygonscan.com/address/"+antHillContractAddress}> Link to Blockexplorer</a></>
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
                             <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
@@ -83,8 +84,15 @@ const  App = () => {
                         </div>
 
                         <div style={{textAlign:"right"}}>
-                            <><a href= "https://github.com/kelemeno/anthill"> Link to github </a></>
-                         <><a href= "https://faucet.polygon.technology/"> Get test tokens </a></>
+                            <a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+                            <a  href= "https://faucet.polygon.technology/"> Get test tokens </a>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+
+                            <a  href={"https://mumbai.polygonscan.com/address/"+antHillContractAddress}> Link to Blockexplorer</a>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+
+                            <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
                         </div>
                         <AppInner account={accounts} chainId={chainId} clickedNodeId = {clickedNodeId}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNodeId={setClickedNodeId}/>
                         </>

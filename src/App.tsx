@@ -78,7 +78,7 @@ export const AppInner= (props:{"account":string, "chainId":number, "isAccountInG
         svg.current.replaceChildren(DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut));
       };
 
-      const interval = setInterval(async () => await checkForUpdates(), 200);
+      const interval = setInterval(async () => await checkForUpdates(), 1000);
 
       return () => {
       clearInterval(interval);
