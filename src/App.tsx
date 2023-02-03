@@ -20,16 +20,16 @@ export const AppInner= (props:{"account":string, "chainId":number, "isAccountInG
   const clickedNodeId = React.useRef("");
 
   var [anthillGraphNum, setAnthillGraphNum ]= useState(0);
-  var [graph, setGraph] = useState( {"id":{"id":props.clickedNodeId, "name":props.clickedNodeId, "totalWeight": 0,"onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []}} as GraphDataRendering);
-  var [hoverNode, setHoverNode] = useState({"id":props.clickedNodeId, "name":props.clickedNodeId, "totalWeight": 0, "onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
+  var [graph, setGraph] = useState( {"id":{"id":props.clickedNodeId, "name":props.clickedNodeId, "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []}} as GraphDataRendering);
+  var [hoverNode, setHoverNode] = useState({"id":props.clickedNodeId, "name":props.clickedNodeId, "totalWeight": 0,  "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
 
   var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
     
   const handleClick = (id2: string) => {
-    console.log("handling click", id2, props.clickedNodeId, props.account)
+    console.log("handling click", id2, props.clickedNodeId, props.account, anthillGraphNum)
     props.setClickedNodeId(id2);
-
+    
     LoadNeighbourhood(id2,  props.account, props.isAccountInGraph, props.setIsAccountInGraph).then((response)=>{
       setGraph(response[0]);
       setAnthillGraphNum(response[2]); 

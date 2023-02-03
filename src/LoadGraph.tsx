@@ -2,15 +2,17 @@ import axios from "axios";
 import { max } from "d3";
 // import { toChecksumAddress } from 'web3-utils'
  
+// const backendUrl = "http://localhost:5000/"
+const backendUrl = "https://anthill-db.herokuapp.com/"
 
  type DagVote = {'id': string, 'weight': number, 'posInOther': number}
 
 
- export type NodeData = {"id":string, "name":string,  "totalWeight":number; "onchainRep":number, "currentRep": number, "depth":number,  "relRoot":string,  "sentTreeVote": string, "recTreeVotes":string[], "sentDagVotes":DagVote[], "recDagVotes": DagVote[]}
+ export type NodeData = {"id":string, "name":string,  "totalWeight":number; "currentRep": number, "depth":number,  "relRoot":string,  "sentTreeVote": string, "recTreeVotes":string[], "sentDagVotes":DagVote[], "recDagVotes": DagVote[]}
  // Bare is for rendered but not clicked nodes
-  export type NodeDataBare =       {"id":string, "name":string,  "totalWeight":number; "onchainRep":number, "currentRep": number, "depth":number, "relRoot":string, "sentTreeVote": string, "recTreeVotes": string[]}
+  export type NodeDataBare =       {"id":string, "name":string,  "totalWeight":number;  "currentRep": number, "depth":number, "relRoot":string, "sentTreeVote": string, "recTreeVotes": string[]}
  // we need parentIds for rendering
- export type NodeDataRendering =  {"id":string, "name":string,  "totalWeight":number; "onchainRep":number, "currentRep": number, "depth":number,  "relRoot":string, "sentTreeVote": string,  "recTreeVotes": string[], parentIds: string[]}
+ export type NodeDataRendering =  {"id":string, "name":string,  "totalWeight":number;  "currentRep": number, "depth":number,  "relRoot":string, "sentTreeVote": string,  "recTreeVotes": string[], parentIds: string[]}
 
  export type GraphData= {[id: string]: NodeData;}
  export type GraphDataBare= {[id: string]: NodeDataBare;}
@@ -33,8 +35,7 @@ import { max } from "d3";
 
  ///// getters
 
-// const backendUrl = "http://localhost:5000/"
-const backendUrl = "https://anthill-db.herokuapp.com/"
+
 
 export async function getMaxRelRootDepth(){
   maxRelRootDepth = await axios.get(backendUrl+"maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
@@ -358,7 +359,6 @@ function renderingNodeData(node: NodeData): NodeDataRendering {
     nodeRendering.name = node.name;
   }
 
-  nodeRendering.onchainRep = node.onchainRep;
   nodeRendering.currentRep = node.currentRep;
   nodeRendering.depth = node.depth;
   nodeRendering.relRoot = node.relRoot;
@@ -381,7 +381,6 @@ function renderingNodeDataBare(node: NodeDataBare): NodeDataRendering {
     nodeRendering.name = node.name;
   }
   
-  nodeRendering.onchainRep = node.onchainRep;
   nodeRendering.currentRep = node.currentRep;
   nodeRendering.depth = node.depth;
   nodeRendering.relRoot = node.relRoot;

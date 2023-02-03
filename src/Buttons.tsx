@@ -45,6 +45,7 @@ const addNetwork = async (provider:any) => {
 }
 
 async function getAccount(props:{provider:any, setAccounts: any, setIsAccountInGraph :any}) {
+    // for testing comment out the line below
     addNetwork(props.provider);
     var acc = ethers.utils.getAddress((await (props.provider.request({ method: 'eth_requestAccounts' })))[0]);
     props.setAccounts(acc)

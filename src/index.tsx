@@ -21,14 +21,17 @@ const root = client.createRoot(doc!);
 
 const  App = () => {
 
-    const antHillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
+    const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
     // "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai 
-    // const chainId =1337;
-    const chainId = 80001;
+    // const anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
+
+    // const chainId =1337; //anvil
+    const chainId = 80001; //mumbai testnet
+
     var AnthillContract: any; 
     // const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
     const web3 = new Web3(Web3.givenProvider || "https://polygon-mumbai.infura.io/v3/4458cf4d1689497b9a38b1d6bbf05e78");
-    AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], antHillContractAddress);
+    AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], anthillContractAddress);
     
     const queryParameters = new URLSearchParams(window.location.search)
     var id = queryParameters.get("id")
@@ -46,7 +49,7 @@ const  App = () => {
     var [accounts, setAccounts] =  useState("0x0000000000000000000000000000000000000000");
     var [provider, setProvider] = useState<any>(null);
     var [isAccountInGraph, setIsAccountInGraph] = useState(false);
-    // var [clickedNodeId, setClickedNodeId]=useState({"id":"Enter", "name":"Enter", "totalWeight": 0,"onchainRep":1, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
+    // var [clickedNodeId, setClickedNodeId]=useState({"id":"Enter", "name":"Enter", "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
 
     return (
         
@@ -65,7 +68,7 @@ const  App = () => {
                             <><a  href= "https://faucet.polygon.technology/"> Get test tokens </a></>
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
-                            <><a  href= {"https://mumbai.polygonscan.com/address/"+antHillContractAddress}> Link to Blockexplorer</a></>
+                            <><a  href= {"https://mumbai.polygonscan.com/address/"+anthillContractAddress}> Link to Blockexplorer</a></>
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
                             <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
@@ -89,7 +92,7 @@ const  App = () => {
                             <a  href= "https://faucet.polygon.technology/"> Get test tokens </a>
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
-                            <a  href={"https://mumbai.polygonscan.com/address/"+antHillContractAddress}> Link to Blockexplorer</a>
+                            <a  href={"https://mumbai.polygonscan.com/address/"+anthillContractAddress}> Link to Blockexplorer</a>
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
                             <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
