@@ -21,8 +21,9 @@ const root = client.createRoot(doc!);
 
 const  App = () => {
 
-    const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
-    // "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai 
+    const anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
+    // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
+    // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai 
     // const anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
 
     // const chainId =1337; //anvil

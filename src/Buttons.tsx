@@ -24,7 +24,7 @@ const addNetwork = async (provider:any) => {
               params: [
                 {
                     chainId: "0x13881",
-                    chainName:  "Mumbai Testnet",
+                    chainName:  "Mumbai",
                     rpcUrls: ["https://rpc-mumbai.maticvigil.com/"],
                     blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
                     nativeCurrency: {
