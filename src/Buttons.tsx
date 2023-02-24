@@ -44,43 +44,46 @@ const addNetwork = async (provider:any) => {
   };
 }
 
-async function getAccount(props:{provider:any, setAccounts: any, setIsAccountInGraph :any}) {
-    // for testing comment out the line below
-    addNetwork(props.provider);
+async function getAccount(props:{backendUrl: string, provider:any, setAccounts: any, setIsAccountInGraph :any}) {
+    
+  if (props.backendUrl != "http://localhost:5000/") {
+      addNetwork(props.provider);
+    }
+
     var acc = ethers.utils.getAddress((await (props.provider.request({ method: 'eth_requestAccounts' })))[0]);
     props.setAccounts(acc)
-    var isInGraph = await getIsNodeInGraph(acc)
+    var isInGraph = await getIsNodeInGraph(props.backendUrl, acc)
     props.setIsAccountInGraph(isInGraph)
-    if (isInGraph) await LoadNeighbourhood(acc, acc, isInGraph, props.setIsAccountInGraph);
+    if (isInGraph) await LoadNeighbourhood(acc, acc, isInGraph, props.setIsAccountInGraph, props.backendUrl);
     
 }
 
 
-export function ConnectMetamaskButton(props:{provider:any, setProvider:any, accounts :string, setAccounts: any, setIsAccountInGraph :any}) {
+export function ConnectMetamaskButton(props:{provider:any, setProvider:any, accounts :string, setAccounts: any, setIsAccountInGraph :any, backendUrl: string, }) {
     detectEthereumProvider().then((res)=>{props.setProvider(res); return res});
     if (props.provider){
         if (props.accounts != "0x0000000000000000000000000000000000000000") {
             return <div></div>
         }
-        return <button onClick={() => getAccount({"provider":props.provider, "setAccounts": props.setAccounts, setIsAccountInGraph: props.setIsAccountInGraph})}>Connect Wallet</button>
+        return <button onClick={() => getAccount({"backendUrl":props.backendUrl, "provider":props.provider, "setAccounts": props.setAccounts, setIsAccountInGraph: props.setIsAccountInGraph})}>Connect Wallet</button>
 
     }
     return <div><a href="https://metamask.io/download/">Install Metamask</a></div>
 }
 
-export function GoHomeButton(props:{accounts: string, isAccountInGraph :boolean,  setClickedNodeId: any}) {
+export function GoHomeButton(props:{accounts: string, isAccountInGraph :boolean,   setClickedNodeId: any}) {
     var navigate = useNavigate();
     if (!props.isAccountInGraph) {return <></>}
 
     return <button onClick={() => {console.log("gohome"); props.setClickedNodeId(props.accounts); navigate("/?id="+props.accounts);}}>Go to my node</button>
 }
 
-export function JoinTreeRandomlyButton(props:{AnthillContract: any, chainId: number, accounts: string, isAccountInGraph :boolean, setClickedNodeId: any}) {
+export function JoinTreeRandomlyButton(props:{AnthillContract: any, chainId: number, accounts: string, isAccountInGraph :boolean,backendUrl: string,  setClickedNodeId: any}) {
     var navigate = useNavigate();
     if (props.isAccountInGraph) {return <></>}
     if (props.accounts == "0x0000000000000000000000000000000000000000"){return <></>}
     return <button onClick={async () => {
-            var recipient = await getRandomLeaf()
+            var recipient = await getRandomLeaf(props.backendUrl )
             await JoinTree(props.AnthillContract, props.chainId, props.accounts, recipient, props.setClickedNodeId) ;
             navigate("/"+props.accounts)
             }   

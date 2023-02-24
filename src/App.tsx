@@ -11,7 +11,7 @@ import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButto
 
 
 
-export const AppInner= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any})=> {
+export const AppInner= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any, "backendUrl": string, })=> {
   
 
   let navigate = useNavigate();
@@ -30,7 +30,7 @@ export const AppInner= (props:{"account":string, "chainId":number, "isAccountInG
     console.log("handling click", id2, props.clickedNodeId, props.account, anthillGraphNum)
     props.setClickedNodeId(id2);
     
-    LoadNeighbourhood(id2,  props.account, props.isAccountInGraph, props.setIsAccountInGraph).then((response)=>{
+    LoadNeighbourhood(id2,  props.account, props.isAccountInGraph, props.setIsAccountInGraph, props.backendUrl).then((response)=>{
       setGraph(response[0]);
       setAnthillGraphNum(response[2]); 
       // console.log("response",response[0][response[1]].id )
@@ -61,7 +61,7 @@ export const AppInner= (props:{"account":string, "chainId":number, "isAccountInG
 
   var checkForUpdates = async () => {
     if (clickedNodeId.current != props.clickedNodeId) {clickedNodeId.current = props.clickedNodeId; handleClick(props.clickedNodeId)}
-    await getAnthillGraphNum().then((res)=>{   
+    await getAnthillGraphNum(props.backendUrl).then((res)=>{   
         if (res != anthillGraphNum) {
           
           // console.log("updating AnthillGraphNum",  res,  anthillGraphNum, props.clickedNodeId, id, id? id: "Enter");

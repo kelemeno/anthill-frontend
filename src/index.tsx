@@ -20,18 +20,32 @@ const doc = document.getElementById('root')
 const root = client.createRoot(doc!);
 
 const  App = () => {
+    const testing = true;
+    
+    var anthillContractAddress;
+    var chainId;
+    var web3; 
+    var backendUrl;
 
-    const anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
-    // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
-    // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai 
-    // const anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
+    if (!testing) {
+        anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
+        // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
+        // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
+        chainId = 80001; //mumbai testnet
+        web3 = new Web3(Web3.givenProvider || "https://polygon-mumbai.infura.io/v3/4458cf4d1689497b9a38b1d6bbf05e78");
 
-    // const chainId =1337; //anvil
-    const chainId = 80001; //mumbai testnet
+        backendUrl = "https://anthill-/db.herokuapp.com/"
+
+    
+    } else {
+        anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
+        chainId =1337; //anvil
+        web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
+        backendUrl = "http://localhost:5000/"
+    }
+
 
     var AnthillContract: any; 
-    // const web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
-    const web3 = new Web3(Web3.givenProvider || "https://polygon-mumbai.infura.io/v3/4458cf4d1689497b9a38b1d6bbf05e78");
     AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], anthillContractAddress);
     
     const queryParameters = new URLSearchParams(window.location.search)
@@ -59,9 +73,9 @@ const  App = () => {
                 <Route path="/" element={
                         <>
                         <div style={{textAlign:"left", margin : 15}}>
-                            <ConnectMetamaskButton provider={provider} setProvider={setProvider} accounts = {accounts} setAccounts={setAccounts} setIsAccountInGraph={setIsAccountInGraph} />
+                            <ConnectMetamaskButton provider={provider} setProvider={setProvider} accounts = {accounts} setAccounts={setAccounts} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl} />
                             <GoHomeButton accounts={accounts} isAccountInGraph={isAccountInGraph} setClickedNodeId= {setClickedNodeId}/>
-                            <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} accounts={accounts} isAccountInGraph= {isAccountInGraph} setClickedNodeId={setClickedNodeId}/>
+                            <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} accounts={accounts} isAccountInGraph= {isAccountInGraph} setClickedNodeId={setClickedNodeId} backendUrl={backendUrl}/>
                         
                         <div style={{textAlign:"right"}}>
                             <><a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a></>
@@ -75,15 +89,15 @@ const  App = () => {
                             <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
                         </div>
                         </div>
-                        <AppInner account={accounts} chainId={chainId} clickedNodeId = {clickedNodeId}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNodeId={setClickedNodeId}/>
+                        <AppInner account={accounts} chainId={chainId} clickedNodeId = {clickedNodeId}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNodeId={setClickedNodeId} backendUrl={backendUrl}/>
                         </>
                     }/>
                     <Route path="/:id" element={
                         <>
                         <div style={{textAlign:"left"}}>
-                        <ConnectMetamaskButton provider={provider} setProvider={setProvider} accounts = {accounts} setAccounts={setAccounts} setIsAccountInGraph={setIsAccountInGraph} />
+                        <ConnectMetamaskButton provider={provider} setProvider={setProvider} accounts = {accounts} setAccounts={setAccounts} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl}/>
                         <GoHomeButton accounts={accounts} isAccountInGraph={isAccountInGraph} setClickedNodeId= {setClickedNodeId}/>
-                        <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} accounts={accounts} isAccountInGraph= {isAccountInGraph} setClickedNodeId= {setClickedNodeId}/>
+                        <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} accounts={accounts} isAccountInGraph= {isAccountInGraph} setClickedNodeId= {setClickedNodeId} backendUrl={backendUrl}/>
 
                         </div>
 
@@ -98,7 +112,7 @@ const  App = () => {
 
                             <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
                         </div>
-                        <AppInner account={accounts} chainId={chainId} clickedNodeId = {clickedNodeId}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNodeId={setClickedNodeId}/>
+                        <AppInner account={accounts} chainId={chainId} clickedNodeId = {clickedNodeId}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNodeId={setClickedNodeId} backendUrl={backendUrl}/>
                         </>
                     }/>
                 </Routes>

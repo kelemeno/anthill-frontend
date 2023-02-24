@@ -2,8 +2,7 @@ import axios from "axios";
 import { max } from "d3";
 // import { toChecksumAddress } from 'web3-utils'
  
-// const backendUrl = "http://localhost:5000/"
-const backendUrl = "https://anthill-db.herokuapp.com/"
+
 
  type DagVote = {'id': string, 'weight': number, 'posInOther': number}
 
@@ -37,40 +36,40 @@ const backendUrl = "https://anthill-db.herokuapp.com/"
 
 
 
-export async function getMaxRelRootDepth(){
+export async function getMaxRelRootDepth(backendUrl: string){
   maxRelRootDepth = await axios.get(backendUrl+"maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
 }
 
-export async function getIsNodeInGraph(id:string){
+export async function getIsNodeInGraph(backendUrl: string, id:string){
   return await axios.get(backendUrl+"isNodeInGraph/"+id).then(response => {return response.data.isNodeInGraph}); 
 }
 
 
-export async function getRootNodeId(): Promise<string >{
+export async function getRootNodeId(backendUrl: string): Promise<string >{
   return await axios.get(backendUrl+"rootId").then(response => { return response.data.id;}); 
 }
 
-export async function getAnthillGraphNum(): Promise<number>{
+export async function getAnthillGraphNum(backendUrl: string, ): Promise<number>{
   return await axios.get(backendUrl+"anthillGraphNum").then(response => {return response.data.anthillGraphNum}); 
 }
 
-async function getNodeFromServer(id: string) : Promise<NodeData>{
+async function getNodeFromServer(backendUrl: string, id: string) : Promise<NodeData>{
   return await axios.get(backendUrl+"id/"+id).then(response => {anthillGraph[response.data.nodeData.id]= response.data.nodeData as NodeData; anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
 }
 
-export async function getBareNodeFromServer(id: string):Promise<NodeDataBare>{
+export async function getBareNodeFromServer(backendUrl: string, id: string):Promise<NodeDataBare>{
   return await axios.get(backendUrl+"bareId/"+id).then(response => {anthillGraphBare[(response.data.nodeData as NodeDataBare).id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
 }
 
-export async function getRandomLeaf():Promise<string>{
+export async function getRandomLeaf(backendUrl: string, ):Promise<string>{
   return await axios.get(backendUrl+"randomLeaf").then(response => {return response.data.randomLeaf}); 
 }
 
 
 //// utils, checkers
 
-async function checkAnthillGraphNum(): Promise<boolean>{
-  var newAnthillGraphNum = await getAnthillGraphNum();
+async function checkAnthillGraphNum(backendUrl: string, ): Promise<boolean>{
+  var newAnthillGraphNum = await getAnthillGraphNum(backendUrl);
   outdated = (newAnthillGraphNum != anthillGraphNum)   
   return outdated
 } 
@@ -180,15 +179,15 @@ export function isSwitchable(voterId: string, recipient: NodeDataRendering): boo
 // We need to save the nodes that we will render: the clicked node with id, and the rec/sent tree/Dag votes. 
 // for these nodes we also want to know if we can DagVote on them, i.e, are they in the original neighbourhood. 
 // for this we can load the relative root from the database, and check if it is in the parents of the original accounts relative root.  
-async function checkSaveNeighbourHood(id : string) {
+async function checkSaveNeighbourHood(backendUrl: string, id : string) {
 
 
-  (await checkAnthillGraphNum());
+  (await checkAnthillGraphNum(backendUrl));
   
   if (outdated){
     
     console.log("we are outdated, clearing graphs")
-    anthillGraphNum = await getAnthillGraphNum();
+    anthillGraphNum = await getAnthillGraphNum(backendUrl);
     anthillGraph = {} as GraphData;
     anthillGraphBare = {} as GraphDataBare;
     rootAddress = "";
@@ -198,66 +197,66 @@ async function checkSaveNeighbourHood(id : string) {
   }
 
   // we don't have the node, or it is not up to date.
-  var node  = await getNodeFromServer(id);  
+  var node  = await getNodeFromServer(backendUrl, id);  
 
-  await getBareParentsForDepth(node.sentTreeVote, 2*maxRelRootDepth);
+  await getBareParentsForDepth(backendUrl, node.sentTreeVote, 2*maxRelRootDepth);
 
   // saving each node
-  await checkSaveBareNodeArray(anthillGraph[id].recTreeVotes);
-  await checkSaveBareNodeArray(anthillGraph[id].sentDagVotes.map((r)=>r.id));
-  await checkSaveBareNodeArray(anthillGraph[id].recDagVotes.map((r)=> r.id));
+  await checkSaveBareNodeArray(backendUrl, anthillGraph[id].recTreeVotes);
+  await checkSaveBareNodeArray(backendUrl, anthillGraph[id].sentDagVotes.map((r)=>r.id));
+  await checkSaveBareNodeArray(backendUrl, anthillGraph[id].recDagVotes.map((r)=> r.id));
 
 
   anthillGraphServe = anthillGraph;
   anthillGraphBareServe = anthillGraphBare;
 }
 
-async function getBareParentsForDepth(sentTreeVote :string, depthDiff: number){
+async function getBareParentsForDepth(backendUrl: string, sentTreeVote :string, depthDiff: number){
   if ((sentTreeVote != "0x0000000000000000000000000000000000000001") && (sentTreeVote != "")){
-    await checkSaveBareNode(sentTreeVote);
+    await checkSaveBareNode(backendUrl, sentTreeVote);
     var newBareNode = anthillGraphBare[sentTreeVote];
     if ((depthDiff>0) && (newBareNode.sentTreeVote != "0x0000000000000000000000000000000000000001") ){
-      await getBareParentsForDepth(newBareNode.sentTreeVote, depthDiff-1);
+      await getBareParentsForDepth(backendUrl, newBareNode.sentTreeVote, depthDiff-1);
     }
   }
 }
 
-async function checkSaveBareNodeArray(ids: string[]){
+async function checkSaveBareNodeArray(backendUrl: string, ids: string[]){
   for (const i in ids) {
     if ((ids[i] != "")&&(ids[i] != "0x0000000000000000000000000000000000000001")){
-      await checkSaveBareNode(ids[i]);
+      await checkSaveBareNode(backendUrl, ids[i]);
     }
   }
   
 }
 
-async function checkSaveBareNode(id: string){
+async function checkSaveBareNode(backendUrl: string, id: string){
   if ((anthillGraphBare[id] === undefined) ){
-     await getBareNodeFromServer(id);
+     await getBareNodeFromServer(backendUrl, id);
   } 
 }
 
 ////// main entrypoint and rendering/serving
 
 // every graph we load is focused on a node, that was clicked on. 
-export async function LoadNeighbourhood(id: string, account: string, accountInGraph :boolean, setAccountInGraph: any): Promise<[GraphDataRendering, string, number]> {
+export async function LoadNeighbourhood(id: string, account: string, accountInGraph :boolean, setAccountInGraph: any, backendUrl: string, ): Promise<[GraphDataRendering, string, number]> {
   var newGraphDataRendering = {} as GraphDataRendering;
 
-  await getMaxRelRootDepth(); 
+  await getMaxRelRootDepth(backendUrl, ); 
   
   if (id == "Enter"){
         
 
-       id = await getRandomLeaf();
+       id = await getRandomLeaf(backendUrl, );
   } else {
-    var isIdInGraph = await getIsNodeInGraph(id);
-    if (!isIdInGraph){  id = await getRandomLeaf();}
+    var isIdInGraph = await getIsNodeInGraph(backendUrl, id);
+    if (!isIdInGraph){  id = await getRandomLeaf(backendUrl, );}
   }
 
 
-  var isAccountInGraph = await getIsNodeInGraph(account );
+  var isAccountInGraph = await getIsNodeInGraph(backendUrl, account );
   if (isAccountInGraph){
-    await checkSaveNeighbourHood(account);
+    await checkSaveNeighbourHood(backendUrl, account);
   }
   
   // we want to XOR
@@ -269,7 +268,7 @@ export async function LoadNeighbourhood(id: string, account: string, accountInGr
 
 
   // this saves the data into our Database
-  await checkSaveNeighbourHood(id)
+  await checkSaveNeighbourHood(backendUrl, id)
   // console.log("anthillGraph in LoadN for id:  ", id ,  anthillGraph)
   // console.log("anthillGraphBare in Load N for id:",id,  anthillGraphBare)
   
