@@ -3,6 +3,8 @@ import Popover from '@mui/material/Popover';
 
 import { useNavigate, useParams } from "react-router-dom";
 // import detectEthereumProvider from '@metamask/detect-provider';
+import useWebSocket from 'react-use-websocket';
+
 
 import './App.css';
 import {GraphDataRendering, LoadNeighbourhood, isVotable, isDagVote, isSwitchable, getAnthillGraphNum,  NodeDataRendering, serveParent} from './LoadGraph';
@@ -11,7 +13,7 @@ import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButto
 
 
 
-export const AppInner= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any, "backendUrl": string, })=> {
+export const Graph= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string })=> {
   
 
   let navigate = useNavigate();
@@ -71,6 +73,12 @@ export const AppInner= (props:{"account":string, "chainId":number, "isAccountInG
     )
   }
 
+  var checkForClick = () => {
+    if (clickedNodeId.current != props.clickedNodeId) {
+      clickedNodeId.current = props.clickedNodeId; 
+      handleClick(props.clickedNodeId)}
+  }
+
   React.useEffect(()=>{
 
     
@@ -78,14 +86,33 @@ export const AppInner= (props:{"account":string, "chainId":number, "isAccountInG
         svg.current.replaceChildren(DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut));
       };
 
-      const interval = setInterval(async () => await checkForUpdates(), 1000);
+      const interval = setInterval(async () => await checkForClick(), 100);
 
       return () => {
       clearInterval(interval);
       }
     
+      
+
     
   }, [graph, props.clickedNodeId]);
+
+  const {
+    // sendMessage,
+    // sendJsonMessage,
+    // lastMessage,
+    // lastJsonMessage,
+    // readyState,
+    // getWebSocket,
+  } = useWebSocket(props.wsUrl, {
+    onOpen: () => {
+      console.log('WebSocket connection established.');
+    },
+    onMessage: (event) => {
+      checkForUpdates();
+      console.log('WebSocket message received.', event);
+    },
+  });
 
   return (<div>
     <div className="AppInner" ref={svg}/>

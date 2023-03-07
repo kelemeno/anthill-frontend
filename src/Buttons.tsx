@@ -1,5 +1,4 @@
 import React, {useState} from 'react';
-import Popover from '@mui/material/Popover';
 
 import { useNavigate, useParams } from "react-router-dom";
 import detectEthereumProvider from '@metamask/detect-provider';
@@ -7,7 +6,6 @@ import {ethers} from  "ethers";
 
 import './App.css';
 import {getRandomLeaf, getIsNodeInGraph, LoadNeighbourhood, isVotable, isDagVote, isSwitchable,  NodeDataRendering, serveParent} from './LoadGraph';
-import { DrawGraph, } from './DrawGraph';
 
 const addNetwork = async (provider:any) => {
     try {
