@@ -14,52 +14,83 @@ import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButto
 
 
 export const Graph= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string })=> {
-  
+  // console.log("rendering graph")
 
   let navigate = useNavigate();
 
+  // we have to use a ref to render the svg (or at least, I couldn't get it to work without it)
   const svg  = React.useRef<HTMLDivElement>(null);
+  // we use this and compare it with props.clickedNodeId to see if we need to reload the graph
   const clickedNodeId = React.useRef("");
 
+  // the actual data
   var [anthillGraphNum, setAnthillGraphNum ]= useState(0);
   var [graph, setGraph] = useState( {"id":{"id":props.clickedNodeId, "name":props.clickedNodeId, "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []}} as GraphDataRendering);
   var [hoverNode, setHoverNode] = useState({"id":props.clickedNodeId, "name":props.clickedNodeId, "totalWeight": 0,  "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
 
+  // for the popover
   var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
-    
+  var [open, setOpen] = React.useState(Boolean(anchorEl));
+  
+  // we delay the popover to render only after the graph is loaded. This is set as true in useEffect
+  var [loaded, setLoaded] = React.useState(false);
+
+  // console.log("open", open, anchorEl, loaded)
+
   const handleClick = (id2: string) => {
     console.log("handling click", id2, props.clickedNodeId, props.account, anthillGraphNum)
-    props.setClickedNodeId(id2);
     
+    handleMouseOut();
+    setAnchorEl(null);
+    setAnchorElSaver(null);
+    setOpen(false);
+    setLoaded(false);
+    // console.log("open2", open, anchorEl, loaded)
+
+    
+    props.setClickedNodeId(id2);
+
     LoadNeighbourhood(id2,  props.account, props.isAccountInGraph, props.setIsAccountInGraph, props.backendUrl).then((response)=>{
       setGraph(response[0]);
       setAnthillGraphNum(response[2]); 
       // console.log("response",response[0][response[1]].id )
       navigate("/?id="+response[0][response[1]].id); 
-      setHoverNode(response[0][response[1]]); });
-      setAnchorEl(null);
-      setAnchorElSaver(null);
+      setHoverNode(response[0][response[1]]);
+     });
+
+    setTimeout(() => {setLoaded(true)}, 1000);
+    // console.log("open3", open, anchorEl, loaded)    
   }
 
   const handleMouseOver = (event: React.MouseEvent<HTMLElement>, node: NodeDataRendering) => {
-    setHoverNode(node);
-    setAnchorEl(event.currentTarget);
-    setAnchorElSaver(event.currentTarget);
+    
+    // console.log("handleMouseOver", open, anchorEl, loaded)
+
+    if (loaded){
+      setHoverNode(node);
+      setAnchorEl(event.currentTarget);
+      setAnchorElSaver(event.currentTarget);
+      setOpen(true);
+    }
   };
 
   const handleMouseStay = (event: React.MouseEvent<HTMLElement>,) => {
 
     if (anchorElSaver){
+      // console.log("handleMouseStay", anchorElSaver)
       setAnchorEl(anchorElSaver);
+      setOpen(true);
+
     }
   };
 
   const handleMouseOut = () => {
+    // console.log("handleMouseOut")
+    setOpen(false);
     setAnchorEl(null);
   };
 
-  const open = Boolean(anchorEl);
 
   var checkForUpdates = async () => {
     if (clickedNodeId.current != props.clickedNodeId) {clickedNodeId.current = props.clickedNodeId; handleClick(props.clickedNodeId)}
@@ -81,19 +112,15 @@ export const Graph= (props:{"account":string, "chainId":number, "isAccountInGrap
 
   React.useEffect(()=>{
 
-    
+
       if (svg.current){
-        svg.current.replaceChildren(DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut));
+        svg.current.replaceChildren(DrawGraph({ "graph":graph ,"handleClick":handleClick, "handleMouseOver":handleMouseOver, "handleMouseOut":handleMouseOut}));
       };
+      checkForClick();
 
-      const interval = setInterval(async () => await checkForClick(), 100);
-
-      return () => {
-      clearInterval(interval);
-      }
-    
-      
-
+      // this has to be the last one (maybe because we rerender multiple times)
+      setLoaded(true);
+      // console.log("open4", open, anchorEl, loaded);
     
   }, [graph, props.clickedNodeId]);
 
@@ -114,8 +141,49 @@ export const Graph= (props:{"account":string, "chainId":number, "isAccountInGrap
     },
   });
 
+  // these are the ways I tried to visualise the svg without refs. Leaving it here for posterity. Delete in next commit. 
+  // var svgNew = DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut);
+
+  // const svgString0= (( DrawGraph({ "graph":graph ,"handleClick":handleClick, handleMouseOver:"handleMouseOver", handleMouseOut:"handleMouseOut"})))
+  // console.log("DrawGraph", svgString0, typeof(svgString0) , Object.keys(svgString0));
+  // const svgString = encodeURIComponent(renderToStaticMarkup(<  DrawGraph graph={graph} handleClick={handleClick} handleMouseOver={handleMouseOver} handleMouseOut={handleMouseOut}/>));
+  // var s = new XMLSerializer();
+  // var serialised = s.serializeToString( svgString0)
+  // console.log("serialised", serialised, typeof(serialised) )
+  // console.log("single", svgString0[0])
+  // const svgString = encodeURIComponent(serialised);
+  
+  // console.log("svgString", svgString)
+  // const dataUri = `url("data:image/svg+xml;base64,${btoa(svgString)}")`;
+  // console.log("dataUri", dataUri)
+
+  // var svg2 = require('svg');
+
+  // const circles = svg2`<svg height="100" width="200">
+  //     <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
+  //     <circle cx="150" cy="50" r="40" stroke="black" stroke-width="3" fill="blue" />
+
+  //   </svg>`
+
+  // console.log("circles",  typeof(circles), circles)
+
+  // const svg3 = new Blob([circles], { type: "image/svg+xml" });
+
+  // const url = URL.createObjectURL(svg3);
+
   return (<div>
-    <div className="AppInner" ref={svg}/>
+    <div className="Graph" ref={svg}/>
+    
+    {/* <div className="Graph" style={{backgroundImage: dataUri}}/> */}
+    {/* <img src = {dataUri}/> */}
+    {/* <p>{circles}</p> */}
+    {/* <img src={url}/> */}
+    {/* <p> {DrawGraph({ "graph":graph ,"handleClick":handleClick, handleMouseOver:"handleMouseOver", handleMouseOut:"handleMouseOut"})}</p> */}
+    {/* <svg height="100" width="200">
+      <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
+      <circle cx="150" cy="50" r="40" stroke="black" stroke-width="3" fill="blue" />
+
+    </svg> */}
     <Popover
     id="mouse-over-popover"
     sx={{

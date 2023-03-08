@@ -244,8 +244,6 @@ export async function LoadNeighbourhood(id: string, account: string, accountInGr
   await getMaxRelRootDepth(backendUrl, ); 
   
   if (id == "Enter"){
-        
-
        id = await getRandomLeaf(backendUrl, );
   } else {
     var isIdInGraph = await getIsNodeInGraph(backendUrl, id);
@@ -327,22 +325,30 @@ function renderNeighbourhood(id : string) : GraphDataRendering{
   }
 
   // add rec dag votes
-  node.recDagVotes.map((rDagVote)=>{
-    var voter = anthillGraphBareServe[rDagVote.id];      
-    neighbourhood[voter.id] =  renderingNodeDataBare(voter);
-    neighbourhood[voter.id].parentIds.push(id);
-  })
+  // console.log("recDagvotes", node.recDagVotes)
+  if (node.recDagVotes.length != 0) {
+    node.recDagVotes.map((rDagVote)=>{
+      var voter = anthillGraphBareServe[rDagVote.id];
+      // console.log("voter", voter)
+      if (voter != undefined) {
+        neighbourhood[voter.id] =  renderingNodeDataBare(voter);
+        neighbourhood[voter.id].parentIds.push(id);
+      }
+    })
+  }
 
   // add rec tree votes
-  node.recTreeVotes.map((id)=>{
-    var voter = anthillGraphBareServe[id];  
-    
-    if (neighbourhood[id] == undefined) {
-      neighbourhood[id] =  renderingNodeDataBare(voter);
-      neighbourhood[id].parentIds.push(node.id);
-    }
-  
-  })
+  // console.log("recTreeVotes", node.recTreeVotes)
+  if (node.recTreeVotes.length != 0) {
+    node.recTreeVotes.map((id)=>{
+      var voter = anthillGraphBareServe[id];  
+      // console.log("id in recTreevotes", id)
+      if ((neighbourhood[id] == undefined) && (voter != undefined)) {
+        neighbourhood[id] =  renderingNodeDataBare(voter);
+        neighbourhood[id].parentIds.push(node.id);
+      }
+    })
+  }
 
   return neighbourhood;
 }
@@ -372,6 +378,7 @@ function renderingNodeData(node: NodeData): NodeDataRendering {
 
 function renderingNodeDataBare(node: NodeDataBare): NodeDataRendering {
   var nodeRendering = {} as NodeDataRendering;
+  // console.log("node in renderingNodeDataBare", node)
   nodeRendering.id = node.id;
   if (node.name == "Name") {
     nodeRendering.name = node.id.slice(0, 2)+".."+node.id.slice((node.id.length)-3);

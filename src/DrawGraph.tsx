@@ -1,5 +1,7 @@
 import * as d3Base from 'd3';
 import {useState} from 'react';
+import React from 'react';
+
 
 import * as d3Dag from 'd3-dag';
 
@@ -13,9 +15,10 @@ function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[]{
         array.push(node)
     }
     return array
-  }
+}
 
-export const DrawGraph= (graph: GraphDataRendering, handleClick: any, handleMouseOver: any, handleMouseOut: any) =>{
+export const DrawGraph= (props:{graph: GraphDataRendering, handleClick: any, handleMouseOver: any, handleMouseOut: any}) =>{
+// export class DrawGraph extends React.Component{
     const nodeRadius = 35;
     
     // const sources = new Map([
@@ -101,7 +104,7 @@ export const DrawGraph= (graph: GraphDataRendering, handleClick: any, handleMous
     // const [key, reader] = sources.get(source);
     const [, reader]  =    ["grafo", d3Dag.dagStratify()];
     // const dag_data = await d3.json(`https://raw.githubusercontent.com/erikbrinkman/d3-dag/master/examples/${key}.json`);
-    const dag_data = graph;
+    const dag_data = props.graph;
     if (dag_data === undefined) {
         return
     }
@@ -155,7 +158,9 @@ export const DrawGraph= (graph: GraphDataRendering, handleClick: any, handleMous
     // const { width, height, time, dag } = laidout;
     
     // This code only handles rendering
+    // const nontemplatestring= '<svg xmlns='+'"http://localhost:3000/svg"'+' width="'+width+'" height="'+height+'"></svg>'
     const nontemplatestring= '<svg width="'+width+'" height="'+height+'"></svg>'
+
     const templateString = `${nontemplatestring}`;
 
     const svgNode = svg(templateString);
@@ -202,7 +207,7 @@ export const DrawGraph= (graph: GraphDataRendering, handleClick: any, handleMous
         .attr("d", ({ points }) => line(points))
         .attr("fill", "none")
         .attr("stroke-width", ({ source, target }) => {
-            if ( graph[target.data.id].sentTreeVote==source.data.id) {
+            if ( props.graph[target.data.id].sentTreeVote==source.data.id) {
                 return 6
             } else {
                 return 2
@@ -241,9 +246,9 @@ export const DrawGraph= (graph: GraphDataRendering, handleClick: any, handleMous
         .enter()
         .append("g")
         .attr("transform", ({ x, y }) => `translate(${x}, ${y})`)
-        .on("click", (n) => {handleClick(n.target.__data__.data.id)})
-        .on("mouseover", (n)=>handleMouseOver(n, n.target.__data__.data))
-        .on("mouseout",  handleMouseOut);
+        .on("click", (n) => {props.handleClick(n.target.__data__.data.id)})
+        .on("mouseover", (n)=>props.handleMouseOver(n, n.target.__data__.data))
+        .on("mouseout",  props.handleMouseOut);
         
     
         
