@@ -1,19 +1,7 @@
-import axios from "axios";
 // import { toChecksumAddress } from 'web3-utils'
  
- /// base types, same as in backend
-
- type DagVote = {'id': string, 'weight': number, 'posInOther': number}
-
- export type NodeData = {"id":string, "name":string,  "totalWeight":number; "currentRep": number, "depth":number,  "relRoot":string,  "sentTreeVote": string, "recTreeVotes":string[], "sentDagVotes":DagVote[], "recDagVotes": DagVote[]}
- // Bare is for rendered but not clicked nodes
-  export type NodeDataBare =       {"id":string, "name":string,  "totalWeight":number;  "currentRep": number, "depth":number, "relRoot":string, "sentTreeVote": string, "recTreeVotes": string[]}
- // we need parentIds for rendering
- export type NodeDataRendering =  {"id":string, "name":string,  "totalWeight":number;  "currentRep": number, "depth":number,  "relRoot":string, "sentTreeVote": string,  "recTreeVotes": string[], parentIds: string[]}
-
- export type GraphData= {[id: string]: NodeData;}
- export type GraphDataBare= {[id: string]: NodeDataBare;}
- export type GraphDataRendering= {[id: string]: NodeDataRendering;}
+import {getAnthillGraphNum, getBareNodeFromServer, getIsNodeInGraph, getMaxRelRootDepth, getRandomLeaf, getNodeFromServer} from "../../ExternalConnections/BackendGetters"
+import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "./GraphBase";
 
  // variables 
 
@@ -30,40 +18,8 @@ import axios from "axios";
 
 
 
- var rootAddress = "";
 
- ///// getters
-
-
-
-export async function getMaxRelRootDepth(backendUrl: string){
-  maxRelRootDepth = await axios.get(backendUrl+"maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 
-}
-
-export async function getIsNodeInGraph(backendUrl: string, id:string){
-  return await axios.get(backendUrl+"isNodeInGraph/"+id).then(response => {return response.data.isNodeInGraph}); 
-}
-
-
-export async function getRootNodeId(backendUrl: string): Promise<string >{
-  return await axios.get(backendUrl+"rootId").then(response => { return response.data.id;}); 
-}
-
-export async function getAnthillGraphNum(backendUrl: string, ): Promise<number>{
-  return await axios.get(backendUrl+"anthillGraphNum").then(response => {return response.data.anthillGraphNum}); 
-}
-
-async function getNodeFromServer(backendUrl: string, id: string) : Promise<NodeData>{
-  return await axios.get(backendUrl+"id/"+id).then(response => {anthillGraph[response.data.nodeData.id]= response.data.nodeData as NodeData; anthillGraphBare[response.data.nodeData.id]= response.data.nodeData as NodeDataBare; return response.data.nodeData;}); 
-}
-
-export async function getBareNodeFromServer(backendUrl: string, id: string):Promise<NodeDataBare>{
-  return await axios.get(backendUrl+"bareId/"+id).then(response => {anthillGraphBare[(response.data.nodeData as NodeDataBare).id]= response.data.nodeData as NodeDataBare; return response.data.nodeData; }); 
-}
-
-export async function getRandomLeaf(backendUrl: string, ):Promise<string>{
-  return await axios.get(backendUrl+"randomLeaf").then(response => {return response.data.randomLeaf}); 
-}
+ 
 
 
 //// utils, checkers
@@ -78,100 +34,7 @@ export function serveParent(voterId: string): string{
   return anthillGraphServe[voterId].sentTreeVote;
 }
 
-export function isVotable(voterId :string,  recipient : NodeDataBare): boolean{
-  // console.log("voter",voter, "recipient", recipient)
-  // if ((voter.i == "Enter")) {
-  //   return false;
-  // }
 
-  if ((anthillGraphServe[voterId] === undefined)) {
-    const error = new Error("isVotable called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
-    throw error;
-  }
-
-  var voter = anthillGraphServe[voterId]; 
-  if (voter.depth<=recipient.depth) {
-    return false;
-  } else if (recipient.depth+maxRelRootDepth< voter.depth ) {
-
-    return false;
-  }  
-
-  var relRootRecipient = recipient.relRoot;
-  var relRootVoter = voter.relRoot;
-
-  var relRootVoterAncestor = relRootVoter;
-  for (var i = 0; i < maxRelRootDepth; i++) {
-    
-      if (relRootVoterAncestor == relRootRecipient) {
-          return true;
-      }
-
-      // if we are at the root, we can't take more anscestors
-      if ((relRootVoterAncestor == "0x0000000000000000000000000000000000000001")) {
-        return false;
-      }
-
-      relRootVoterAncestor = anthillGraphBareServe[relRootVoterAncestor].sentTreeVote;   
-  }
-  return false;
-}
-
-// only called for voter = Metamask account, recipient = rendered node 
-export function isDagVote(voterId: string, recipient: NodeDataRendering): boolean{  
-
-  // if ((voter.id == "Enter")) {
-  //   return false;
-  // }
-
-  if ((anthillGraphServe[voterId] === undefined)) {
-    const error = new Error("isDagVote called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
-    throw error;
-  }
-
-  if ((anthillGraphBareServe[recipient.id] === undefined)) {
-    const error = new Error("isDagVote called with undefined recipientwith id: "+ recipient.id+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
-    throw error;
-  }
-
-  var voterFull = anthillGraphServe[voterId];
-
-  // console.log("In idDagVote, voter",voter, "recipient", recipient)
-  if ((voterFull.sentDagVotes === undefined) || (voterFull.sentDagVotes.length == 0)) {
-    return false;
-  }
-  if (voterFull.sentDagVotes.map((r)=>r.id).includes(recipient.id)) {
-      return true;
-  }
-  return false;
-}
-
-// only called for voter = Metamask account, recipient = rendered node 
-export function isSwitchable(voterId: string, recipient: NodeDataRendering): boolean{  
-
-  // if ((voter.id == "Enter")) {
-  //   return false;
-  // }
-
-  if ((anthillGraphServe[voterId] === undefined)) {
-    const error = new Error("isDagVote called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
-    throw error;
-  }
-
-  if ((anthillGraphBareServe[recipient.id] === undefined)) {
-    const error = new Error("isDagVote called with undefined recipientwith id: "+ recipient.id+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
-    throw error;
-  }
-
-  var voterFull = anthillGraphServe[voterId];
-
-  // console.log("In idDagVote, voter",voter, "recipient", recipient)
-  if ((voterFull.sentTreeVote == recipient.id) && (recipient.currentRep < voterFull.currentRep)) {
-    return true;
-  }
-  
-  return false;
-}
 
 //// check saved and savers
 
@@ -190,14 +53,15 @@ async function checkSaveNeighbourHood(backendUrl: string, id : string) {
     anthillGraphNum = await getAnthillGraphNum(backendUrl);
     anthillGraph = {} as GraphData;
     anthillGraphBare = {} as GraphDataBare;
-    rootAddress = "";
   
   } else if ((anthillGraphServe[id])) {
     return ;
   }
 
   // we don't have the node, or it is not up to date.
-  var node  = await getNodeFromServer(backendUrl, id);  
+  var node  = await getNodeFromServer(backendUrl, id); 
+  anthillGraph[node.id]= node as NodeData; 
+  anthillGraphBare[node.id]= node as NodeDataBare;
 
   await getBareParentsForDepth(backendUrl, node.sentTreeVote, 2*maxRelRootDepth);
 
@@ -232,7 +96,8 @@ async function checkSaveBareNodeArray(backendUrl: string, ids: string[]){
 
 async function checkSaveBareNode(backendUrl: string, id: string){
   if ((anthillGraphBare[id] === undefined) ){
-     await getBareNodeFromServer(backendUrl, id);
+    var node = await getBareNodeFromServer(backendUrl, id);
+    anthillGraphBare[node.id]= node as NodeDataBare;
   } 
 }
 
@@ -242,7 +107,7 @@ async function checkSaveBareNode(backendUrl: string, id: string){
 export async function LoadNeighbourhood(id: string, account: string, accountInGraph :boolean, setAccountInGraph: any, backendUrl: string, ): Promise<[GraphDataRendering, string, number]> {
   var newGraphDataRendering = {} as GraphDataRendering;
 
-  await getMaxRelRootDepth(backendUrl, ); 
+  maxRelRootDepth =  await getMaxRelRootDepth(backendUrl, ); 
   
   if (id == "Enter"){
        id = await getRandomLeaf(backendUrl, );

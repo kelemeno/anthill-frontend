@@ -7,13 +7,17 @@ import useWebSocket from 'react-use-websocket';
 
 
 import '.././App.css';
-import {GraphDataRendering, LoadNeighbourhood, isVotable, isDagVote, isSwitchable, getAnthillGraphNum,  NodeDataRendering, serveParent} from './GraphCore/LoadGraph';
+import { LoadNeighbourhood,     serveParent} from './GraphCore/LoadGraph';
+import {getAnthillGraphNum,} from '../ExternalConnections/BackendGetters';
+import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "./GraphCore/GraphBase";
+
 import { DrawGraph, } from './DrawGraph';
-import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, DagVoteButton} from '../Buttons/MainAppButtons'
+import {handleClick, handleMouseOut, handleMouseOver, handleMouseStay} from './GraphNodeMouseInteractions'
+import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, DagVoteButton} from '../Buttons/PopupButtons'
 
 
 
-export const Graph= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string })=> {
+export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string })=> {
   // console.log("rendering graph")
 
   let navigate = useNavigate();
@@ -36,69 +40,31 @@ export const Graph= (props:{"account":string, "chainId":number, "isAccountInGrap
   // we delay the popover to render only after the graph is loaded. This is set as true in useEffect
   var [loaded, setLoaded] = React.useState(false);
 
+  const handleClickConstructed = (id:string)=>handleClick({
+    "id":id,
+    "setOpen":setOpen, 
+    "setAnchorEl":setAnchorEl, 
+    "setAnchorElSaver":setAnchorElSaver, 
+    "setHoverNode":setHoverNode, 
+    "setGraph":setGraph, 
+    "setAnthillGraphNum":setAnthillGraphNum, 
+    "backendUrl":props.backendUrl, 
+    "setClickedNodeId":props.setClickedNodeId, 
+    "account":props.account,  
+    "isAccountInGraph":props.isAccountInGraph, 
+    "setIsAccountInGraph":props.setIsAccountInGraph, 
+    "setLoaded":setLoaded,
+    "navigate":navigate
+  })
   // console.log("open", open, anchorEl, loaded)
 
-  const handleClick = (id2: string) => {
-    console.log("handling click", id2, props.clickedNodeId, props.account, anthillGraphNum)
-    
-    handleMouseOut();
-    setAnchorEl(null);
-    setAnchorElSaver(null);
-    setOpen(false);
-    setLoaded(false);
-    // console.log("open2", open, anchorEl, loaded)
-
-    
-    props.setClickedNodeId(id2);
-
-    LoadNeighbourhood(id2,  props.account, props.isAccountInGraph, props.setIsAccountInGraph, props.backendUrl).then((response)=>{
-      setGraph(response[0]);
-      setAnthillGraphNum(response[2]); 
-      // console.log("response",response[0][response[1]].id )
-      navigate("/?id="+response[0][response[1]].id); 
-      setHoverNode(response[0][response[1]]);
-     });
-
-    setTimeout(() => {setLoaded(true)}, 1000);
-    // console.log("open3", open, anchorEl, loaded)    
-  }
-
-  const handleMouseOver = (event: React.MouseEvent<HTMLElement>, node: NodeDataRendering) => {
-    
-    // console.log("handleMouseOver", open, anchorEl, loaded)
-
-    if (loaded){
-      setHoverNode(node);
-      setAnchorEl(event.currentTarget);
-      setAnchorElSaver(event.currentTarget);
-      setOpen(true);
-    }
-  };
-
-  const handleMouseStay = (event: React.MouseEvent<HTMLElement>,) => {
-
-    if (anchorElSaver){
-      // console.log("handleMouseStay", anchorElSaver)
-      setAnchorEl(anchorElSaver);
-      setOpen(true);
-
-    }
-  };
-
-  const handleMouseOut = () => {
-    // console.log("handleMouseOut")
-    setOpen(false);
-    setAnchorEl(null);
-  };
-
-
   var checkForUpdates = async () => {
-    if (clickedNodeId.current != props.clickedNodeId) {clickedNodeId.current = props.clickedNodeId; handleClick(props.clickedNodeId)}
+    if (clickedNodeId.current != props.clickedNodeId) {clickedNodeId.current = props.clickedNodeId; handleClickConstructed( props.clickedNodeId )}
     await getAnthillGraphNum(props.backendUrl).then((res)=>{   
         if (res != anthillGraphNum) {
           
           // console.log("updating AnthillGraphNum",  res,  anthillGraphNum, props.clickedNodeId, id, id? id: "Enter");
-          handleClick((props.clickedNodeId));
+          handleClickConstructed( props.clickedNodeId );
         }
       }
     )
@@ -107,14 +73,19 @@ export const Graph= (props:{"account":string, "chainId":number, "isAccountInGrap
   var checkForClick = () => {
     if (clickedNodeId.current != props.clickedNodeId) {
       clickedNodeId.current = props.clickedNodeId; 
-      handleClick(props.clickedNodeId)}
+      handleClickConstructed( props.clickedNodeId )}
   }
 
   React.useEffect(()=>{
 
 
       if (svg.current){
-        svg.current.replaceChildren(DrawGraph({ "graph":graph ,"handleClick":handleClick, "handleMouseOver":handleMouseOver, "handleMouseOut":handleMouseOut}));
+        svg.current.replaceChildren(DrawGraph({
+           "graph":graph ,
+           "handleClick":handleClickConstructed,
+           "handleMouseOver":(event:  React.MouseEvent<HTMLElement>, node:NodeDataRendering) => 
+              handleMouseOver(event, node, loaded, setHoverNode, setAnchorEl, setAnchorElSaver, setOpen ), 
+            "handleMouseOut":()=>handleMouseOut(setOpen, setAnchorEl)}));
       };
       checkForClick();
 
@@ -163,8 +134,8 @@ export const Graph= (props:{"account":string, "chainId":number, "isAccountInGrap
     }}
     onClose={handleMouseOut}
     PaperProps={{
-      onMouseEnter: handleMouseStay, 
-      onMouseLeave: handleMouseOut, 
+      onMouseEnter: () => handleMouseStay(anchorElSaver, setAnchorEl, setOpen), 
+      onMouseLeave: () => handleMouseOut(setOpen, setAnchorEl), 
       sx: {pointerEvents: 'auto',}
     }}
     transitionDuration="auto"
