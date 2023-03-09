@@ -11,11 +11,11 @@ import { AbiItem } from 'web3-utils'
 // there was some problem with the web3 alternative, so we use ethers
 
 
-import {Graph} from './Graph';
+import {Graph} from './Graph/Graph';
 import './index.css';
-import AnthillJson from "./Anthill.json"
-import {JoinTreeRandomlyButton, ConnectMetamaskButton, GoHomeButton} from "./Buttons"
-import { getRootNodeId } from './LoadGraph';
+import AnthillJson from "./ExternalConnections/Anthill.json"
+import {JoinTreeRandomlyButton, ConnectMetamaskButton, GoHomeButton} from "./Buttons/MainAppButtons"
+import { getRootNodeId } from './Graph/GraphCore/LoadGraph';
 
 
 const doc = document.getElementById('root')

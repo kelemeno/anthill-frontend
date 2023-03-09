@@ -5,7 +5,7 @@ import React from 'react';
 
 import * as d3Dag from 'd3-dag';
 
-import {GraphDataRendering,  NodeDataRendering} from './LoadGraph';
+import {GraphDataRendering,  NodeDataRendering} from './GraphCore/LoadGraph';
 var svg = require('svg');
 
 function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[]{

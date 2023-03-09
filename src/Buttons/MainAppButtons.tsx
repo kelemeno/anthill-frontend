@@ -4,8 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import detectEthereumProvider from '@metamask/detect-provider';
 import {ethers} from  "ethers";
 
-import './App.css';
-import {getRandomLeaf, getIsNodeInGraph, LoadNeighbourhood, isVotable, isDagVote, isSwitchable,  NodeDataRendering, serveParent} from './LoadGraph';
+import '.././App.css';
+import {getRandomLeaf, getIsNodeInGraph, LoadNeighbourhood, isVotable, isDagVote, isSwitchable,  NodeDataRendering, serveParent} from '../Graph/GraphCore/LoadGraph';
 
 const addNetwork = async (provider:any) => {
     try {
@@ -202,6 +202,9 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
     }
     return  <div></div>
   }
+  
+
+  ////////////////// Smart contract calls/txs //////////////////
   
   async function AddDagVote(AnthillContract:any, chainId: number, account: string, recipient:string){
     await AnthillContract.methods.addDagVote(account, recipient, 1).send({from: account, chainId: chainId}).then((res:any)=>{console.log(res)});

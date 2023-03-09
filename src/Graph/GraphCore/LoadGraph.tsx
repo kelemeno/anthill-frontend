@@ -1,10 +1,9 @@
 import axios from "axios";
 // import { toChecksumAddress } from 'web3-utils'
  
-
+ /// base types, same as in backend
 
  type DagVote = {'id': string, 'weight': number, 'posInOther': number}
-
 
  export type NodeData = {"id":string, "name":string,  "totalWeight":number; "currentRep": number, "depth":number,  "relRoot":string,  "sentTreeVote": string, "recTreeVotes":string[], "sentDagVotes":DagVote[], "recDagVotes": DagVote[]}
  // Bare is for rendered but not clicked nodes
@@ -15,6 +14,8 @@ import axios from "axios";
  export type GraphData= {[id: string]: NodeData;}
  export type GraphDataBare= {[id: string]: NodeDataBare;}
  export type GraphDataRendering= {[id: string]: NodeDataRendering;}
+
+ // variables 
 
  var maxRelRootDepth = 0;
  var anthillGraphNum = 0;
@@ -383,7 +384,12 @@ function renderingNodeDataBare(node: NodeDataBare): NodeDataRendering {
   if (node.name == "Name") {
     nodeRendering.name = node.id.slice(0, 2)+".."+node.id.slice((node.id.length)-3);
   } else {
-    nodeRendering.name = node.name;
+    // console.log("name", node.name, node.name.length)
+    if (node.name.length < 7) {
+      nodeRendering.name = node.name;
+    } else {
+      nodeRendering.name = node.name.slice(0, 6)+"..";
+    }
   }
   
   nodeRendering.currentRep = node.currentRep;

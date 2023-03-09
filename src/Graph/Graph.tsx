@@ -6,10 +6,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import useWebSocket from 'react-use-websocket';
 
 
-import './App.css';
-import {GraphDataRendering, LoadNeighbourhood, isVotable, isDagVote, isSwitchable, getAnthillGraphNum,  NodeDataRendering, serveParent} from './LoadGraph';
+import '.././App.css';
+import {GraphDataRendering, LoadNeighbourhood, isVotable, isDagVote, isSwitchable, getAnthillGraphNum,  NodeDataRendering, serveParent} from './GraphCore/LoadGraph';
 import { DrawGraph, } from './DrawGraph';
-import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, DagVoteButton} from './Buttons'
+import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, DagVoteButton} from '../Buttons/MainAppButtons'
 
 
 
@@ -32,7 +32,7 @@ export const Graph= (props:{"account":string, "chainId":number, "isAccountInGrap
   var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
   var [open, setOpen] = React.useState(Boolean(anchorEl));
-  
+
   // we delay the popover to render only after the graph is loaded. This is set as true in useEffect
   var [loaded, setLoaded] = React.useState(false);
 
@@ -139,51 +139,13 @@ export const Graph= (props:{"account":string, "chainId":number, "isAccountInGrap
       checkForUpdates();
       console.log('WebSocket message received.', event);
     },
+    onClose: () => {
+      console.log('WebSocket connection closed.');
+    }
   });
-
-  // these are the ways I tried to visualise the svg without refs. Leaving it here for posterity. Delete in next commit. 
-  // var svgNew = DrawGraph(graph, handleClick, handleMouseOver, handleMouseOut);
-
-  // const svgString0= (( DrawGraph({ "graph":graph ,"handleClick":handleClick, handleMouseOver:"handleMouseOver", handleMouseOut:"handleMouseOut"})))
-  // console.log("DrawGraph", svgString0, typeof(svgString0) , Object.keys(svgString0));
-  // const svgString = encodeURIComponent(renderToStaticMarkup(<  DrawGraph graph={graph} handleClick={handleClick} handleMouseOver={handleMouseOver} handleMouseOut={handleMouseOut}/>));
-  // var s = new XMLSerializer();
-  // var serialised = s.serializeToString( svgString0)
-  // console.log("serialised", serialised, typeof(serialised) )
-  // console.log("single", svgString0[0])
-  // const svgString = encodeURIComponent(serialised);
-  
-  // console.log("svgString", svgString)
-  // const dataUri = `url("data:image/svg+xml;base64,${btoa(svgString)}")`;
-  // console.log("dataUri", dataUri)
-
-  // var svg2 = require('svg');
-
-  // const circles = svg2`<svg height="100" width="200">
-  //     <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
-  //     <circle cx="150" cy="50" r="40" stroke="black" stroke-width="3" fill="blue" />
-
-  //   </svg>`
-
-  // console.log("circles",  typeof(circles), circles)
-
-  // const svg3 = new Blob([circles], { type: "image/svg+xml" });
-
-  // const url = URL.createObjectURL(svg3);
 
   return (<div>
     <div className="Graph" ref={svg}/>
-    
-    {/* <div className="Graph" style={{backgroundImage: dataUri}}/> */}
-    {/* <img src = {dataUri}/> */}
-    {/* <p>{circles}</p> */}
-    {/* <img src={url}/> */}
-    {/* <p> {DrawGraph({ "graph":graph ,"handleClick":handleClick, handleMouseOver:"handleMouseOver", handleMouseOut:"handleMouseOut"})}</p> */}
-    {/* <svg height="100" width="200">
-      <circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
-      <circle cx="150" cy="50" r="40" stroke="black" stroke-width="3" fill="blue" />
-
-    </svg> */}
     <Popover
     id="mouse-over-popover"
     sx={{
