@@ -14,9 +14,9 @@ export async function getMaxRelRootDepth(backendUrl: string): Promise<number>{
     return await axios.get(backendUrl+"rootId").then(response => { return response.data.id;}); 
   }
   
-  export async function getAnthillGraphNum(backendUrl: string, ): Promise<number>{
-    return await axios.get(backendUrl+"anthillGraphNum").then(response => {return response.data.anthillGraphNum}); 
-  }
+  // export async function getAnthillGraphNum(backendUrl: string, ): Promise<number>{
+  //   return await axios.get(backendUrl+"anthillGraphNum").then(response => {return response.data.anthillGraphNum}); 
+  // }
   
  export async function getNodeFromServer(backendUrl: string, id: string) : Promise<NodeData>{
     return await axios.get(backendUrl+"id/"+id).then(response => { return response.data.nodeData;}); 

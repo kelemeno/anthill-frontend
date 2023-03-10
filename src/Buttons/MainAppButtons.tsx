@@ -1,3 +1,5 @@
+// buttons for the main app. 
+
 import React, {useState} from 'react';
 
 import { useNavigate, useParams } from "react-router-dom";
@@ -55,9 +57,14 @@ async function getAccount(props:{backendUrl: string, provider:any, setAccounts: 
 
     var acc = ethers.utils.getAddress((await (props.provider.request({ method: 'eth_requestAccounts' })))[0]);
     props.setAccounts(acc)
-    var isInGraph = await getIsNodeInGraph(props.backendUrl, acc)
+    var isInGraph: boolean;
+    if (acc === undefined) {
+      isInGraph = false;
+    } else {
+      isInGraph = await getIsNodeInGraph(props.backendUrl, acc)
+    }
     props.setIsAccountInGraph(isInGraph)
-    if (isInGraph) await LoadNeighbourhood(acc, acc, isInGraph, props.setIsAccountInGraph, props.backendUrl);
+    // if (isInGraph) await LoadNeighbourhood(acc, acc, isInGraph, props.setIsAccountInGraph, props.backendUrl);
     
 }
 

@@ -20,15 +20,14 @@ export async function RemoveDagVote(AnthillContract:any, chainId: number, accoun
     await AnthillContract.methods.changeName(account, name).send({from:account  , chainId: chainId}).then((res:any)=>{console.log(res)});
   }
   
-  export   async function LeaveTree(AnthillContract:any, chainId: number, account: string, setIsAccountInGraph: any, navigate: any, setClickedNodeId:any){
+  export   async function LeaveTree(AnthillContract:any, chainId: number, account: string, setIsAccountInGraph: any, navigate: any, setClickedNodeId:any, altNode:string){
     
     await AnthillContract.methods.leaveTree(account).send({from: account, chainId: chainId}).then((res:any)=>{
       console.log(res);
       setIsAccountInGraph(false);
-      var parent = serveParent(account);
-      setClickedNodeId(parent);
+      setClickedNodeId(altNode);
       // console.log("parent", parent);
-      navigate("/?id="+parent);
+      navigate("/?id="+altNode);
     });
   }
   
