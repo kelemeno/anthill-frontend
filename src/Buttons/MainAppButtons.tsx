@@ -9,8 +9,8 @@ import {ethers} from  "ethers";
 import '.././App.css';
 import { getIsNodeInGraph, getRandomLeaf } from '../ExternalConnections/BackendGetters';
 
-import { LoadNeighbourhood,  serveParent} from '../Graph/GraphCore/LoadGraph';
-import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphCore/GraphBase";
+import { LoadNeighbourhood,  serveParent} from '../Graph/LoadGraph';
+import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
 
 import {JoinTree, RemoveDagVote, AddDagVote, MoveTreeVote, ChangeName, SwitchWithParent, LeaveTree} from '../ExternalConnections/SmartContractInteractions'
 

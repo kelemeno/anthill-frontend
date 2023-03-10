@@ -2,8 +2,8 @@
 
 import { useNavigate, useParams } from "react-router-dom";
 
-import { NodeDataRendering } from "./GraphCore/GraphBase";
-import {LoadNeighbourhood} from "./GraphCore/LoadGraph";
+import { NodeDataRendering } from "../GraphBase";
+import {LoadNeighbourhood} from "../LoadGraph";
 
 
 export const handleClick = (props: {id: string, setOpen: any, setAnchorEl:any, setAnchorElSaver:any, setLoaded:any, setClickedNodeId:any} ) => { //setAnthillGraphNum:any,

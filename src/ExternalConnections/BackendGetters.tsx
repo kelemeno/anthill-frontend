@@ -1,5 +1,5 @@
 import axios from "axios";
-import { NodeData, NodeDataBare } from "../Graph/GraphCore/GraphBase";
+import { NodeData, NodeDataBare } from "../Graph/GraphBase";
 
 export async function getMaxRelRootDepth(backendUrl: string): Promise<number>{
     return await axios.get(backendUrl+"maxRelRootDepth").then(response => {return response.data.maxRelRootDepth}); 

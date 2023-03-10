@@ -1,4 +1,5 @@
  /// base types, similar to backend
+ // also some graph related functions. 
 
  export const address1 ="0x0000000000000000000000000000000000000001";
 

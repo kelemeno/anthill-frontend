@@ -10,11 +10,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import '.././App.css';
 // import { LoadNeighbourhood,     serveParent} from './GraphCore/LoadGraph';
 // import {getAnthillGraphNum,} from '../ExternalConnections/BackendGetters';
-import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "./GraphCore/GraphBase";
+import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../GraphBase";
 
 import { DrawGraph, } from './DrawGraph';
 import {handleClick, handleMouseOut, handleMouseOver, handleMouseStay} from './GraphNodeMouseInteractions'
-import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, DagVoteButton} from '../Buttons/PopupButtons'
+import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, DagVoteButton} from '../../Buttons/PopupButtons'
 
 
 

@@ -2,10 +2,10 @@
 
 import React, {useState} from 'react';
 
-import {isVotable, isDagVote, isSwitchable,} from '../Graph/GraphCore/GraphBase';
+import {isVotable, isDagVote, isSwitchable,} from '../Graph/GraphBase';
 
-import { LoadNeighbourhood,    serveParent} from '../Graph/GraphCore/LoadGraph';
-import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphCore/GraphBase";
+import { LoadNeighbourhood,    serveParent} from '../Graph/LoadGraph';
+import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
 
 import {JoinTree, RemoveDagVote, AddDagVote, MoveTreeVote, ChangeName, SwitchWithParent, LeaveTree} from '../ExternalConnections/SmartContractInteractions'
 

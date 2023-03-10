@@ -5,9 +5,9 @@ import React, {useState} from 'react';
 import useWebSocket from 'react-use-websocket';
 
 
-import { GraphSVG } from "./Graph"
-import { GraphData, GraphDataBare, GraphDataRendering , address1} from "./GraphCore/GraphBase"
-import { LoadNeighbourhood } from './GraphCore/LoadGraph';
+import { GraphSVG } from "./GraphSVG/GraphSVG"
+import { GraphData, GraphDataBare, GraphDataRendering , address1} from "./GraphBase"
+import { LoadNeighbourhood } from './LoadGraph';
 
 export const Graph = (props: {"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNodeId":string,"setClickedNodeId":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string }) => {
     // variables 

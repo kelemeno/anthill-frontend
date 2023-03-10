@@ -1,7 +1,7 @@
 // this is where we store the functions that load the graph from the backend.
 
 import { max } from "d3";
-import { getBareNodeFromServer, getIsNodeInGraph, getMaxRelRootDepth, getRandomLeaf, getNodeFromServer} from "../../ExternalConnections/BackendGetters"
+import { getBareNodeFromServer, getIsNodeInGraph, getMaxRelRootDepth, getRandomLeaf, getNodeFromServer} from "../ExternalConnections/BackendGetters"
 import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering , isVotable, isDagVote, isSwitchable} from "./GraphBase";
 
 //// utils, checkers
