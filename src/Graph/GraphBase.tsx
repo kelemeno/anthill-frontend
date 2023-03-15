@@ -1,7 +1,9 @@
  /// base types, similar to backend
  // also some graph related functions. 
 
+ export const address0 ="0x0000000000000000000000000000000000000000";
  export const address1 ="0x0000000000000000000000000000000000000001";
+
 
  export type DagVote = {'id': string, 'weight': number, 'posInOther': number}
 
@@ -22,7 +24,7 @@
     // if ((voter.i == "Enter")) {
     //   return false;
     // }
-  
+    if (voterId === address0) {return false};
     if ((anthillGraph[voterId] === undefined)) {
       const error = new Error("isVotable called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
       throw error;
@@ -42,12 +44,12 @@
     var relRootVoterAncestor = relRootVoter;
     for (var i = 0; i < maxRelRootDepth; i++) {
       
-        if (relRootVoterAncestor == relRootRecipient) {
+        if (relRootVoterAncestor === relRootRecipient) {
             return true;
         }
   
         // if we are at the root, we can't take more anscestors
-        if ((relRootVoterAncestor == "0x0000000000000000000000000000000000000001")) {
+        if ((relRootVoterAncestor === "0x0000000000000000000000000000000000000001")) {
           return false;
         }
   
@@ -62,21 +64,22 @@
     // if ((voter.id == "Enter")) {
     //   return false;
     // }
-  
+    if (voterId === address0) {return false};
+
     if ((anthillGraph[voterId] === undefined)) {
       const error = new Error("isDagVote called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
       throw error;
     }
   
     if ((anthillGraphBare[recipientId] === undefined)) {
-      const error = new Error("isDagVote called with undefined recipientwith id: "+ recipientId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
+      const error = new Error("isDagVote called with undefined recipient with id: "+ recipientId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
       throw error;
     }
   
     var voterFull = anthillGraph[voterId];
   
     // console.log("In idDagVote, voter",voter, "recipient", recipient)
-    if ((voterFull.sentDagVotes === undefined) || (voterFull.sentDagVotes.length == 0)) {
+    if ((voterFull.sentDagVotes === undefined) || (voterFull.sentDagVotes.length === 0)) {
       return false;
     }
     if (voterFull.sentDagVotes.map((r)=>r.id).includes(recipientId)) {
@@ -91,21 +94,23 @@
     // if ((voter.id == "Enter")) {
     //   return false;
     // }
-  
+    
+    if (voterId === address0) {return false};
+
     if ((anthillGraph[voterId] === undefined)) {
-      const error = new Error("isDagVote called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
+      const error = new Error("isSwitchable called with undefined voter with id: "+ voterId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
       throw error;
     }
   
     if ((anthillGraphBare[recipientId] === undefined)) {
-      const error = new Error("isDagVote called with undefined recipientwith id: "+ recipientId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
+      const error = new Error("isSwitchable called with undefined recipientwith id: "+ recipientId+ ", this should not happen, as we should be checking only for clicked and rendered nodes")
       throw error;
     }
   
     var voterFull = anthillGraph[voterId];
   
     // console.log("In idDagVote, voter",voter, "recipient", recipient)
-    if ((voterFull.sentTreeVote == recipientId) && (recipientRep < voterFull.currentRep)) {
+    if ((voterFull.sentTreeVote === recipientId) && (recipientRep < voterFull.currentRep)) {
       return true;
     }
     

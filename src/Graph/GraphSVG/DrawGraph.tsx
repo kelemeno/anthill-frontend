@@ -1,6 +1,9 @@
+// this file is used to draw the graph in the svg element.
+// it is a copy of https://observablehq.com/@erikbrinkman/d3-dag-sugiyama
+
 import * as d3Base from 'd3';
-import {useState} from 'react';
-import React from 'react';
+// import {useState} from 'react';
+// import React from 'react';
 
 
 import * as d3Dag from 'd3-dag';
@@ -10,7 +13,7 @@ var svg = require('svg');
 
 function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[]{
     var array :NodeDataRendering[] = [];
-    for (const [key, value] of Object.entries(graph)) {    
+    for (const [key, ] of Object.entries(graph)) {    
         var node = graph[key] as NodeDataRendering;
         array.push(node)
     }
@@ -172,10 +175,10 @@ export const DrawGraph= (props:{graph: GraphDataRendering, handleClick: any, han
     
 
     // Initialize color map
-    const steps = dag.size();
+    // const steps = dag.size();
     const interp = d3Base.interpolateRainbow;
     const colorMap :{[key: string]: string} = {};
-    for (const [i, node] of [...dag].entries()) {
+    for (const [, node] of [...dag].entries()) {
         let stringUniqueHash = [...node.data.id].reduce((acc, char) => {
             return char.charCodeAt(0) + ((acc << 5) - acc);
         }, 0);
@@ -207,7 +210,7 @@ export const DrawGraph= (props:{graph: GraphDataRendering, handleClick: any, han
         .attr("d", ({ points }) => line(points))
         .attr("fill", "none")
         .attr("stroke-width", ({ source, target }) => {
-            if ( props.graph[target.data.id].sentTreeVote==source.data.id) {
+            if ( props.graph[target.data.id].sentTreeVote===source.data.id) {
                 return 6
             } else {
                 return 2

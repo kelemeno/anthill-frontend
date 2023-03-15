@@ -19,6 +19,7 @@ export async function getMaxRelRootDepth(backendUrl: string): Promise<number>{
   // }
   
  export async function getNodeFromServer(backendUrl: string, id: string) : Promise<NodeData>{
+    // console.log("getting id", id)
     return await axios.get(backendUrl+"id/"+id).then(response => { return response.data.nodeData;}); 
   }
   

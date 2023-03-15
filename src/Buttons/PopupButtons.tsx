@@ -2,10 +2,8 @@
 
 import React, {useState} from 'react';
 
-import {isVotable, isDagVote, isSwitchable,} from '../Graph/GraphBase';
 
-import { LoadNeighbourhood,    serveParent} from '../Graph/LoadGraph';
-import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
+import {  NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
 
 import {JoinTree, RemoveDagVote, AddDagVote, MoveTreeVote, ChangeName, SwitchWithParent, LeaveTree} from '../ExternalConnections/SmartContractInteractions'
 
@@ -40,9 +38,9 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
     return  <div></div>
   }
   
- export const JoinTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNodeId": any}) => {
+ export const JoinTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNode": any}) => {
     if (props.isAccountInGraph) return (<div></div>)
-    if (props.voter == "0x0000000000000000000000000000000000000000") return (<div></div>)
+    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
     
     var notFull = false
     if (props.recipient.recTreeVotes !== undefined) {
@@ -52,7 +50,7 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
       return (
         <div className='Popover'> 
         <button className = 'PopoverButton'
-           onClick={()=>JoinTree(props.AnthillContract, props.chainId, props.voter, props.recipient.id, props.setClickedNodeId)}>
+           onClick={()=>JoinTree(props.AnthillContract, props.chainId, props.voter, props.recipient.id, props.setClickedNode)}>
             Join tree here
         </button>
         </div>
@@ -65,8 +63,8 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
     var [nameInput, setNameInput] = useState("")
     
     if (!props.isAccountInGraph) return (<div></div>)
-    if (props.voter == "0x0000000000000000000000000000000000000000") return (<div></div>)
-    if (props.voter != props.recipient.id) return (<div></div>)
+    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
+    if (props.voter !== props.recipient.id) return (<div></div>)
 
   
     var notFull = false
@@ -96,27 +94,27 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
     return  <div></div>
   }
   
-  export  const LeaveTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "setIsAccountInGraph":any, "voter":string,"recipient": NodeDataRendering, "setClickedNodeId":any, "navigate":any, "altNode":string}) => {
+  export  const LeaveTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "setIsAccountInGraph":any, "voter":string,"recipient": NodeDataRendering, "setClickedNode":any, "navigate":any, "altNode":string}) => {
     if (!props.isAccountInGraph) return (<div></div>)
-    if (props.voter == "0x0000000000000000000000000000000000000000") return (<div></div>)
+    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
     // console.log("joinTreeButton", props.isAccountInGraph, props.voter, props.recipient )
-    if (props.voter != props.recipient.id) return (<div></div>)
+    if (props.voter !== props.recipient.id) return (<div></div>)
    
-    return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>LeaveTree( props.AnthillContract, props.chainId,  props.voter, props.setIsAccountInGraph, props.navigate, props.setClickedNodeId, props.altNode)} >Leave the tree</button></div>)
+    return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>LeaveTree( props.AnthillContract, props.chainId,  props.voter, props.setIsAccountInGraph, props.navigate, props.setClickedNode, props.altNode)} >Leave the tree</button></div>)
   }
   
-  export  const MoveTreeVoteButton = (props :{"AnthillContract": any, "chainId":number , "isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNodeId":any, navigate: any}) => {
+  export  const MoveTreeVoteButton = (props :{"AnthillContract": any, "chainId":number , "isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNode":any, navigate: any}) => {
     if (!props.isAccountInGraph) return (<div></div>)
-    if (props.voter == "0x0000000000000000000000000000000000000000") return (<div></div>)
+    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
     // console.log("joinTreeButton", props.isAccountInGraph, props.voter, props.recipient )
     if (props.recipient.recTreeVotes.includes(props.voter)) return (<div></div>)
-    if (props.voter == props.recipient.id) return (<div></div>)
+    if (props.voter === props.recipient.id) return (<div></div>)
     var notFull = false
     if (props.recipient.recTreeVotes !== undefined) {
       notFull = (props.recipient.recTreeVotes.length < 2) 
     }
     if (notFull) {
-      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>MoveTreeVote(props.AnthillContract, props.chainId, props.voter, props.recipient.id, props.setClickedNodeId, props.navigate)} >Move position</button></div>)
+      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>MoveTreeVote(props.AnthillContract, props.chainId, props.voter, props.recipient.id, props.setClickedNode, props.navigate)} >Move position</button></div>)
     }
     return  <div></div>
   }
