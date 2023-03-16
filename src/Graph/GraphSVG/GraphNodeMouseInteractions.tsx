@@ -6,7 +6,7 @@ import { NodeDataRendering } from "../GraphBase";
 
 
 export const handleClick = (props: {id: string, setOpen: any, setAnchorEl:any, setAnchorElSaver:any, setLoaded:any, setClickedNodeId:any, setHoverNode:any, navigate:any} ) => { //setAnthillGraphNum:any,
-    console.log("handling click", props.id,)
+    // console.log("handling click", props.id,)
 
     props.setLoaded(false);
     props.setOpen(false);
@@ -34,14 +34,14 @@ export const handleClick = (props: {id: string, setOpen: any, setAnchorEl:any, s
     //   props.navigate("/?id="+props.id); 
     //  });
 
-    setTimeout(() => {console.log("back to true");props.setLoaded(true)}, 1000);
+    setTimeout(() => {props.setLoaded(true)}, 1000);
     // console.log("open3", open, anchorEl, loaded)    
   }
 
  export const handleMouseOver = (event: React.MouseEvent<HTMLElement>, node: NodeDataRendering, loaded: boolean, setHoverNode: any, setAnchorEl:any, setAnchorElSaver:any, setOpen:any) => {
     
     if ((loaded) && (document.body.contains(event.currentTarget))){
-      console.log("handling mouseover", event.currentTarget)
+      // console.log("handling mouseover", event.currentTarget)
       setHoverNode(node);
       setAnchorEl(event.currentTarget);
       // console.log("does the document contain the currentTarget?", (document.body.contains(event.currentTarget)), event.currentTarget)
@@ -53,7 +53,7 @@ export const handleClick = (props: {id: string, setOpen: any, setAnchorEl:any, s
  export const handleMouseStay = (anchorElSaver: any, setAnchorEl:any, setOpen:any, loaded:boolean) => {
 
     if (anchorElSaver && loaded){
-      console.log("handling mouseStay")
+      // console.log("handling mouseStay")
       // console.log("handleMouseStay", anchorElSaver)
       setAnchorEl(anchorElSaver);
       setOpen(true);
@@ -62,7 +62,7 @@ export const handleClick = (props: {id: string, setOpen: any, setAnchorEl:any, s
 
 export const handleMouseOut = (loaded:boolean, setOpen:any, setAnchorEl:any) => {
     if (loaded) {
-      console.log("handling mouseOut")
+      // console.log("handling mouseOut")
       setOpen(false);
       setAnchorEl(null);
     }

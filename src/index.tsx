@@ -117,11 +117,7 @@ const  App = () => {
                 <Routes>
                 <Route path="/" element={
                         <>
-                        <div style={{textAlign:"left", margin : 15}}>
-                            <ConnectMetamaskButton provider={provider} setProvider={setProvider} account = {account} setAccounts={setAccount} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl} />
-                            {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
-                            {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode={setClickedNode} backendUrl={backendUrl}/> */}
-                        </div>
+                        
                         
                         <div style={{textAlign:"right"}}>
                             <><a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a></>
@@ -134,16 +130,19 @@ const  App = () => {
 
                             <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
                         </div>
+
+                        <div style={{textAlign:"left", margin : 15}}>
+                            <ConnectMetamaskButton provider={provider} setProvider={setProvider} account = {account} setAccounts={setAccount} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl} />
+                            {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
+                            {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode={setClickedNode} backendUrl={backendUrl}/> */}
+                        </div>
+
                         <Graph account={account} chainId={chainId} clickedNode = {clickedNode}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
                     <Route path="/:id" element={
                         <>
-                        <div style={{textAlign:"left"}}>
-                            <ConnectMetamaskButton provider={provider} setProvider={setProvider} account = {account} setAccounts={setAccount} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl}/>
-                            {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
-                            {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} backendUrl={backendUrl}/> */}
-                        </div>
+                        
 
                         <div style={{textAlign:"right"}}>
                             <a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a>
@@ -156,6 +155,13 @@ const  App = () => {
 
                             <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
                         </div>
+
+                        <div style={{textAlign:"left"}}>
+                            <ConnectMetamaskButton provider={provider} setProvider={setProvider} account = {account} setAccounts={setAccount} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl}/>
+                            {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
+                            {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} backendUrl={backendUrl}/> */}
+                        </div>
+                        
                         <Graph account={account} chainId={chainId} clickedNode = {clickedNode}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>

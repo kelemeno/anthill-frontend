@@ -1,6 +1,7 @@
 // buttons for the main app. 
 
-// import React, {useState} from 'react';
+import styled from "styled-components";
+// import COLORS from "./color";
 
 import { useNavigate } from "react-router-dom";
 import detectEthereumProvider from '@metamask/detect-provider';
@@ -9,7 +10,6 @@ import {ethers} from  "ethers";
 import '.././App.css';
 import { getIsNodeInGraph, getRandomLeaf } from '../ExternalConnections/BackendGetters';
 
-// import { LoadNeighbourhood,  serveParent} from '../Graph/LoadGraph';
 // import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
 
 import {JoinTree,} from '../ExternalConnections/SmartContractInteractions'
@@ -105,7 +105,60 @@ export function JoinTreeRandomlyButton(props:{AnthillContract: any, chainId: num
         </button>
 }
 
+export function TreeOrRepModeSwitch(props:{treeMode: boolean, setTreeMode: any}) {
+   
+    
+  function handleOnChange() {
+    // console.log("---", e.target.checked);
+    props.setTreeMode(!props.treeMode);
+  }
+  return (
+    < >
+    <StyledLabel htmlFor="checkbox" checked={props.treeMode}> 
+    
+      <input 
+        id="checkbox" 
+        type="checkbox" 
+        checked={props.treeMode}
+        onChange={handleOnChange} />   
+
+    </StyledLabel>
+    <div style={{ textAlign: 'center', width:'80px' }}>{props.treeMode ? "Tree" : "Reputation"}</div>
+
+    </>
+  );
+}
 
 
- 
-  
+
+const StyledLabel = styled.label<{ checked: boolean }>`  
+cursor: pointer;
+display: flex;
+align-items: center;
+text-indent: -9999px;  
+width: 60px;  
+height: 30px;  
+background: ${({ checked }) => (checked ? "#00ff00" :  "#808080")};  
+display: block;  
+border-radius: 20px;  
+position: relative;
+margin-left: 10px;
+user-select: none;
+
+
+&:after {    
+content: "";    
+position: absolute;    
+left: ${({ checked }) => (checked ? "6px" : "calc(55% - 1px)")};    top: 4.5px;    
+width: 20px;    
+height: 20px;    
+background: #fff;    
+border-radius: 20px;    
+transition: 0.3s;  
+appearance: none;
+
+}
+
+
+
+`;
