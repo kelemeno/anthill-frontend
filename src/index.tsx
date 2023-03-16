@@ -24,7 +24,7 @@ const doc = document.getElementById('root')
 const root = client.createRoot(doc!);
 
 const  App = () => {
-    const testing = true;
+    const testing = false;
     
     var anthillContractAddress;
     var chainId;
@@ -161,7 +161,7 @@ const  App = () => {
                             {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
                             {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} backendUrl={backendUrl}/> */}
                         </div>
-                        
+
                         <Graph account={account} chainId={chainId} clickedNode = {clickedNode}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
