@@ -67,11 +67,12 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
     if (props.voter !== props.recipient.id) return (<div></div>)
 
   
-    var notFull = false
-    if (props.recipient.recTreeVotes !== undefined) {
-      notFull = (props.recipient.recTreeVotes.length < 2) 
-    }
-    if (notFull) {
+    // var notFull = false
+    // if (props.recipient.recTreeVotes !== undefined) {
+    //   notFull = (props.recipient.recTreeVotes.length < 2) 
+    // }
+    // if (notFull)
+     
       return (
         <div className='Popover'>
             
@@ -90,8 +91,8 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
                 </button>
               
         </div>)
-    }
-    return  <div></div>
+    
+    
   }
   
   export  const LeaveTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "setIsAccountInGraph":any, "voter":string,"recipient": NodeDataRendering, "setClickedNode":any, "navigate":any, "altNode":string}) => {
