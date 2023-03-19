@@ -11,13 +11,9 @@ function renderingNodeData(node: NodeData, account: string, isAccountInGraph: bo
     nodeRendering.id = node.id;
   
     if (node.name === "Name") {
-      nodeRendering.name = node.id.slice(0, 2)+".."+node.id.slice((node.id.length)-3);
+        nodeRendering.name = node.id.slice(0, 2)+".."+node.id.slice((node.id.length)-3);
     } else {
-      if (node.name.length < 7) {
         nodeRendering.name = node.name;
-      } else {
-        nodeRendering.name = node.id.slice(0, 4)+".."+node.id.slice((node.id.length)-3);
-      }
     }
   
     nodeRendering.currentRep = node.currentRep;
@@ -54,12 +50,7 @@ function renderingNodeData(node: NodeData, account: string, isAccountInGraph: bo
     if (node.name === "Name") {
       nodeRendering.name = node.id.slice(0, 2)+".."+node.id.slice((node.id.length)-3);
     } else {
-      // console.log("name", node.name, node.name.length)
-      if (node.name.length < 7) {
         nodeRendering.name = node.name;
-      } else {
-        nodeRendering.name = node.id.slice(0, 4)+".."+node.id.slice((node.id.length)-3);
-      }
     }
     
     nodeRendering.currentRep = node.currentRep;

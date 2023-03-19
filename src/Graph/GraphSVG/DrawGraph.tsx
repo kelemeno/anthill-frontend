@@ -307,7 +307,12 @@ export const DrawGraph= (props:{graph: GraphDataRendering, handleClick: any, han
     // Add text to nodes
     nodes
         .append("text")
-        .text((d) => d.data.name)
+        .text((d) => {if (d.data.name.length <= 7) {
+                        return d.data.name;
+                    } else {
+                        return d.data.name.slice(0, 4)+".."+d.data.name.slice((d.data.name.length)-3);
+                    }
+                })
         .attr("fontWeight", "bold")
         .attr("fontFamily", "sans-serif")
         .attr("text-anchor", "middle")

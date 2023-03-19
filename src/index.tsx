@@ -1,7 +1,7 @@
 import React, {useState}  from 'react';
 import * as client from 'react-dom/client';
 import { Routes, Route,  BrowserRouter, useNavigate } from 'react-router-dom';
-// import useWebSocket from 'react-use-websocket';
+import useWebSocket from 'react-use-websocket';
 
 
 
@@ -41,18 +41,25 @@ const  App = () => {
         chainId = 80001; //mumbai testnet
         web3 = new Web3(Web3.givenProvider || "https://polygon-mumbai.infura.io/v3/4458cf4d1689497b9a38b1d6bbf05e78");
 
-        backendUrl = "https://anthill-/db.herokuapp.com/"
-        wsUrl = 'wss://anthill-/db.herokuapp.com'; // this might be wrong
+        // backendUrl = "http://localhost:5000/"
+        // wsUrl = 'ws://127.0.0.1:5000';
+
+        backendUrl = "https://anthill-db.herokuapp.com/"
+        wsUrl = 'wss://anthill-db.herokuapp.com/'; 
     
     } else {
         anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
         chainId =1337; //anvil
         web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
         backendUrl = "http://localhost:5000/"
-        wsUrl = 'ws://127.0.0.1:8000'; //this hopefully works 
+        wsUrl = 'ws://127.0.0.1:5000';
     }
 
-    
+    useWebSocket(wsUrl, {
+        onOpen: () => {
+          console.log('WebSocket connection established.');
+        },
+      });
 
     var AnthillContract: any; 
     AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], anthillContractAddress);
