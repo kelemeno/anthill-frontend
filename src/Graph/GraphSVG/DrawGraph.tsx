@@ -261,6 +261,8 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
     //   .(()=> `console.log("Hello")`);
     //   ' window.addEventListener("DOMContentLoaded", () => {document.getElementById("button_${n.data.id}").addEventListener("click", function(){  console.log("hello")} ) })' );
     
+
+    // extra ring for clicked node
     nodes
         .append("circle")
         .attr("r", (d)=>{if (d.data.id=== props.clickedNode)
