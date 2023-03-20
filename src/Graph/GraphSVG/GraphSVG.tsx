@@ -71,6 +71,7 @@ export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInG
 
         svg.current.replaceChildren(DrawGraph({
            "graph":props.graph ,
+           "clickedNode":props.clickedNode,
            "handleClick":handleClickConstructed,
            "handleMouseOver":(event:  React.MouseEvent<HTMLElement>, node:NodeDataRendering) => 
               handleMouseOver(event, node, loaded, setHoverNode, setAnchorEl, setAnchorElSaver, setOpen ), 

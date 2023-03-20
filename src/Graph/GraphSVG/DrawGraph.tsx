@@ -20,7 +20,7 @@ function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[]{
     return array
 }
 
-export const DrawGraph= (props:{graph: GraphDataRendering, handleClick: any, handleMouseOver: any, handleMouseOut: any}) =>{
+export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, handleClick: any, handleMouseOver: any, handleMouseOut: any}) =>{
 // export class DrawGraph extends React.Component{
     const nodeRadius = 35;
     
@@ -261,6 +261,11 @@ export const DrawGraph= (props:{graph: GraphDataRendering, handleClick: any, han
     //   .(()=> `console.log("Hello")`);
     //   ' window.addEventListener("DOMContentLoaded", () => {document.getElementById("button_${n.data.id}").addEventListener("click", function(){  console.log("hello")} ) })' );
     
+    nodes
+        .append("circle")
+        .attr("r", (d)=>{if (d.data.id=== props.clickedNode)
+                            {return nodeRadius+5}
+                        else {return 0}})
     
     // Plot node circles
     nodes
