@@ -1,4 +1,10 @@
 // buttons for the main app. 
+import React, { useState } from 'react';
+
+import image1 from '../logo192.png';
+import image2 from '../logo192.png';
+import image3 from '../logo192.png';
+
 
 import styled from "styled-components";
 // import COLORS from "./color";
@@ -157,8 +163,62 @@ border-radius: 20px;
 transition: 0.3s;  
 appearance: none;
 
+}`;
+
+export function TutorialButton(props:{ showTutorial:boolean, setShowTutorial: any}) {
+  
+  return <button onClick={ () => {
+          props.setShowTutorial(!props.showTutorial);
+          }   
+      }>
+      Tutorial
+      </button>
 }
 
+export const TutorialPopup = (props:{showTutorial:boolean, setShowTutorial:any}) => {
 
+  const handleClosePopup = () => {
+    props.setShowTutorial(false);
+  };
 
-`;
+  const [currentImage, setCurrentImage] = useState(0);
+  const images = [
+    image1, 
+    image2,
+    image3
+  ];
+
+  const handleNext = () => {
+    const nextIndex = currentImage === images.length - 1 ? 0 : currentImage + 1;
+    setCurrentImage(nextIndex);
+  };
+
+  const handlePrevious = () => {
+    const previousIndex = currentImage === 0 ? images.length - 1 : currentImage - 1;
+    setCurrentImage(previousIndex);
+  };
+
+  return (
+    <>
+      {props.showTutorial && (
+        <div className="tutorial-popup">
+          {/* <h2>Welcome to My Website</h2>
+          <p>Here's a quick tutorial on how to use my website:</p>
+          <ol>
+            <li>Step 1: Do this</li>
+            <li>Step 2: Do that</li>
+            <li>Step 3: Do this other thing</li>
+          </ol> */}
+          <img src={images[currentImage]} alt="Tutorial image" />
+      <div>
+        <button onClick={handlePrevious}>Previous</button>
+        <button onClick={handleNext}>Next</button>
+      </div>
+          <button onClick={handleClosePopup}>Close</button>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default TutorialPopup;

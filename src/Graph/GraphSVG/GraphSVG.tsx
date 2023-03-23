@@ -113,7 +113,7 @@ export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInG
     transitionDuration="auto"
 >
     <div className='Popover' >Name: {hoverNode.name}.  </div>
-    <div className='Popover'>Depth: {hoverNode.depth}.  </div>
+    {/* <div className='Popover'>Depth: {hoverNode.depth}.  </div> */}
     <div className='Popover'> Current reputation: {(hoverNode.currentRep/10**18).toFixed(2)} </div>
 
     <SwitchParentButton AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} graph={props.graph}/>

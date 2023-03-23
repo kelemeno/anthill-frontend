@@ -266,7 +266,7 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
     nodes
         .append("circle")
         .attr("r", (d)=>{if (d.data.id=== props.clickedNode)
-                            {return nodeRadius+5}
+                            {return nodeRadius+4}
                         else {return 0}})
     
     // Plot node circles

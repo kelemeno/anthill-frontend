@@ -15,7 +15,7 @@ import { AbiItem } from 'web3-utils'
 import {Graph} from './Graph/GraphMain';
 import './index.css';
 import AnthillJson from "./ExternalConnections/Anthill.json"
-import { ConnectMetamaskButton} from "./Buttons/MainAppButtons"
+import TutorialPopup, { ConnectMetamaskButton, TutorialButton} from "./Buttons/MainAppButtons"
 import {getIsNodeInGraph, getRandomLeaf} from "./ExternalConnections/BackendGetters"
 
 
@@ -35,17 +35,18 @@ const  App = () => {
     var navigate = useNavigate();
 
     if (!testing) {
-        anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
+        anthillContractAddress = "0x69649a6E7E9c090a742f0671C64f4c7c31a1e4ce"; //mumbai v4
+        // anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
         // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
         // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
         chainId = 80001; //mumbai testnet
         web3 = new Web3(Web3.givenProvider || "https://polygon-mumbai.infura.io/v3/4458cf4d1689497b9a38b1d6bbf05e78");
 
-        // backendUrl = "http://localhost:5000/"
-        // wsUrl = 'ws://127.0.0.1:5000';
+        backendUrl = "http://localhost:5000/"
+        wsUrl = 'ws://127.0.0.1:5000';
 
-        backendUrl = "https://anthill-db.herokuapp.com/"
-        wsUrl = 'wss://anthill-db.herokuapp.com/'; 
+        // backendUrl = "https://anthill-db.herokuapp.com/"
+        // wsUrl = 'wss://anthill-db.herokuapp.com/'; 
     
     } else {
         anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
@@ -83,6 +84,8 @@ const  App = () => {
     var [account, setAccount] =  useState("0x0000000000000000000000000000000000000000");
     var [provider, setProvider] = useState<any>(null);
     var [isAccountInGraph, setIsAccountInGraph] = useState(false);
+
+    var [showTutorial, setShowTutorial] = useState(true);
     
     React.useEffect(()=>{
 
@@ -126,7 +129,10 @@ const  App = () => {
                         <>
                         
                         
-                        <div style={{textAlign:"right"}}>
+                        <div style={{textAlign:"right", margin : 15}}>
+
+                            <TutorialButton showTutorial= {showTutorial} setShowTutorial={setShowTutorial}/>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
                             <><a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a></>
                             &nbsp; &nbsp;&nbsp;&nbsp;
                             <><a  href= "https://faucet.polygon.technology/"> Get test tokens </a></>
@@ -136,6 +142,9 @@ const  App = () => {
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
                             <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+
+                            <a  href= "https://demo.snapshot.org/#/anthilldao.eth"> Link to voting page </a>
                         </div>
 
                         <div style={{textAlign:"left", margin : 15}}>
@@ -143,7 +152,7 @@ const  App = () => {
                             {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
                             {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode={setClickedNode} backendUrl={backendUrl}/> */}
                         </div>
-
+                        <TutorialPopup showTutorial= {showTutorial} setShowTutorial= {setShowTutorial}/>
                         <Graph account={account} chainId={chainId} clickedNode = {clickedNode}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
@@ -151,7 +160,10 @@ const  App = () => {
                         <>
                         
 
-                        <div style={{textAlign:"right"}}>
+                        <div style={{textAlign:"right", margin : 15}}>
+                            <TutorialButton showTutorial= {showTutorial} setShowTutorial={setShowTutorial}/>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+
                             <a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a>
                             &nbsp; &nbsp;&nbsp;&nbsp;
                             <a  href= "https://faucet.polygon.technology/"> Get test tokens </a>
@@ -161,14 +173,17 @@ const  App = () => {
                             &nbsp; &nbsp;&nbsp;&nbsp;
 
                             <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
+                            &nbsp; &nbsp;&nbsp;&nbsp;
+
+                            <a  href= "https://demo.snapshot.org/#/anthilldao.eth"> Link to voting page </a>
                         </div>
 
-                        <div style={{textAlign:"left"}}>
+                        <div style={{textAlign:"left", margin : 15}}>
                             <ConnectMetamaskButton provider={provider} setProvider={setProvider} account = {account} setAccounts={setAccount} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl}/>
                             {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
                             {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} backendUrl={backendUrl}/> */}
                         </div>
-
+                        <TutorialPopup showTutorial= {showTutorial} setShowTutorial= {setShowTutorial}/>
                         <Graph account={account} chainId={chainId} clickedNode = {clickedNode}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
