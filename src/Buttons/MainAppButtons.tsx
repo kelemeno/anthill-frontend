@@ -10,85 +10,86 @@ import styled from "styled-components";
 // import COLORS from "./color";
 
 import { useNavigate } from "react-router-dom";
-import detectEthereumProvider from '@metamask/detect-provider';
-import {ethers} from  "ethers";
+// import detectEthereumProvider from '@metamask/detect-provider';
+// import {ethers} from  "ethers";
 
 import '.././App.css';
-import { getIsNodeInGraph, getRandomLeaf } from '../ExternalConnections/BackendGetters';
+import {  getRandomLeaf } from '../ExternalConnections/BackendGetters';
+// import { getIsNodeInGraph } from '../ExternalConnections/BackendGetters';
 
 // import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
 
 import {JoinTree,} from '../ExternalConnections/SmartContractInteractions'
 
-const addNetwork = async (provider:any) => {
-    try {
-        await provider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: "0x13881" }],
-        });
-      } catch (switchError:any) {
-        // This error code indicates that the chain has not been added to MetaMask.
-        if (switchError.code === 4902) {
-          try {
-            await provider.request({
-              method: 'wallet_addEthereumChain',
-              params: [
-                {
-                    chainId: "0x13881",
-                    chainName:  "Mumbai",
-                    rpcUrls: ["https://rpc-mumbai.maticvigil.com/"],
-                    blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
-                    nativeCurrency: {
-                        name: "MATIC",
-                        symbol: "MATIC", // 2-6 characters long
-                        decimals: 18,
-                    },
-                },
-              ],
-            });
-          } catch (addError) {
-            // handle "add" error
-          }
-        }
+// const addNetwork = async (provider:any) => {
+//     try {
+//         await provider.request({
+//           method: 'wallet_switchEthereumChain',
+//           params: [{ chainId: "0x13881" }],
+//         });
+//       } catch (switchError:any) {
+//         // This error code indicates that the chain has not been added to MetaMask.
+//         if (switchError.code === 4902) {
+//           try {
+//             await provider.request({
+//               method: 'wallet_addEthereumChain',
+//               params: [
+//                 {
+//                     chainId: "0x13881",
+//                     chainName:  "Mumbai",
+//                     rpcUrls: ["https://rpc-mumbai.maticvigil.com/"],
+//                     blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
+//                     nativeCurrency: {
+//                         name: "MATIC",
+//                         symbol: "MATIC", // 2-6 characters long
+//                         decimals: 18,
+//                     },
+//                 },
+//               ],
+//             });
+//           } catch (addError) {
+//             // handle "add" error
+//           }
+//         }
     
-    window.location.reload();
-  };
-}
+//     window.location.reload();
+//   };
+// }
 
-async function getAccount(props:{backendUrl: string, provider:any, setAccounts: any, setIsAccountInGraph :any}) {
+// async function getAccount(props:{backendUrl: string, provider:any, setAccounts: any, setIsAccountInGraph :any}) {
     
-  if (props.backendUrl !== "http://localhost:5000/") {
-      addNetwork(props.provider);
-    }
+//   if (props.backendUrl !== "http://localhost:5000/") {
+//       addNetwork(props.provider);
+//     }
 
-    var account = ethers.utils.getAddress((await (props.provider.request({ method: 'eth_requestAccounts' })))[0]);
-    var isAccountInGraph: boolean;
-    if (account === undefined) {
-      isAccountInGraph = false;
-    } else {
-      isAccountInGraph = await getIsNodeInGraph(props.backendUrl, account)
-      console.log("isAccountInGraph", isAccountInGraph, account)
+//     var account = ethers.utils.getAddress((await (props.provider.request({ method: 'eth_requestAccounts' })))[0]);
+//     var isAccountInGraph: boolean;
+//     if (account === undefined) {
+//       isAccountInGraph = false;
+//     } else {
+//       isAccountInGraph = await getIsNodeInGraph(props.backendUrl, account)
+//       console.log("isAccountInGraph", isAccountInGraph, account)
 
-    }
-    if (isAccountInGraph){
-      props.setIsAccountInGraph(isAccountInGraph)
-    }    
-    props.setAccounts(account)
+//     }
+//     if (isAccountInGraph){
+//       props.setIsAccountInGraph(isAccountInGraph)
+//     }    
+//     props.setAccounts(account)
 
-}
+// }
 
 
-export function ConnectMetamaskButton(props:{"provider":any, "setProvider":any, "account" :string, "setAccounts": any,  "setIsAccountInGraph" :any, "backendUrl": string, }) {
-    detectEthereumProvider().then((res)=>{props.setProvider(res); return res});
-    if (props.provider){
-        if (props.account !== "0x0000000000000000000000000000000000000000") {
-            return <div></div>
-        }
-        return <button onClick={() => getAccount({"backendUrl":props.backendUrl, "provider":props.provider, "setAccounts": props.setAccounts, "setIsAccountInGraph": props.setIsAccountInGraph})}>Connect Wallet</button>
+// export function ConnectMetamaskButton(props:{"provider":any, "setProvider":any, "account" :string, "setAccounts": any,  "setIsAccountInGraph" :any, "backendUrl": string, }) {
+//     detectEthereumProvider().then((res)=>{props.setProvider(res); return res});
+//     if (props.provider){
+//         if (props.account !== "0x0000000000000000000000000000000000000000") {
+//             return <div></div>
+//         }
+//         return <button onClick={() => getAccount({"backendUrl":props.backendUrl, "provider":props.provider, "setAccounts": props.setAccounts, "setIsAccountInGraph": props.setIsAccountInGraph})}>Connect Wallet</button>
 
-    }
-    return <div><a href="https://metamask.io/download/">Install Metamask</a></div>
-}
+//     }
+//     return <div><a href="https://metamask.io/download/">Install Metamask</a></div>
+// }
 
 export function GoHomeButton(props:{account: string, isAccountInGraph :boolean, setClickedNode: any}) {
     var navigate = useNavigate();
@@ -209,7 +210,7 @@ export const TutorialPopup = (props:{showTutorial:boolean, setShowTutorial:any})
             <li>Step 2: Do that</li>
             <li>Step 3: Do this other thing</li>
           </ol> */}
-          <img src={images[currentImage]} alt="Tutorial image" />
+          <img src={images[currentImage]} alt="Tutorial" />
       <div>
         <button onClick={handlePrevious}>Previous</button>
         <button onClick={handleNext}>Next</button>

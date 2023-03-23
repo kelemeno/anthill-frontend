@@ -1,6 +1,6 @@
 
 import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering , isVotable, isDagVote, isSwitchable, address1} from "./GraphBase";
-import { CheckSaveWholeGraph } from "./LoadGraph";
+// import { CheckSaveWholeGraph } from "./LoadGraph";
 
 
 ////// selecting the graph to render

@@ -22,7 +22,7 @@ function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[]{
 
 export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, handleClick: any, handleMouseOver: any, handleMouseOut: any}) =>{
 // export class DrawGraph extends React.Component{
-    const nodeRadius = 35;
+    const nodeRadius = 30;
     
     // const sources = new Map([
     //   ["Grafo", ["grafo", d3Dag.dagStratify()]],
@@ -274,6 +274,8 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
         .append("circle")
         .attr("r", nodeRadius)
         .attr("fill", (n) => colorMap[n.data.id])
+        // .attr("user-select", "none") //testing for text highlighting
+
         ;
 
     
@@ -314,10 +316,10 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
     // Add text to nodes
     nodes
         .append("text")
-        .text((d) => {if (d.data.name.length <= 7) {
+        .text((d) => {if (d.data.name.length <= 6) {
                         return d.data.name;
                     } else {
-                        return d.data.name.slice(0, 4)+".."+d.data.name.slice((d.data.name.length)-3);
+                        return d.data.name.slice(0, 3)+".."+d.data.name.slice((d.data.name.length)-3);
                     }
                 })
         .attr("fontWeight", "bold")
@@ -325,8 +327,15 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
         .attr("text-anchor", "middle")
         .attr("alignment-baseline", "middle")
         .attr("dominant-baseline", "middle")
+        .attr("fill", "white")
+        .attr("font-size", "14px")
+        .attr("user-select", "none")
+        // .attr("webkit-user-select", "none")
+        .attr("pointer-events", "none")
+        .attr("selectable", "false")
+        // .attr("selection", "")
+        ;
 
-        .attr("fill", "white");
     
     return (svgNode);
     
