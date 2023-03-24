@@ -104,7 +104,7 @@ export function JoinTreeRandomlyButton(props:{AnthillContract: any, chainId: num
     if (props.account === "0x0000000000000000000000000000000000000000"){return <></>}
     return <button onClick={async () => {
             var recipient = await getRandomLeaf(props.backendUrl )
-            await JoinTree(props.AnthillContract, props.chainId, props.account, recipient, props.setClickedNode) ;
+            await JoinTree(props.AnthillContract,  props.account, recipient, props.setClickedNode) ;
             navigate("/"+props.account)
             }   
         }>

@@ -16,11 +16,11 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
     if (votable) {
       
       if (props.graph[props.recipient].isDagVote) {
-        return ( <div className='Popover'><button className = 'PopoverButton' onClick={()=>RemoveDagVote(props.AnthillContract, props.chainId, props.account, props.recipient)} >Remove reputation vote</button></div>)
+        return ( <div className='Popover'><button className = 'PopoverButton' onClick={()=>RemoveDagVote(props.AnthillContract,  props.account, props.recipient)} >Remove reputation vote</button></div>)
       } 
       else {
   
-        return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>AddDagVote(props.AnthillContract, props.chainId, props.account, props.recipient)} >Add reputation vote</button></div>)
+        return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>AddDagVote(props.AnthillContract,  props.account, props.recipient)} >Add reputation vote</button></div>)
       }
     }
     return  <div></div>
@@ -32,7 +32,7 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
   
     var switchable= props.graph[props.recipient.id].isSwitchable
     if (switchable) {
-      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>SwitchWithParent(props.AnthillContract, props.chainId, props.voter)} >You can switch with your parent!</button></div>)
+      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>SwitchWithParent(props.AnthillContract,  props.voter)} >You can switch with your parent!</button></div>)
     }
     if (props.recipient.recTreeVotes.includes(props.voter)) return (<div  className='Popover'> Increase your <br/> reputation to  <br/> switch position <br/> with your parent!</div>)
     return  <div></div>
@@ -50,7 +50,7 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
       return (
         <div className='Popover'> 
         <button className = 'PopoverButton'
-           onClick={()=>JoinTree(props.AnthillContract, props.chainId, props.voter, props.recipient.id, props.setClickedNode)}>
+           onClick={()=>JoinTree(props.AnthillContract,  props.voter, props.recipient.id, props.setClickedNode)}>
             Join tree here
         </button>
         </div>
@@ -86,7 +86,7 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
                       }
                 />
                 <button className = 'PopoverButton' onClick={
-                    ()=>ChangeName(props.AnthillContract, props.chainId, props.voter, nameInput)}>
+                    ()=>ChangeName(props.AnthillContract,  props.voter, nameInput)}>
                     Change name
                 </button>
               
@@ -101,7 +101,7 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
     // console.log("joinTreeButton", props.isAccountInGraph, props.voter, props.recipient )
     if (props.voter !== props.recipient.id) return (<div></div>)
    
-    return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>LeaveTree( props.AnthillContract, props.chainId,  props.voter, props.setIsAccountInGraph, props.navigate, props.setClickedNode, props.altNode)} >Leave the tree</button></div>)
+    return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>LeaveTree( props.AnthillContract,   props.voter, props.setIsAccountInGraph, props.navigate, props.setClickedNode, props.altNode)} >Leave the tree</button></div>)
   }
   
   export  const MoveTreeVoteButton = (props :{"AnthillContract": any, "chainId":number , "isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNode":any, navigate: any}) => {
@@ -115,7 +115,7 @@ export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,
       notFull = (props.recipient.recTreeVotes.length < 2) 
     }
     if (notFull) {
-      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>MoveTreeVote(props.AnthillContract, props.chainId, props.voter, props.recipient.id, props.setClickedNode, props.navigate)} >Move position</button></div>)
+      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>MoveTreeVote(props.AnthillContract,  props.voter, props.recipient.id, props.setClickedNode, props.navigate)} >Move position</button></div>)
     }
     return  <div></div>
   }

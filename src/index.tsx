@@ -15,10 +15,12 @@ import { Web3Button } from '@web3modal/react'
 import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/react'
 import { configureChains, createClient, WagmiConfig } from 'wagmi'
-import { useAccount,  useSwitchNetwork } from 'wagmi'
+import { useAccount,  useSwitchNetwork , useContract, useSigner} from 'wagmi'
+import { infuraProvider } from 'wagmi/providers/infura'
+import { publicProvider } from 'wagmi/providers/public'
 
 
-import {  polygonMumbai} from 'wagmi/chains'
+import {  polygonMumbai, localhost} from 'wagmi/chains'
 
 // import Provider from "@walletconnect/web3-provider"
 import { AbiItem } from 'web3-utils'
@@ -36,10 +38,10 @@ import {getIsNodeInGraph, getRandomLeaf} from "./ExternalConnections/BackendGett
 const doc = document.getElementById('root')
 const root = client.createRoot(doc!);
 
-const chains = [ polygonMumbai]
+const chains = [ polygonMumbai, localhost]
 const projectId = 'a768398be97a29d62abe51d94ac7735a'
 
-const { provider } = configureChains(chains, [w3mProvider({ projectId })])
+const { provider } = configureChains(chains, [infuraProvider({apiKey: '4458cf4d1689497b9a38b1d6bbf05e78'}), publicProvider( ) ])//[w3mProvider({ projectId })])
 const wagmiClient = createClient({
   autoConnect: true,
   connectors: w3mConnectors({ projectId, version: 1, chains }),
@@ -52,7 +54,6 @@ const  App = () => {
 
     var anthillContractAddress;
     var chainId;
-    var web3;
     var backendUrl ="";
     var wsUrl;
 
@@ -64,7 +65,6 @@ const  App = () => {
         // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
         // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
         chainId = 80001; //mumbai testnet
-        web3 = new Web3(Web3.givenProvider || "https://polygon-mumbai.infura.io/v3/4458cf4d1689497b9a38b1d6bbf05e78");
         
         // backendUrl = "http://localhost:5000/"
         // wsUrl = 'ws://127.0.0.1:5000';
@@ -75,7 +75,6 @@ const  App = () => {
     } else {
         anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
         chainId =1337; //anvil
-        web3 = new Web3(Web3.givenProvider || "ws://localhost:8545");
         backendUrl = "http://localhost:5000/"
         wsUrl = 'ws://127.0.0.1:5000';
     }
@@ -87,8 +86,11 @@ const  App = () => {
       });
 
     var AnthillContract: any; 
-    AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], anthillContractAddress);
-    
+    // AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], anthillContractAddress);
+    const {data: signer } = useSigner({chainId: chainId});
+    AnthillContract = useContract({address: anthillContractAddress, abi: AnthillJson.abi  as AbiItem[], signerOrProvider: signer}); //provider({chainId: chainId})});
+    // console.log("keys", Object.keys(AnthillContract))
+
     const queryParameters = new URLSearchParams(window.location.search)
     var id = queryParameters.get("id")
 
