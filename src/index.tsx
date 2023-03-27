@@ -38,10 +38,24 @@ import {getIsNodeInGraph, getRandomLeaf} from "./ExternalConnections/BackendGett
 const doc = document.getElementById('root')
 const root = client.createRoot(doc!);
 
-const chains = [ polygonMumbai, localhost]
+const testing = false;
+console.log("Version 1")
+
+
+var chains =[];
+var provider:any;
+
+if (testing){
+     chains = [  localhost];
+     ({ provider } = configureChains(chains, [ publicProvider( ) ]))//[w3mProvider({ projectId })])
+
+} else {
+     chains = [ polygonMumbai];
+     ({ provider } = configureChains(chains, [infuraProvider({apiKey: '4458cf4d1689497b9a38b1d6bbf05e78'})]))//[w3mProvider({ projectId })])
+
+}
 const projectId = 'a768398be97a29d62abe51d94ac7735a'
 
-const { provider } = configureChains(chains, [infuraProvider({apiKey: '4458cf4d1689497b9a38b1d6bbf05e78'}), publicProvider( ) ])//[w3mProvider({ projectId })])
 const wagmiClient = createClient({
   autoConnect: true,
   connectors: w3mConnectors({ projectId, version: 1, chains }),
@@ -50,7 +64,6 @@ const wagmiClient = createClient({
 const ethereumClient = new EthereumClient(wagmiClient, chains)
 
 const  App = () => {
-    const testing = false;
 
     var anthillContractAddress;
     var chainId;
@@ -107,9 +120,8 @@ const  App = () => {
     var [isClickedNodeInGraph, setIsClickedNodeInGraph] = useState(false);
 
     // console.log("rendering main app, clickedNode: ", clickedNode)
-    // var [account, setAccount] =  useState("0x0000000000000000000000000000000000000000");
-    const {address } = useAccount();
-    var account = (address) as string;
+    // var [account, setAccount] =  useState(address0);
+    const {address  : account  } = useAccount();
 
     const { pendingChainId,switchNetwork}= useSwitchNetwork();
     if (switchNetwork && pendingChainId !== chainId){
@@ -117,7 +129,6 @@ const  App = () => {
     }
 
     // var [provider, setProvider] = useState<any>(null);
-    var [isAccountInGraph, setIsAccountInGraph] = useState(false);
 
     var [showTutorial, setShowTutorial] = useState(false);
     
@@ -150,15 +161,9 @@ const  App = () => {
             } 
         }
        
-        if (account === undefined) {
-            // isAccountInGraph = false;
-          } else {
-            getIsNodeInGraph(backendUrl, account).then((res)=> {if (res) {setIsAccountInGraph(res)}});
-            console.log("isAccountInGraph", isAccountInGraph, account)
-          }
-         
         
-      }, [backendUrl, clickedNode, isClickedNodeInGraph, navigate, account, isAccountInGraph]);        
+        
+      }, [backendUrl, clickedNode, isClickedNodeInGraph, navigate, account]);        
       
     // var [clickedNodeId, setClickedNodeId]=useState({"id":"Enter", "name":"Enter", "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
     
@@ -196,7 +201,7 @@ const  App = () => {
                             {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode={setClickedNode} backendUrl={backendUrl}/> */}
                         </div>
                         <TutorialPopup showTutorial= {showTutorial} setShowTutorial= {setShowTutorial}/>
-                        <Graph account={account} chainId={chainId} clickedNode = {clickedNode}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
+                        <Graph account={account as string} chainId={chainId} clickedNode = {clickedNode}   AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
                     <Route path="/:id" element={
@@ -229,7 +234,7 @@ const  App = () => {
                             {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} backendUrl={backendUrl}/> */}
                         </div>
                         <TutorialPopup showTutorial= {showTutorial} setShowTutorial= {setShowTutorial}/>
-                        <Graph account={account} chainId={chainId} clickedNode = {clickedNode}  isAccountInGraph={isAccountInGraph} setIsAccountInGraph={setIsAccountInGraph} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
+                        <Graph account={account as string} chainId={chainId} clickedNode = {clickedNode}   AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
                 </Routes>

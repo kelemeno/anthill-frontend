@@ -10,7 +10,9 @@ import {  GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from
 
 import { DrawGraph, } from './DrawGraph';
 import {handleClick, handleMouseOut, handleMouseOver, handleMouseStay} from './GraphNodeMouseInteractions'
-import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, DagVoteButton} from '../../Buttons/PopupButtons'
+import {SwitchParentButton, MoveTreeVoteButton, ChangeNameButton, LeaveTreeButton, JoinTreeButton, RemoveDagVoteButton, AddDagVoteButton} from '../../Buttons/PopupButtons'
+import {SwitchParentCheck, MoveTreeVoteCheck, ChangeNameCheck, LeaveTreeCheck, JoinTreeCheck, RemoveDagVoteCheck, AddDagVoteCheck} from '../../Buttons/PopupButtons'
+
 
 
 
@@ -83,7 +85,7 @@ export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInG
       setLoaded(true);
       // console.log("open4", open, anchorEl, loaded);
     
-  }, [props.graph, props.clickedNode, props.setClickedNode, loaded, navigate]);
+  }, [props.graph, props.clickedNode, props.setClickedNode, loaded,  navigate]);
 
  
 
@@ -116,12 +118,13 @@ export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInG
     {/* <div className='Popover'>Depth: {hoverNode.depth}.  </div> */}
     <div className='Popover'> Current reputation: {(hoverNode.currentRep/10**18).toFixed(2)} </div>
 
-    <SwitchParentButton AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} graph={props.graph}/>
-    <LeaveTreeButton    AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} setIsAccountInGraph = {props.setIsAccountInGraph} setClickedNode= {props.setClickedNode} navigate={navigate} altNode={props.altNode}/>
-    <MoveTreeVoteButton AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} setClickedNode= {props.setClickedNode} navigate={navigate} />
-    <DagVoteButton      AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} account={props.account} recipient={hoverNode.id} graph={props.graph} />
-    <JoinTreeButton     AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} setClickedNode={props.setClickedNode}/>
-    <ChangeNameButton   AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode}  />
+    {(SwitchParentCheck(props.isAccountInGraph, props.graph[hoverNode.id])) && (<SwitchParentButton AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} graph={props.graph}/>)}
+    {(LeaveTreeCheck(props.isAccountInGraph, props.account,  props.graph[hoverNode.id])) && (<LeaveTreeButton    AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} setIsAccountInGraph = {props.setIsAccountInGraph} setClickedNode= {props.setClickedNode} navigate={navigate} altNode={props.altNode}/>)}
+    {(MoveTreeVoteCheck(props.isAccountInGraph, props.account, props.graph[hoverNode.id])) && (<MoveTreeVoteButton AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} setClickedNode= {props.setClickedNode} navigate={navigate} />)}
+    {(AddDagVoteCheck(props.isAccountInGraph, props.graph[hoverNode.id])) && (<AddDagVoteButton      AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} account={props.account} recipient={hoverNode.id} graph={props.graph} />)}
+    {(RemoveDagVoteCheck(props.isAccountInGraph, props.graph[hoverNode.id])) && (<RemoveDagVoteButton      AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} account={props.account} recipient={hoverNode.id} graph={props.graph} />)}
+    {(JoinTreeCheck(props.isAccountInGraph, props.account, props.graph[hoverNode.id])) && (<JoinTreeButton     AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode} setClickedNode={props.setClickedNode} setIsAccountInGraph={props.setIsAccountInGraph}/>)}
+    {(ChangeNameCheck(props.isAccountInGraph,  props.account, props.graph[hoverNode.id])) && (<ChangeNameButton   AnthillContract = {props.AnthillContract} chainId = {props.chainId} isAccountInGraph = {props.isAccountInGraph} voter  ={props.account} recipient={hoverNode}  />)}
 
     <div className='Popover'> Address: <a href={"https://mumbai.polygonscan.com/address/"+hoverNode.id}>{hoverNode.id.slice(0,5)}...{hoverNode.id.slice(-3)}</a> </div> 
 

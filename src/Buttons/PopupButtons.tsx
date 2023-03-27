@@ -3,120 +3,131 @@
 import React, {useState} from 'react';
 
 
-import {  NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
+import {  NodeDataRendering, GraphDataRendering, address0 } from "../Graph/GraphBase";
 
 import {JoinTree, RemoveDagVote, AddDagVote, MoveTreeVote, ChangeName, SwitchWithParent, LeaveTree} from '../ExternalConnections/SmartContractInteractions'
 
 
-export const DagVoteButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "account":string, "recipient": string,  "graph":GraphDataRendering}) => {
-  
-    if (!props.isAccountInGraph) return (<div></div>)
-  
-    var votable= props.graph[props.recipient].isVotable;
-    if (votable) {
-      
-      if (props.graph[props.recipient].isDagVote) {
-        return ( <div className='Popover'><button className = 'PopoverButton' onClick={()=>RemoveDagVote(props.AnthillContract,  props.account, props.recipient)} >Remove reputation vote</button></div>)
-      } 
-      else {
-  
-        return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>AddDagVote(props.AnthillContract,  props.account, props.recipient)} >Add reputation vote</button></div>)
-      }
-    }
-    return  <div></div>
-  }
-  
-  export const SwitchParentButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "graph":GraphDataRendering}) => {
-    
-    if (!props.isAccountInGraph) return (<div></div>)
-  
-    var switchable= props.graph[props.recipient.id].isSwitchable
-    if (switchable) {
-      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>SwitchWithParent(props.AnthillContract,  props.voter)} >You can switch with your parent!</button></div>)
-    }
-    if (props.recipient.recTreeVotes.includes(props.voter)) return (<div  className='Popover'> Increase your <br/> reputation to  <br/> switch position <br/> with your parent!</div>)
-    return  <div></div>
-  }
-  
- export const JoinTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNode": any}) => {
-    if (props.isAccountInGraph) return (<div></div>)
-    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
-    
-    var notFull = false
-    if (props.recipient.recTreeVotes !== undefined) {
-      notFull = (props.recipient.recTreeVotes.length < 2) 
-    }
-    if (notFull) {
-      return (
-        <div className='Popover'> 
-        <button className = 'PopoverButton'
-           onClick={()=>JoinTree(props.AnthillContract,  props.voter, props.recipient.id, props.setClickedNode)}>
-            Join tree here
-        </button>
-        </div>
-      )
-    }
-    return <div></div>
-  }
-  
-  export  const ChangeNameButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering}) => {
-    var [nameInput, setNameInput] = useState("")
-    
-    if (!props.isAccountInGraph) return (<div></div>)
-    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
-    if (props.voter !== props.recipient.id) return (<div></div>)
+// import { useContractWrite, usePrepareContractWrite } from 'wagmi'
+// import AnthillJson from "../ExternalConnections/Anthill.json"
 
+export const AddDagVoteCheck = (isAccountInGraph: boolean, hoverNode: NodeDataRendering) => {
+  return (isAccountInGraph) && (hoverNode?.isVotable) && (!hoverNode?.isDagVote)
+
+}
+
+export const AddDagVoteButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "account":string, "recipient": string,  "graph":GraphDataRendering}) => {
+  var addDagVote = AddDagVote(props.AnthillContract,  props.account, props.recipient)
+  return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>addDagVote?.()} >Add reputation vote</button></div>)
+}
+
+
+export const RemoveDagVoteCheck = (isAccountInGraph: boolean, hoverNode: NodeDataRendering) => {
+  return (isAccountInGraph) && (hoverNode?.isVotable) && (hoverNode?.isDagVote)
+}
+
+export const RemoveDagVoteButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "account":string, "recipient": string,  "graph":GraphDataRendering}) => {
+  // var addDagVote = AddDagVote(props.AnthillContract,  props.account, props.recipient)
+  var removeDagVote = RemoveDagVote(props.AnthillContract,  props.account, props.recipient)      
+  return ( <div className='Popover'><button className = 'PopoverButton' onClick={()=>removeDagVote?.()} >Remove reputation vote</button></div>)
+}
+
+
+export const SwitchParentCheck = (isAccountInGraph: boolean, recipientNode: NodeDataRendering) => {
+  return (isAccountInGraph) && (recipientNode?.isSwitchable) 
+}
+
+export const SwitchParentButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "graph":GraphDataRendering}) => {
   
-    // var notFull = false
-    // if (props.recipient.recTreeVotes !== undefined) {
-    //   notFull = (props.recipient.recTreeVotes.length < 2) 
-    // }
-    // if (notFull)
-     
-      return (
-        <div className='Popover'>
+  var switchWithParent = SwitchWithParent(props.AnthillContract,  props.voter)
+
+  // var switchable= props.graph[props.recipient.id].isSwitchable
+
+  return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>switchWithParent?.()} >Switch positions</button></div>)
+  
+}
+
+
+export const JoinTreeCheck = (isAccountInGraph: boolean, voter:string, recipientNode: NodeDataRendering) => {
+  var notFull = false
+  if ((recipientNode !== undefined) && (recipientNode.recTreeVotes !== undefined) ){
+    notFull = (recipientNode.recTreeVotes.length < 2) 
+  }
+  return (!isAccountInGraph) && (voter !== address0) && (voter !== undefined) && (notFull) 
+}
+
+export const JoinTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNode": any, "setIsAccountInGraph":any}) => {
+  
+  var joinTree = JoinTree(props.AnthillContract,  props.voter, props.recipient.id, props.setClickedNode, props.setIsAccountInGraph);
+
+  return (
+    <div className='Popover'> 
+    <button className = 'PopoverButton'
+        onClick={()=>joinTree?.()}>
+        Join tree here
+    </button>
+    </div>
+  )
+
+}
+
+
+export const ChangeNameCheck = (isAccountInGraph: boolean, voter:string, recipientNode: NodeDataRendering) => {
+  return (isAccountInGraph) && (voter !== address0) && (recipientNode !== undefined) && (voter === recipientNode.id) 
+}
+
+export  const ChangeNameButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering}) => {
+  var [nameInput, setNameInput] = useState("")
+  
+  var changeName = ChangeName(props.AnthillContract,  props.voter, nameInput)
+    
+    return (
+      <div className='Popover'>
+          
+              <input
+                  name='nameInput'
+                  value={nameInput}
+                  placeholder='Name'
+                  autoComplete="off"
+                  onChange={(event) =>
+                      setNameInput(event.target.value)
+                    }
+              />
+              <button className = 'PopoverButton' onClick={
+                  ()=>changeName?.()}>
+                  Change name
+              </button>
             
-                <input
-                    name='nameInput'
-                    value={nameInput}
-                    placeholder='Name'
-                    autoComplete="off"
-                    onChange={(event) =>
-                        setNameInput(event.target.value)
-                      }
-                />
-                <button className = 'PopoverButton' onClick={
-                    ()=>ChangeName(props.AnthillContract,  props.voter, nameInput)}>
-                    Change name
-                </button>
-              
-        </div>)
-    
-    
-  }
+      </div>)
   
-  export  const LeaveTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "setIsAccountInGraph":any, "voter":string,"recipient": NodeDataRendering, "setClickedNode":any, "navigate":any, "altNode":string}) => {
-    if (!props.isAccountInGraph) return (<div></div>)
-    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
-    // console.log("joinTreeButton", props.isAccountInGraph, props.voter, props.recipient )
-    if (props.voter !== props.recipient.id) return (<div></div>)
-   
-    return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>LeaveTree( props.AnthillContract,   props.voter, props.setIsAccountInGraph, props.navigate, props.setClickedNode, props.altNode)} >Leave the tree</button></div>)
-  }
   
-  export  const MoveTreeVoteButton = (props :{"AnthillContract": any, "chainId":number , "isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNode":any, navigate: any}) => {
-    if (!props.isAccountInGraph) return (<div></div>)
-    if (props.voter === "0x0000000000000000000000000000000000000000") return (<div></div>)
-    // console.log("joinTreeButton", props.isAccountInGraph, props.voter, props.recipient )
-    if (props.recipient.recTreeVotes.includes(props.voter)) return (<div></div>)
-    if (props.voter === props.recipient.id) return (<div></div>)
-    var notFull = false
-    if (props.recipient.recTreeVotes !== undefined) {
-      notFull = (props.recipient.recTreeVotes.length < 2) 
-    }
-    if (notFull) {
-      return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>MoveTreeVote(props.AnthillContract,  props.voter, props.recipient.id, props.setClickedNode, props.navigate)} >Move position</button></div>)
-    }
-    return  <div></div>
-  }
+}
+
+
+export const LeaveTreeCheck = (isAccountInGraph: boolean,voter:string, recipientNode: NodeDataRendering) => {
+  return (isAccountInGraph) && (voter !== address0) && (recipientNode !== undefined) && (voter === recipientNode.id)
+}
+
+
+export  const LeaveTreeButton = (props :{"AnthillContract": any, "chainId":number ,"isAccountInGraph": boolean, "setIsAccountInGraph":any, "voter":string,"recipient": NodeDataRendering, "setClickedNode":any, "navigate":any, "altNode":string}) => {
+  var leaveTree = LeaveTree(props.AnthillContract,  props.voter, props.setIsAccountInGraph, props.navigate, props.setClickedNode, props.altNode) 
+  return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>leaveTree?.()} >Leave the tree</button></div>)
+}
+
+
+export const MoveTreeVoteCheck = (isAccountInGraph: boolean, voter:string, recipientNode: NodeDataRendering) => {
   
+  var notFull = false
+  if ((recipientNode !== undefined) && (recipientNode.recTreeVotes !== undefined) ){
+    notFull = (recipientNode.recTreeVotes.length < 2) 
+  }
+
+  return (isAccountInGraph) && (voter !== address0) && (notFull) && (voter !== recipientNode.id) && (!recipientNode.recTreeVotes.includes(voter)) 
+}
+
+export  const MoveTreeVoteButton = (props :{"AnthillContract": any, "chainId":number , "isAccountInGraph": boolean, "voter":string, "recipient": NodeDataRendering, "setClickedNode":any, navigate: any}) => {
+  
+  var moveTreeVote = MoveTreeVote(props.AnthillContract,  props.voter, props.recipient.id, props.setClickedNode, props.navigate)
+  return (<div className='Popover'><button className = 'PopoverButton' onClick={()=>moveTreeVote?.()} >Move position</button></div>)
+
+}

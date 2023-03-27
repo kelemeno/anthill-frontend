@@ -6,13 +6,14 @@ import React, {useState} from 'react';
 
 import useWebSocket from 'react-use-websocket';
 
-import {JoinTreeRandomlyButton,  GoHomeButton, TreeOrRepModeSwitch} from "../Buttons/MainAppButtons"
+import {JoinTreeRandomlyButton, JoinTreeRandomlyCheck, GoHomeButton, TreeOrRepModeSwitch} from "../Buttons/MainAppButtons"
 
 import { GraphSVG } from "./GraphSVG/GraphSVG"
 import { GraphData, GraphDataBare, GraphDataRendering , address1} from "./GraphBase"
 import {  CheckSaveNeighbourHoodWithParentChain , CheckSaveNode, CheckSaveWholeGraph} from './LoadGraph';
-import { getMaxRelRootDepth } from '../ExternalConnections/BackendGetters';
+import { getMaxRelRootDepth, getIsNodeInGraph } from '../ExternalConnections/BackendGetters';
 import {  SelectSentRecDagVotes, SelectWholeGraph } from './SubGraphSelectors';
+
 
 function deepEqual(x:any, y:any):boolean {
     const ok = Object.keys, tx = typeof x, ty = typeof y;
@@ -37,6 +38,7 @@ const gettingMaxRelRootDepth = async (backendUrl: string, maxRelRootDepth:number
 
 const gettingAccount = async (account : string, isAccountInGraph: boolean, anthillGraph: GraphData, anthillGraphBare: GraphDataBare, maxRelRootDepth:number, backendUrl:string)=>{ 
   // console.log("should we get account?", account, isAccountInGraph)
+  // console.log("getting account", isAccountInGraph)
   if  (isAccountInGraph===true){
     // console.log("getting account1", account)
 
@@ -45,18 +47,19 @@ const gettingAccount = async (account : string, isAccountInGraph: boolean, anthi
   }
 }
 
-const gettingClickedNode = async (account : string, 
-                                  isAccountInGraph: boolean,
-                                  treeMode:boolean,
-                                  clickedNode:string,
-                                  altNode: string, 
-                                  setAltNode:any, 
-                                  anthillGraph: GraphData,
-                                  anthillGraphBare: GraphDataBare,
-                                  maxRelRootDepth:number, 
-                                  graphDisplayed: GraphDataRendering,
-                                  setGraphDisplayed: any, 
-                                  backendUrl:string )=>{
+const gettingClickedNode = async (
+    account : string, 
+    isAccountInGraph: boolean,
+    treeMode:boolean,
+    clickedNode:string,
+    altNode: string, 
+    setAltNode:any, 
+    anthillGraph: GraphData,
+    anthillGraphBare: GraphDataBare,
+    maxRelRootDepth:number, 
+    graphDisplayed: GraphDataRendering,
+    setGraphDisplayed: any, 
+    backendUrl:string )=>{
   if (clickedNode !== "Enter") {
     // console.log("getting clickednode", clickedNode)
 
@@ -89,8 +92,13 @@ const gettingClickedNode = async (account : string,
 
 }
 
-const loadGraphDetails = async (account : string, isAccountInGraph: boolean, treeMode:boolean, clickedNode:string, altNode:string, setAltNode:any, anthillGraph: GraphData, anthillGraphBare: GraphDataBare, maxRelRootDepth:number, setMaxRelRootDepth:any,  graphDisplayed:GraphDataRendering, setGraphDisplayed:any, backendUrl:string)=>{
+const loadGraphDetails = async (account : string, isAccountInGraph: boolean, setIsAccountInGraph:any, treeMode:boolean, clickedNode:string, altNode:string, setAltNode:any, anthillGraph: GraphData, anthillGraphBare: GraphDataBare, maxRelRootDepth:number, setMaxRelRootDepth:any,  graphDisplayed:GraphDataRendering, setGraphDisplayed:any, backendUrl:string)=>{
   // console.log("in loadGraphDetails", account, isAccountInGraph,  clickedNode, altNode,  maxRelRootDepth,  backendUrl)
+  // if (account !== undefined)  {
+  //   var res = await getIsNodeInGraph(backendUrl, account)
+  //   if (res!==isAccountInGraph) {setIsAccountInGraph(res)};
+  //   console.log("isAccountInGraph", isAccountInGraph, account)
+  // }
   await gettingMaxRelRootDepth(backendUrl, maxRelRootDepth, setMaxRelRootDepth)
   await gettingAccount(account, isAccountInGraph, anthillGraph, anthillGraphBare, maxRelRootDepth, backendUrl)
   await gettingClickedNode( account, isAccountInGraph, treeMode, clickedNode, altNode, setAltNode, anthillGraph, anthillGraphBare, maxRelRootDepth, graphDisplayed, setGraphDisplayed, backendUrl)
@@ -98,11 +106,12 @@ const loadGraphDetails = async (account : string, isAccountInGraph: boolean, tre
 
        
 
-export const Graph = (props: {"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNode":string,"setClickedNode":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string }) => {
+export const Graph = (props: {"account":string, "chainId":number, "clickedNode":string,"setClickedNode":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string }) => {
     // variables 
 
 
     // const navigate = useNavigate();
+    var [isAccountInGraph, setIsAccountInGraph] = useState(false);
 
     var [maxRelRootDepth, setMaxRelRootDepth] =useState(0);
     // the nodes we have clicked on, so have fully loaded
@@ -119,40 +128,65 @@ export const Graph = (props: {"account":string, "chainId":number, "isAccountInGr
     var [treeMode, setTreeMode] = useState(true);
 
     
-    loadGraphDetails(props.account, props.isAccountInGraph, treeMode, clickedNode, altNode, setAltNode, anthillGraph, anthillGraphBare, maxRelRootDepth, setMaxRelRootDepth, graphDisplayed, setGraphDisplayed, props.backendUrl)
 
     var clearingGraph = async () => {
+      if (props.account !== undefined)  {
+        await getIsNodeInGraph(props.backendUrl, props.account).then((res)=>{if (res!==isAccountInGraph) {setIsAccountInGraph(res)};})
+      } else {
+        if (isAccountInGraph) {setIsAccountInGraph(false)}
+      }
+
       setAnthillGraph({});
       setAnthillGraphBare({});
+      
     }
 
-           useWebSocket(props.wsUrl, {
-        onOpen: () => {
-          console.log('WebSocket connection established.');
-        },
-        onMessage: (event) => {
-          clearingGraph();
-          console.log('WebSocket message received.', event);
-        },
-        onClose: () => {
-          console.log('WebSocket connection closed.');
-        }
-      });
+    useWebSocket(props.wsUrl, {
+      onOpen: () => {
+        console.log('WebSocket connection established.');
+      },
+      onMessage: (event) => {
+        clearingGraph();
+        console.log('WebSocket message received.', event);
+      },
+      onClose: () => {
+        console.log('WebSocket connection closed.');
+      }
+    });
+
+    
+
+    loadGraphDetails(props.account, isAccountInGraph, setIsAccountInGraph, treeMode, clickedNode, altNode, setAltNode, anthillGraph, anthillGraphBare, maxRelRootDepth, setMaxRelRootDepth, graphDisplayed, setGraphDisplayed, props.backendUrl)
+
 
     React.useEffect(()=>{
-      // console.log("clickedNode", clickedNode, "props.isAccountInGraph", props.isAccountInGraph)
+
+      
+
+
+      // console.log("clickedNode", clickedNode, "isAccountInGraph", isAccountInGraph)
       if (clickedNode === "Enter"){
         setClickedNode(props.clickedNode)
       }
-      
-      gettingAccount(props.account, props.isAccountInGraph, anthillGraph, anthillGraphBare, maxRelRootDepth, props.backendUrl)
 
-    }, [clickedNode, props.clickedNode, props.account, props.isAccountInGraph, props.backendUrl, anthillGraph, anthillGraphBare, maxRelRootDepth]);
+      
+      
+      gettingAccount(props.account, isAccountInGraph, anthillGraph, anthillGraphBare, maxRelRootDepth, props.backendUrl)
+
+
+
+    }, [clickedNode, props.clickedNode, props.account, isAccountInGraph, props.backendUrl, anthillGraph, anthillGraphBare, maxRelRootDepth, graphDisplayed, treeMode, altNode]);
+
+    // I added this so that when we connect the account, the buttons on the popups for the graph change. Currently we calculate the buttons in SubGraphSelection, but this will be moved to LoadGraph, so that we only do it once. 
+    // ideally we will seperate these button details from the graph itself, so that we do not relead when connecting the account. 
+    React.useEffect(()=>{
+      clearingGraph();
+    }, [props.account])
   
     const props2 = { "account":props.account, 
     "chainId":props.chainId,
-    "isAccountInGraph": props.isAccountInGraph,
-    "setIsAccountInGraph": props.setIsAccountInGraph,
+    "isAccountInGraph": isAccountInGraph,
+    "setIsAccountInGraph": setIsAccountInGraph,
     // here we use the state variable and not the props variable for clickedNode
     "clickedNode": clickedNode,
     "setClickedNode": setClickedNode,
@@ -166,8 +200,8 @@ export const Graph = (props: {"account":string, "chainId":number, "isAccountInGr
     return (
     <>
       <div style={{textAlign:"left"}}>
-        <GoHomeButton account={props.account} isAccountInGraph={props.isAccountInGraph} setClickedNode= {setClickedNode}/>
-        <JoinTreeRandomlyButton AnthillContract= {props.AnthillContract} chainId={props.chainId} account={props.account} isAccountInGraph= {props.isAccountInGraph} setClickedNode= {setClickedNode} backendUrl={props.backendUrl}/>
+        <GoHomeButton account={props.account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/>
+        {(JoinTreeRandomlyCheck(isAccountInGraph, props.account ))&&(<JoinTreeRandomlyButton AnthillContract= {props.AnthillContract} chainId={props.chainId} account={props.account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} setIsAccountInGraph={setIsAccountInGraph} backendUrl={props.backendUrl}/>)}
         <TreeOrRepModeSwitch treeMode = {treeMode} setTreeMode =  {setTreeMode} />
       </div>
       <GraphSVG {...props2}/>

@@ -6,6 +6,7 @@ export async function getMaxRelRootDepth(backendUrl: string): Promise<number>{
   }
   
   export async function getIsNodeInGraph(backendUrl: string, id:string):Promise<boolean>{
+    // console.log("gettingIsNodeInGraph", id)
     return await axios.get(backendUrl+"isNodeInGraph/"+id).then(response => {return response.data.isNodeInGraph}); 
   }
   
@@ -20,6 +21,7 @@ export async function getMaxRelRootDepth(backendUrl: string): Promise<number>{
   
  export async function getNodeFromServer(backendUrl: string, id: string) : Promise<NodeData>{
     // console.log("getting id", id)
+    if (id === undefined) {console.log("bug: trying to get undefined from backend");return {} as NodeData}
     return await axios.get(backendUrl+"id/"+id).then(response => { return response.data.nodeData;}); 
   }
   
