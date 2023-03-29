@@ -323,6 +323,8 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
         .attr("alignment-baseline", "middle")
         .attr("dominant-baseline", "middle")
         .attr("fill", "white")
+        // color: #fff;
+        // .attr("text-shadow", "5px 0 0 #000, 0 -5px 0 #000, 0 5px 0 #000, -5px 0 0 #000")
         .attr("font-size", "14px")
         .attr("user-select", "none")
         .attr("class", "unselectable")
