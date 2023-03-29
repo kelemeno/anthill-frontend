@@ -2,12 +2,12 @@
 
 // import { useNavigate, useParams } from "react-router-dom";
 
-import { NodeDataRendering } from "../GraphBase";
+import {  NodeDataRendering } from "../GraphBase";
 
 
-export const handleClick = (props: {id: string, setOpen: any, setAnchorEl:any, setAnchorElSaver:any, setLoaded:any, setClickedNodeId:any, setHoverNode:any, navigate:any} ) => { //setAnthillGraphNum:any,
+export const handleClick = (props: {id: string, name:string, rep:number, setOpen: any, setAnchorEl:any, setAnchorElSaver:any, setLoaded:any, clickedNode:string, setClickedNodeId:any, setHoverNode:any, navigate:any} ) => { //setAnthillGraphNum:any,
     // console.log("handling click", props.id,)
-
+    if (props.id === props.clickedNode) {return}
     props.setLoaded(false);
     props.setOpen(false);
     props.setAnchorEl(null);
@@ -18,7 +18,7 @@ export const handleClick = (props: {id: string, setOpen: any, setAnchorEl:any, s
       props.setClickedNodeId(props.id);
 
 
-      props.setHoverNode({"id":props.id, "name":props.id, "totalWeight": 0,  "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": [], "isVotable": false, "isDagVote": false, "isSwitchable": false} as NodeDataRendering);
+      props.setHoverNode({"id":props.id, "name": props.name, "totalWeight": 0,  "currentRep": props.rep, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": [], "isVotable": false, "isDagVote": false, "isSwitchable": false} as NodeDataRendering);
 
     // }, 30)
     

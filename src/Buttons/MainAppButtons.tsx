@@ -91,9 +91,9 @@ export function TreeOrRepModeSwitch(props:{treeMode: boolean, setTreeMode: any})
         onChange={handleOnChange} />   
 
     </StyledLabel>
-    <div style={{ textAlign: 'center', width:'80px' }}>{props.treeMode ? "Tree" : "Reputation"}</div>
+     <div style={{ textAlign: 'center', width:'80px' }}>{props.treeMode ? "Tree" : "Reputation"}</div> 
 
-    </>
+     </> 
   );
 }
 
@@ -110,9 +110,9 @@ background: ${({ checked }) => (checked ? "#00ff00" :  "#808080")};
 display: block;  
 border-radius: 20px;  
 position: relative;
+margin-top: 10px;
 margin-left: 10px;
 user-select: none;
-
 
 &:after {    
 content: "";    

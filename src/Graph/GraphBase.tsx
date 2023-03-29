@@ -5,6 +5,7 @@
  export const address1 ="0x0000000000000000000000000000000000000001";
 
 
+ 
  export type DagVote = {'id': string, 'weight': number, 'posInOther': number}
 
  export type NodeData = {"id":string, "name":string,  "totalWeight":number; "currentRep": number, "depth":number,  "relRoot":string,  "sentTreeVote": string, "recTreeVotes":string[], "sentDagVotes":DagVote[], "recDagVotes": DagVote[]}
@@ -16,6 +17,14 @@
  export type GraphData= {[id: string]: NodeData;}
  export type GraphDataBare= {[id: string]: NodeDataBare;}
  export type GraphDataRendering= {[id: string]: NodeDataRendering;}
+
+export const nameShortener= (d:string) => {
+  if (d.length <= 6) {
+    return d;
+  } else {
+    return d.slice(0, 3)+".."+d.slice((d.length)-3);
+  }
+}
 
  // functions adapted for use here. 
 

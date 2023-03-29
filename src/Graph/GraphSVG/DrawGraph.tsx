@@ -8,7 +8,7 @@ import * as d3Base from 'd3';
 
 import * as d3Dag from 'd3-dag';
 
-import {GraphDataRendering,  NodeDataRendering} from '../GraphBase';
+import {GraphDataRendering,  nameShortener,  NodeDataRendering} from '../GraphBase';
 var svg = require('svg');
 
 function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[]{
@@ -249,7 +249,7 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
         .enter()
         .append("g")
         .attr("transform", ({ x, y }) => `translate(${x}, ${y})`)
-        .on("click", (n) => {props.handleClick(n.target.__data__.data.id)})
+        .on("click", (n) => {props.handleClick(n.target.__data__.data.id, n.target.__data__.data.name, n.target.__data__.data.currentRep)})
         .on("mouseover", (n)=>props.handleMouseOver(n, n.target.__data__.data))
         .on("mouseout",  props.handleMouseOut);
         
@@ -316,12 +316,7 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
     // Add text to nodes
     nodes
         .append("text")
-        .text((d) => {if (d.data.name.length <= 6) {
-                        return d.data.name;
-                    } else {
-                        return d.data.name.slice(0, 3)+".."+d.data.name.slice((d.data.name.length)-3);
-                    }
-                })
+        .text((d) => nameShortener(d.data.name))
         .attr("fontWeight", "bold")
         .attr("fontFamily", "sans-serif")
         .attr("text-anchor", "middle")
@@ -330,10 +325,7 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
         .attr("fill", "white")
         .attr("font-size", "14px")
         .attr("user-select", "none")
-        // .attr("webkit-user-select", "none")
-        .attr("pointer-events", "none")
-        .attr("selectable", "false")
-        // .attr("selection", "")
+        .attr("class", "unselectable")
         ;
 
     

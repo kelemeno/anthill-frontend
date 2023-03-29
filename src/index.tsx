@@ -7,12 +7,12 @@ import useWebSocket from 'react-use-websocket';
 
 
 // import detectEthereumProvider from '@metamask/detect-provider';
-import Web3 from 'web3';
+// import Web3 from 'web3';
 // import WalletConnectProvider from '@walletconnect/web3-provider';
 // import { provider as Provider } from 'web3-core/types';
 import { Web3Button } from '@web3modal/react'
 
-import { EthereumClient, w3mConnectors, w3mProvider } from '@web3modal/ethereum'
+import { EthereumClient, w3mConnectors } from '@web3modal/ethereum'
 import { Web3Modal } from '@web3modal/react'
 import { configureChains, createClient, WagmiConfig } from 'wagmi'
 import { useAccount,  useSwitchNetwork , useContract, useSigner} from 'wagmi'
@@ -30,7 +30,7 @@ import { AbiItem } from 'web3-utils'
 import {Graph} from './Graph/GraphMain';
 import './index.css';
 import AnthillJson from "./ExternalConnections/Anthill.json"
-import TutorialPopup, {  TutorialButton} from "./Buttons/MainAppButtons"
+import TutorialPopup, {  TutorialButton, TreeOrRepModeSwitch} from "./Buttons/MainAppButtons"
 import {getIsNodeInGraph, getRandomLeaf} from "./ExternalConnections/BackendGetters"
 
 
@@ -39,7 +39,7 @@ const doc = document.getElementById('root')
 const root = client.createRoot(doc!);
 
 const testing = false;
-console.log("Version 1")
+console.log("Version 2")
 
 
 var chains =[];
@@ -63,14 +63,11 @@ const wagmiClient = createClient({
 })
 const ethereumClient = new EthereumClient(wagmiClient, chains)
 
-const  App = () => {
-
-    var anthillContractAddress;
-    var chainId;
+    var anthillContractAddress:string;
+    var chainId:number;
     var backendUrl ="";
-    var wsUrl;
+    var wsUrl:string;
 
-    var navigate = useNavigate();
 
     if (!testing) {
         // anthillContractAddress = "0x69649a6E7E9c090a742f0671C64f4c7c31a1e4ce"; //mumbai v4
@@ -92,6 +89,11 @@ const  App = () => {
         wsUrl = 'ws://127.0.0.1:5000';
     }
 
+const  App = () => {
+
+    var navigate = useNavigate();
+
+
     useWebSocket(wsUrl, {
         onOpen: () => {
           console.log('WebSocket connection established.');
@@ -108,7 +110,6 @@ const  App = () => {
     var id = queryParameters.get("id")
 
     // var {id} = useParams<{id: string}>();
-    // console.log()
     // console.log("main app1",id)
 
     if ((id === undefined) || (id === null) || (id === "")) {
@@ -118,6 +119,9 @@ const  App = () => {
 
     var [clickedNode, setClickedNode] = useState("Enter");
     var [isClickedNodeInGraph, setIsClickedNodeInGraph] = useState(false);
+
+    var [treeMode, setTreeMode] = useState(true);
+
 
     // console.log("rendering main app, clickedNode: ", clickedNode)
     // var [account, setAccount] =  useState(address0);
@@ -137,25 +141,27 @@ const  App = () => {
         if (!isClickedNodeInGraph){
             setIsClickedNodeInGraph(true);
             // we check that the clicked node is valid.
-            if ((clickedNode === "Enter")|| (clickedNode === undefined) || (clickedNode === null)|| (clickedNode === "")){
+            // console.log("useEffect", id, clickedNode)
+            if ((id === "Enter") || (id == null)){
                 // if we are on an empty node, we get a random leaf
-                getRandomLeaf(backendUrl, ).then((res)=>{
-                navigate("/?id="+res);
-                //   console.log("random leaf: ", res)
-                setClickedNode(res);
+                getRandomLeaf(backendUrl).then((rand)=>{
+                    navigate("/?id="+rand);
+                    //   console.log("random leaf: ", rand)
+                    setClickedNode(rand);
                 });
             } else {
-                // if we are on an incorrect node, we get a random leaf
-                getIsNodeInGraph(backendUrl, clickedNode).then(
+                getIsNodeInGraph(backendUrl, id).then(
                 (res)=> {
-                    // console.log("clickedNode in graph?", clickedNode, res);
+                    // console.log("clickedNode in graph?/", clickedNode, res);
                     if (!res){ getRandomLeaf(backendUrl ).then(
-                    (res2) => {
-                        navigate("/?id="+res2);
-                        // console.log("random leaf: ", res)
-                        setClickedNode(res2);
-                    } 
-                    )}
+                        (rand) => {
+                            navigate("/?id="+rand);
+                            // console.log("random leaf: ", res)
+                            setClickedNode(rand);
+                        } 
+                    )} else {
+                        if (id) {setClickedNode(id)};
+                    }
                 }
                 )
             } 
@@ -163,7 +169,7 @@ const  App = () => {
        
         
         
-      }, [backendUrl, clickedNode, isClickedNodeInGraph, navigate, account]);        
+      }, [ clickedNode, isClickedNodeInGraph, navigate, account, id]);        
       
     // var [clickedNodeId, setClickedNodeId]=useState({"id":"Enter", "name":"Enter", "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
     
@@ -173,68 +179,18 @@ const  App = () => {
                 <Routes>
                 <Route path="/" element={
                         <>
-                        
-                        
-                        <div style={{textAlign:"right", margin : 15}}>
-                            <Web3Button />
-                            &nbsp; &nbsp;&nbsp;&nbsp;
+                        <Header showTutorial={showTutorial} setShowTutorial= {setShowTutorial} treeMode={treeMode} setTreeMode= {setTreeMode}/>       
 
-                            <TutorialButton showTutorial= {showTutorial} setShowTutorial={setShowTutorial}/>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-                            <><a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a></>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-                            <><a  href= "https://faucet.polygon.technology/"> Get test tokens </a></>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-
-                            <><a  href= {"https://mumbai.polygonscan.com/address/"+anthillContractAddress}> Link to Blockexplorer</a></>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-
-                            <><a  href= "https://github.com/kelemeno/anthill"> Link to github </a></>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-
-                            <a  href= "https://demo.snapshot.org/#/anthilldao.eth"> Link to voting page </a>
-                        </div>
-
-                        <div style={{textAlign:"left", margin : 15}}>
-                            {/* <ConnectMetamaskButton provider={provider} setProvider={setProvider} account = {account} setAccounts={setAccount} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl} /> */}
-                            {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
-                            {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode={setClickedNode} backendUrl={backendUrl}/> */}
-                        </div>
                         <TutorialPopup showTutorial= {showTutorial} setShowTutorial= {setShowTutorial}/>
-                        <Graph account={account as string} chainId={chainId} clickedNode = {clickedNode}   AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
+                        <Graph account={account as string} chainId={chainId} clickedNode = {clickedNode} treeMode={treeMode}  AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
                     <Route path="/:id" element={
                         <>
-                        
+                        <Header showTutorial={showTutorial} setShowTutorial= {setShowTutorial} treeMode={treeMode} setTreeMode= {setTreeMode} />
 
-                        <div style={{textAlign:"right", margin : 15}}>
-                            <Web3Button />
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-                            <TutorialButton showTutorial= {showTutorial} setShowTutorial={setShowTutorial}/>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-
-                            <a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-                            <a  href= "https://faucet.polygon.technology/"> Get test tokens </a>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-
-                            <a  href={"https://mumbai.polygonscan.com/address/"+anthillContractAddress}> Link to Blockexplorer</a>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-
-                            <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
-                            &nbsp; &nbsp;&nbsp;&nbsp;
-
-                            <a  href= "https://demo.snapshot.org/#/anthilldao.eth"> Link to voting page </a>
-                        </div>
-
-                        <div style={{textAlign:"left", margin : 15}}>
-                            {/* <ConnectMetamaskButton provider={provider} setProvider={setProvider} account = {account} setAccounts={setAccount} setIsAccountInGraph={setIsAccountInGraph} backendUrl={backendUrl}/> */}
-                            {/* <GoHomeButton account={account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/> */}
-                            {/* <JoinTreeRandomlyButton AnthillContract= {AnthillContract} chainId={chainId} account={account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} backendUrl={backendUrl}/> */}
-                        </div>
                         <TutorialPopup showTutorial= {showTutorial} setShowTutorial= {setShowTutorial}/>
-                        <Graph account={account as string} chainId={chainId} clickedNode = {clickedNode}   AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
+                        <Graph account={account as string} chainId={chainId} clickedNode = {clickedNode} treeMode={treeMode} AnthillContract={AnthillContract} setClickedNode={setClickedNode} backendUrl={backendUrl} wsUrl={wsUrl}/>
                         </>
                     }/>
                 </Routes>
@@ -242,12 +198,57 @@ const  App = () => {
     )
 }
 
+function Header(props:{showTutorial: boolean, setShowTutorial: any, treeMode: boolean, setTreeMode: any}) {
+    return (
+        <header>
+            {/* <p>
+                <div style = {{fontSize:"20px", textAlign:"center"}}>🐜</div>
+            </p> */}
+
+            <div className="header__left">
+                <TreeOrRepModeSwitch treeMode = {props.treeMode} setTreeMode =  {props.setTreeMode} />
+                
+            </div>
+            <div className="header__right">
+                &nbsp; &nbsp;
+                <TutorialButton showTutorial= {props.showTutorial} setShowTutorial={props.setShowTutorial}/>
+                &nbsp; &nbsp; 
+                <Web3Button />
+            </div>
+            
+
+        </header>
+    )
+}
+
+function Footer() {
+    return (
+      <footer>
+            &nbsp; &nbsp;&nbsp;&nbsp;
+            <a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a>
+            &nbsp; &nbsp;&nbsp;&nbsp;
+            <a  href= "https://faucet.polygon.technology/"> Get test tokens </a>
+            &nbsp; &nbsp;&nbsp;&nbsp;
+
+            <a  href={"https://mumbai.polygonscan.com/address/"+anthillContractAddress}> Link to Blockexplorer</a>
+            &nbsp; &nbsp;&nbsp;&nbsp;
+
+            <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
+            &nbsp; &nbsp;&nbsp;&nbsp;
+
+            <a  href= "https://demo.snapshot.org/#/anthilldao.eth"> Link to voting page </a>
+      </footer>
+    );
+  }
+
 root.render(
 
     <React.StrictMode>
         <BrowserRouter>
             <WagmiConfig client={wagmiClient}>
-                <App/>
+                <App />
+                <Footer />
+
             </WagmiConfig>
             <Web3Modal projectId={projectId} ethereumClient={ethereumClient} />
         </BrowserRouter>

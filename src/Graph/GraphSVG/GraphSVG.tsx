@@ -51,12 +51,15 @@ export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInG
 
   React.useEffect(()=>{
 
-    const handleClickConstructed = (id:string)=>handleClick({
+    const handleClickConstructed = (id:string, name:string, rep:number)=>handleClick({
       "id":id,
+      "name":name,
+      "rep":rep,
       "setOpen":setOpen, 
       "setAnchorEl":setAnchorEl, 
       "setAnchorElSaver":setAnchorElSaver, 
       // "setAnthillGraphNum":setAnthillGraphNum, 
+      "clickedNode" : props.clickedNode,
       "setClickedNodeId":props.setClickedNode, 
       "setLoaded":setLoaded,
       "setHoverNode":setHoverNode,

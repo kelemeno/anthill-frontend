@@ -106,7 +106,7 @@ const loadGraphDetails = async (account : string, isAccountInGraph: boolean, set
 
        
 
-export const Graph = (props: {"account":string, "chainId":number, "clickedNode":string,"setClickedNode":any,  "AnthillContract": any, "backendUrl": string, "wsUrl":string }) => {
+export const Graph = (props: {"account":string, "chainId":number, "clickedNode":string,"setClickedNode":any, "treeMode":boolean, "AnthillContract": any, "backendUrl": string, "wsUrl":string }) => {
     // variables 
 
 
@@ -124,10 +124,6 @@ export const Graph = (props: {"account":string, "chainId":number, "clickedNode":
     var [graphDisplayed, setGraphDisplayed] = useState( {"id":{"id":props.clickedNode, "name":props.clickedNode, "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": [], "isVotable":false, "isDagVote":false, "isSwitchable": false}} as GraphDataRendering);
 
     var [altNode, setAltNode] = useState("");
-
-    var [treeMode, setTreeMode] = useState(true);
-
-    
 
     var clearingGraph = async () => {
       if (props.account !== undefined)  {
@@ -154,28 +150,18 @@ export const Graph = (props: {"account":string, "chainId":number, "clickedNode":
       }
     });
 
-    
-
-    loadGraphDetails(props.account, isAccountInGraph, setIsAccountInGraph, treeMode, clickedNode, altNode, setAltNode, anthillGraph, anthillGraphBare, maxRelRootDepth, setMaxRelRootDepth, graphDisplayed, setGraphDisplayed, props.backendUrl)
-
+    loadGraphDetails(props.account, isAccountInGraph, setIsAccountInGraph, props.treeMode, clickedNode, altNode, setAltNode, anthillGraph, anthillGraphBare, maxRelRootDepth, setMaxRelRootDepth, graphDisplayed, setGraphDisplayed, props.backendUrl)
 
     React.useEffect(()=>{
-
-      
-
 
       // console.log("clickedNode", clickedNode, "isAccountInGraph", isAccountInGraph)
       if (clickedNode === "Enter"){
         setClickedNode(props.clickedNode)
       }
-
-      
       
       gettingAccount(props.account, isAccountInGraph, anthillGraph, anthillGraphBare, maxRelRootDepth, props.backendUrl)
 
-
-
-    }, [clickedNode, props.clickedNode, props.account, isAccountInGraph, props.backendUrl, anthillGraph, anthillGraphBare, maxRelRootDepth, graphDisplayed, treeMode, altNode]);
+    }, [clickedNode, props.clickedNode, props.account, isAccountInGraph, props.backendUrl, anthillGraph, anthillGraphBare, maxRelRootDepth, graphDisplayed, props.treeMode, altNode]);
 
     // I added this so that when we connect the account, the buttons on the popups for the graph change. Currently we calculate the buttons in SubGraphSelection, but this will be moved to LoadGraph, so that we only do it once. 
     // ideally we will seperate these button details from the graph itself, so that we do not relead when connecting the account. 
@@ -199,10 +185,9 @@ export const Graph = (props: {"account":string, "chainId":number, "clickedNode":
 
     return (
     <>
-      <div style={{textAlign:"left"}}>
+      <div className="insideButton" style={{textAlign:"left"}}>
         <GoHomeButton account={props.account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/>
         {(JoinTreeRandomlyCheck(isAccountInGraph, props.account ))&&(<JoinTreeRandomlyButton AnthillContract= {props.AnthillContract} chainId={props.chainId} account={props.account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} setIsAccountInGraph={setIsAccountInGraph} backendUrl={props.backendUrl}/>)}
-        <TreeOrRepModeSwitch treeMode = {treeMode} setTreeMode =  {setTreeMode} />
       </div>
       <GraphSVG {...props2}/>
     </>
