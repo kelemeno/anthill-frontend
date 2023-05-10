@@ -272,7 +272,7 @@ export const DrawGraph= (props:{graph: GraphDataRendering, clickedNode:string, h
     // Plot node circles
     nodes
         .append("circle")
-        .attr("r", nodeRadius)
+        .attr("r", (n) => nodeRadius) // /(1.2**n.data.depth)), but we need to change the positions in the graph drawing as well
         .attr("fill", (n) => colorMap[n.data.id])
         // .attr("user-select", "none") //testing for text highlighting
 

@@ -137,7 +137,7 @@ export const Graph = (props: {"account":string, "chainId":number, "clickedNode":
       
     }
 
-    useWebSocket(props.wsUrl, {
+    const {sendMessage, } = useWebSocket(props.wsUrl, {
       onOpen: () => {
         console.log('WebSocket connection established.');
       },

@@ -225,18 +225,19 @@ function Footer() {
     return (
       <footer>
             &nbsp; &nbsp;&nbsp;&nbsp;
-            <a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580"> Link to medium post </a>
+            <a  href= "https://faucet.polygon.technology/">Get test tokens </a>
             &nbsp; &nbsp;&nbsp;&nbsp;
-            <a  href= "https://faucet.polygon.technology/"> Get test tokens </a>
-            &nbsp; &nbsp;&nbsp;&nbsp;
-
-            <a  href={"https://mumbai.polygonscan.com/address/"+anthillContractAddress}> Link to Blockexplorer</a>
+            <a  href= "https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580">Medium post </a>
+            
             &nbsp; &nbsp;&nbsp;&nbsp;
 
-            <a  href= "https://github.com/kelemeno/anthill"> Link to github </a>
+            <a  href={"https://mumbai.polygonscan.com/address/"+anthillContractAddress}>Blockexplorer</a>
             &nbsp; &nbsp;&nbsp;&nbsp;
 
-            <a  href= "https://demo.snapshot.org/#/anthilldao.eth"> Link to voting page </a>
+            <a  href= "https://github.com/kelemeno/anthill">Github</a>
+            &nbsp; &nbsp;&nbsp;&nbsp;
+
+            <a  href= "https://demo.snapshot.org/#/anthilldao.eth">Voting page</a>
       </footer>
     );
   }
