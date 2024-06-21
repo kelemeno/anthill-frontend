@@ -8,7 +8,7 @@ import {  NodeDataRendering, GraphDataRendering, address0 } from "../Graph/Graph
 import {JoinTree, RemoveDagVote, AddDagVote, MoveTreeVote, ChangeName, SwitchWithParent, LeaveTree} from '../ExternalConnections/SmartContractInteractions'
 
 
-// import { useContractWrite, usePrepareContractWrite } from 'wagmi'
+// import { useWriteContract, useSimulateContract } from 'wagmi'
 // import AnthillJson from "../ExternalConnections/Anthill.json"
 
 export const AddDagVoteCheck = (isAccountInGraph: boolean, hoverNode: NodeDataRendering) => {

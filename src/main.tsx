@@ -2,9 +2,7 @@ import React, {useState}  from 'react';
 import * as client from 'react-dom/client';
 import { Routes, Route,  BrowserRouter, useNavigate } from 'react-router-dom';
 import useWebSocket from 'react-use-websocket';
-
-
-
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // import detectEthereumProvider from '@metamask/detect-provider';
 // import Web3 from 'web3';
@@ -12,23 +10,21 @@ import useWebSocket from 'react-use-websocket';
 // import { provider as Provider } from 'web3-core/types';
 import { Web3Button } from '@web3modal/react'
 
-import { EthereumClient, w3mConnectors } from '@web3modal/ethereum'
-import { Web3Modal } from '@web3modal/react'
-import { configureChains, createClient, WagmiConfig } from 'wagmi'
-import { useAccount,  useSwitchNetwork , useContract, useSigner} from 'wagmi'
-import { infuraProvider } from 'wagmi/providers/infura'
-import { publicProvider } from 'wagmi/providers/public'
+// import { EthereumClient, w3mConnectors } from '@web3modal/ethereum'
+// import { Web3Modal } from '@web3modal/react'
+import { createConfig, WagmiProvider} from 'wagmi'
+import { useAccount,  useSwitchChain , useReadContract, useWriteContract, useWalletClient} from 'wagmi'
+import { http, createClient } from 'viem'
 
+import {  zkSyncSepoliaTestnet, localhost} from 'wagmi/chains'
 
-import {  polygonMumbai, localhost} from 'wagmi/chains'
+const queryClient = new QueryClient()
 
-// import Provider from "@walletconnect/web3-provider"
 import { AbiItem } from 'web3-utils'
-// there was some problem with the web3 alternative, so we use ethers
 
 
 import {Graph} from './Graph/GraphMain';
-import './index.css';
+import './main.css';
 import AnthillJson from "./ExternalConnections/Anthill.json"
 import TutorialPopup, {  TutorialButton, TreeOrRepModeSwitch} from "./Buttons/MainAppButtons"
 import {getIsNodeInGraph, getRandomLeaf} from "./ExternalConnections/BackendGetters"
@@ -38,35 +34,46 @@ import {getIsNodeInGraph, getRandomLeaf} from "./ExternalConnections/BackendGett
 const doc = document.getElementById('root')
 const root = client.createRoot(doc!);
 
-const testing = false;
+const testing = true;
 console.log("Version 2")
 
+let chainsA = (testing)? [localhost]: [zkSyncSepoliaTestnet];
+let provider:any;
 
-var chains =[];
-var provider:any;
-
-if (testing){
-     chains = [  localhost];
-     ({ provider } = configureChains(chains, [ publicProvider( ) ]))//[w3mProvider({ projectId })])
-
-} else {
-     chains = [ polygonMumbai];
-     ({ provider } = configureChains(chains, [infuraProvider({apiKey: '4458cf4d1689497b9a38b1d6bbf05e78'})]))//[w3mProvider({ projectId })])
-
-}
+const wagmiConfig = createConfig({
+    chains: (testing)? [localhost]: [zkSyncSepoliaTestnet],
+    transports: {
+        [localhost.id ]: http(),
+        [zkSyncSepoliaTestnet.id]: http("https://sepolia.era.zksync.dev/")
+    },
+})
+// const wagmiConfigLocal = createConfig({
+//     chains: [localhost],
+//     transports: {
+//       [localhost.id]: http()
+//     },
+//   })
+// const wagmiConfigTestnet = createConfig({
+//     chains: [zkSyncSepoliaTestnet],
+//     transports: {
+//       [zkSyncSepoliaTestnet.id]: http("https://sepolia.era.zksync.dev/")
+//     },
+//   })
+//   const wagmiConfig = testing ? wagmiConfigLocal : wagmiConfigTestnet;
 const projectId = 'a768398be97a29d62abe51d94ac7735a'
 
-const wagmiClient = createClient({
-  autoConnect: true,
-  connectors: w3mConnectors({ projectId, version: 1, chains }),
-  provider
-})
-const ethereumClient = new EthereumClient(wagmiClient, chains)
+// const wagmiClient = createClient({
+//   autoConnect: true,
+//   connectors: w3mConnectors({ projectId, version: 1, chainsA }),
+//   provider
+// })
+// const ethereumClient = new EthereumClient(wagmiClient, chainsA)
 
-    var anthillContractAddress:string;
-    var chainId:number;
-    var backendUrl ="";
-    var wsUrl:string;
+
+    let anthillContractAddress:string;
+    let chainId:number;
+    let backendUrl ="";
+    let wsUrl:string;
 
 
     if (!testing) {
@@ -76,23 +83,22 @@ const ethereumClient = new EthereumClient(wagmiClient, chains)
         // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
         chainId = 80001; //mumbai testnet
         
-        // backendUrl = "http://localhost:5000/"
-        // wsUrl = 'ws://127.0.0.1:5000';
+        // backendUrl = "http://localhost:5001/"
+        // wsUrl = 'ws://127.0.0.1:5001';
 
         backendUrl = "https://anthill-db.herokuapp.com/"
         wsUrl = 'wss://anthill-db.herokuapp.com/'; 
     
     } else {
         anthillContractAddress = "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512" // forge with lib
-        chainId =1337; //anvil
-        backendUrl = "http://localhost:5000/"
-        wsUrl = 'ws://127.0.0.1:5000';
+        // chainId =1337; //anvil
+        chainId = 270; // zksync dockerized node
+        backendUrl = "http://localhost:5001/"
+        wsUrl = 'ws://127.0.0.1:5001';
     }
 
 const  App = () => {
-
     var navigate = useNavigate();
-
 
     useWebSocket(wsUrl, {
         onOpen: () => {
@@ -100,11 +106,12 @@ const  App = () => {
         },
       });
 
-    var AnthillContract: any; 
+    let AnthillContract: any; 
     // AnthillContract = new web3.eth.Contract(AnthillJson.abi  as AbiItem[], anthillContractAddress);
-    const {data: signer } = useSigner({chainId: chainId});
-    AnthillContract = useContract({address: anthillContractAddress, abi: AnthillJson.abi  as AbiItem[], signerOrProvider: signer}); //provider({chainId: chainId})});
-    // console.log("keys", Object.keys(AnthillContract))
+    // const {data: signer } = useWalletClient({chainId: chainId});
+    // const {writeContract} = useWriteContract();
+    // todo line below: 
+    // AnthillContract =  {address: anthillContractAddress, abi: AnthillJson.abi  as AbiItem[], signerOrProvider: signer}; //provider({chainId: chainId})});
 
     const queryParameters = new URLSearchParams(window.location.search)
     var id = queryParameters.get("id")
@@ -124,12 +131,13 @@ const  App = () => {
 
 
     // console.log("rendering main app, clickedNode: ", clickedNode)
-    // var [account, setAccount] =  useState(address0);
+    // var [account, setAccount] =  useState(address);
     const {address  : account  } = useAccount();
 
-    const { pendingChainId,switchNetwork}= useSwitchNetwork();
-    if (switchNetwork && pendingChainId !== chainId){
-        switchNetwork(chainId);
+    const { chains,switchChain}= useSwitchChain();
+    const selectedChain = chains.find((chain)=>chain.id === chainId);
+    if (switchChain){
+        switchChain({chainId: selectedChain ? selectedChain.id : chainId});
     }
 
     // var [provider, setProvider] = useState<any>(null);
@@ -246,12 +254,16 @@ root.render(
 
     <React.StrictMode>
         <BrowserRouter>
-            <WagmiConfig client={wagmiClient}>
-                <App />
-                <Footer />
+            <QueryClientProvider client={queryClient}> 
 
-            </WagmiConfig>
-            <Web3Modal projectId={projectId} ethereumClient={ethereumClient} />
+                <WagmiProvider config={wagmiConfig}>
+                        <App />
+                        <Footer />
+
+                </WagmiProvider>
+            </QueryClientProvider>
+
+            {/* <Web3Modal projectId={projectId} /> //ethereumClient={ethereumClient}  */}
         </BrowserRouter>
     </React.StrictMode>
 );

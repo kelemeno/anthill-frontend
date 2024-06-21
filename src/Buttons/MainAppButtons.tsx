@@ -22,12 +22,6 @@ import {  getRandomLeaf } from '../ExternalConnections/BackendGetters';
 
 import {JoinTree,} from '../ExternalConnections/SmartContractInteractions'
 
-
-
-
-
-
-
 export function GoHomeButton(props:{account: string, isAccountInGraph :boolean, setClickedNode: any}) {
     var navigate = useNavigate();
     if (!props.isAccountInGraph) {return <></>}
