@@ -7,7 +7,7 @@ import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, Gr
 
 
 function renderingNodeData(node: NodeData, account: string, isAccountInGraph: boolean,  maxRelRootDepth: number, anthillGraph: GraphData, anthillGraphBare: GraphDataBare): NodeDataRendering {
-    var nodeRendering = {} as NodeDataRendering;
+    const nodeRendering = {} as NodeDataRendering;
     nodeRendering.id = node.id;
   
     if (node.name === "Name") {
@@ -42,7 +42,7 @@ function renderingNodeData(node: NodeData, account: string, isAccountInGraph: bo
   }
   
   function renderingNodeDataBare(node: NodeDataBare, account:string, isAccountInGraph:boolean,  maxRelRootDepth: number, anthillGraph: GraphData, anthillGraphBare: GraphDataBare): NodeDataRendering {
-    var nodeRendering = {} as NodeDataRendering;
+    const nodeRendering = {} as NodeDataRendering;
     // console.log("node in renderingNodeDataBare", )
     // console.log("node ", node)
   
@@ -90,28 +90,28 @@ function renderingNodeData(node: NodeData, account: string, isAccountInGraph: bo
 // we return a partial graph from the whole graph, focused on node with id. Here the hard part is selecting which parts to include. 
 // we fully download every node we render. If it is in our data 
 export function SelectNeighbourhoodWithParentChain(id : string, account:string, isAccountInGraph:boolean ,maxRelRootDepth:number, anthillGraph:GraphData, anthillGraphBare:GraphDataBare, ) : GraphDataRendering{
-    var neighbourhood = {} as GraphDataRendering;
+    const neighbourhood = {} as GraphDataRendering;
     // we are focusing on this node, so we display all its connections.
-    var node = anthillGraph[id];
+    const node = anthillGraph[id];
     // console.log("id for", id,  anthillGraph, anthillGraph[id], node)
     neighbourhood[id] = renderingNodeData(node, account, isAccountInGraph, maxRelRootDepth, anthillGraph, anthillGraphBare);
   
     // add sent dag votes
     node.sentDagVotes.forEach((sDagVote)=>{
-        var recipient = anthillGraphBare[sDagVote.id]; 
+        const recipient = anthillGraphBare[sDagVote.id]; 
         // console.log("recipient1", recipient)
         neighbourhood[recipient.id] =  renderingNodeDataBare(recipient, account, isAccountInGraph, maxRelRootDepth, anthillGraph, anthillGraphBare);
       }
     )
   
-    var parent = node as NodeDataBare;
+    let parent = node as NodeDataBare;
     // add tree parent chain
-    for (var i = 0; i < maxRelRootDepth; i++) { 
+    for (let i = 0; i < maxRelRootDepth; i++) { 
       if ((parent.sentTreeVote === "") || (parent.sentTreeVote === "0x0000000000000000000000000000000000000001")){
         break;
       }
   
-      var newParentId = parent.sentTreeVote;
+      const newParentId = parent.sentTreeVote;
       // console.log("newParentId, and full node", id,  newParentId, anthillGraphBare[id], anthillGraphBare, anthillGraphBare["0x000000000000000000000000000000000000000b"], anthillGraphBare["0x0000000000000000000000000000000000000005"], anthillGraphBare[newParentId]);     
   
       const newParent :NodeDataRendering= renderingNodeDataBare(anthillGraphBare[newParentId], account, isAccountInGraph, maxRelRootDepth, anthillGraph, anthillGraphBare); 
@@ -134,7 +134,7 @@ export function SelectNeighbourhoodWithParentChain(id : string, account:string, 
     // console.log("recDagvotes", node.recDagVotes)
     if (node.recDagVotes.length !== 0) {
       node.recDagVotes.forEach((rDagVote)=>{
-        var voter = anthillGraphBare[rDagVote.id];
+        const voter = anthillGraphBare[rDagVote.id];
         // console.log("voter", voter)
         if (voter !== undefined) {
           // console.log("voter1", voter)
@@ -149,7 +149,7 @@ export function SelectNeighbourhoodWithParentChain(id : string, account:string, 
     // console.log("recTreeVotes", node.recTreeVotes)
     if (node.recTreeVotes.length !== 0) {
       node.recTreeVotes.forEach((id)=>{
-        var voter = anthillGraphBare[id];  
+        const voter = anthillGraphBare[id];  
         // console.log("id in recTreevotes", id)
         if ((neighbourhood[id] === undefined) && (voter !== undefined)) {
           // console.log("voter2", voter)
@@ -164,7 +164,7 @@ export function SelectNeighbourhoodWithParentChain(id : string, account:string, 
   }
   
 export  function SelectWholeGraph( id: string, account:string, isAccountInGraph:boolean ,maxRelRootDepth:number, anthillGraph : GraphData, anthillGraphBare : GraphDataBare): GraphDataRendering{
-    var neighbourhood = {} as GraphDataRendering;
+    const neighbourhood = {} as GraphDataRendering;
 
     for (const [key, value] of Object.entries(anthillGraph)) {
         neighbourhood[key] = renderingNodeData(value, account, isAccountInGraph, maxRelRootDepth, anthillGraph, anthillGraphBare);
@@ -181,10 +181,10 @@ export  function SelectWholeGraph( id: string, account:string, isAccountInGraph:
 
 
 export function SelectSentRecDagVotes(id : string, account:string, isAccountInGraph:boolean ,maxRelRootDepth:number, anthillGraph:GraphData, anthillGraphBare:GraphDataBare, ) : GraphDataRendering{
-    var neighbourhood = {} as GraphDataRendering;
+    const neighbourhood = {} as GraphDataRendering;
 
      // we are focusing on this node, so we display all its connections.
-     var node = anthillGraph[id];
+     const node = anthillGraph[id];
      // console.log("id for", id,  anthillGraph, anthillGraph[id], node)
      neighbourhood[id] = renderingNodeData(node, account, isAccountInGraph, maxRelRootDepth, anthillGraph, anthillGraphBare);
      neighbourhood[id].parentIds = node.sentDagVotes.map(r=>r.id);
@@ -192,7 +192,7 @@ export function SelectSentRecDagVotes(id : string, account:string, isAccountInGr
 
      // add sent dag votes
      node.sentDagVotes.forEach((sDagVote)=>{
-         var recipient = anthillGraphBare[sDagVote.id]; 
+         const recipient = anthillGraphBare[sDagVote.id]; 
          // console.log("recipient1", recipient)
          neighbourhood[recipient.id] =  renderingNodeDataBare(recipient, account, isAccountInGraph, maxRelRootDepth, anthillGraph, anthillGraphBare);
 
@@ -203,7 +203,7 @@ export function SelectSentRecDagVotes(id : string, account:string, isAccountInGr
     // console.log("recDagvotes", node.recDagVotes)
     if (node.recDagVotes.length !== 0) {
         node.recDagVotes.forEach((rDagVote)=>{
-          var voter = anthillGraphBare[rDagVote.id];
+          const voter = anthillGraphBare[rDagVote.id];
           // console.log("voter", voter)
           if (voter !== undefined) {
             // console.log("voter1", voter)

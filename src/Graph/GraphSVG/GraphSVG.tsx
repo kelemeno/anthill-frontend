@@ -19,7 +19,7 @@ import {SwitchParentCheck, MoveTreeVoteCheck, ChangeNameCheck, LeaveTreeCheck, J
 export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInGraph":boolean, "setIsAccountInGraph":any, "clickedNode":string,"setClickedNode":any,  "AnthillContract": any,  "graph":GraphDataRendering, "altNode":string, "maxRelRootDepth":number, "anthillGraph":GraphData, "anthillGraphBare":GraphDataBare })=> {
   // console.log("rendering graph")
 
-  let navigate = useNavigate();
+  const navigate = useNavigate();
 
   // we have to use a ref to render the svg (or at least, I couldn't get it to work without it)
   const svg  = React.useRef<HTMLDivElement>(null);
@@ -27,15 +27,15 @@ export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInG
   // const clickedNodeId = React.useRef("");
 
   // the actual data
-  var [hoverNode, setHoverNode] = useState({"id":props.clickedNode, "name":props.clickedNode, "totalWeight": 0,  "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": [], "isVotable": false, "isDagVote": false, "isSwitchable": false} as NodeDataRendering);
+  const [hoverNode, setHoverNode] = useState({"id":props.clickedNode, "name":props.clickedNode, "totalWeight": 0,  "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": [], "isVotable": false, "isDagVote": false, "isSwitchable": false} as NodeDataRendering);
 
   // for the popover
-  var [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
-  var [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
-  var [open, setOpen] = React.useState(Boolean(anchorEl));
+  const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
+  const [anchorElSaver, setAnchorElSaver] = React.useState<HTMLElement | null>(null);
+  const [open, setOpen] = React.useState(Boolean(anchorEl));
 
   // we delay the popover to render only after the graph is loaded. This is set as true in useEffect
-  var [loaded, setLoaded] = React.useState(false);
+  const [loaded, setLoaded] = React.useState(false);
 
   
   // console.log("open", open, anchorEl, loaded)
@@ -81,7 +81,7 @@ export const GraphSVG= (props:{"account":string, "chainId":number, "isAccountInG
            "handleMouseOver":(event:  React.MouseEvent<HTMLElement>, node:NodeDataRendering) => 
               handleMouseOver(event, node, loaded, setHoverNode, setAnchorEl, setAnchorElSaver, setOpen ), 
             "handleMouseOut":()=>handleMouseOut(loaded, setOpen, setAnchorEl)}));
-      };
+      }
       // checkForClick();
 
       // this has to be the last one (maybe because we rerender multiple times)

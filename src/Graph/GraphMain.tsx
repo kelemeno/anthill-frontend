@@ -64,7 +64,7 @@ const gettingClickedNode = async (
     // console.log("getting clickednode", clickedNode)
 
     
-    var graphToRender = {} as GraphDataRendering
+    let graphToRender = {} as GraphDataRendering
 
     if (treeMode){
       await CheckSaveWholeGraph(backendUrl, clickedNode, anthillGraph, anthillGraphBare, maxRelRootDepth)
@@ -80,12 +80,12 @@ const gettingClickedNode = async (
       setGraphDisplayed(graphToRender)
           
       // altNode is used for leaving the tree, so it is the parent or if there is no parent then a child. 
-      var newAltNode = graphToRender[clickedNode].sentTreeVote;
+      let newAltNode = graphToRender[clickedNode].sentTreeVote;
       if (newAltNode === address1) {
         newAltNode = graphToRender[clickedNode].recTreeVotes[0];
       }
-      if (altNode !== newAltNode) {setAltNode(newAltNode)};
-    };
+      if (altNode !== newAltNode) {setAltNode(newAltNode)}
+    }
       
     
   } 
@@ -111,23 +111,23 @@ export const Graph = (props: {"account":string, "chainId":number, "clickedNode":
 
 
     // const navigate = useNavigate();
-    var [isAccountInGraph, setIsAccountInGraph] = useState(false);
+    const [isAccountInGraph, setIsAccountInGraph] = useState(false);
 
-    var [maxRelRootDepth, setMaxRelRootDepth] =useState(0);
+    const [maxRelRootDepth, setMaxRelRootDepth] =useState(0);
     // the nodes we have clicked on, so have fully loaded
-    var [anthillGraph, setAnthillGraph] = useState({}as GraphData);
+    const [anthillGraph, setAnthillGraph] = useState({}as GraphData);
     // the nodes we only display, so have the minimum info
-    var [anthillGraphBare, setAnthillGraphBare]  = useState({} as GraphDataBare);
+    const [anthillGraphBare, setAnthillGraphBare]  = useState({} as GraphDataBare);
 
-    var [clickedNode, setClickedNode] = React.useState(props.clickedNode);
+    const [clickedNode, setClickedNode] = React.useState(props.clickedNode);
 
-    var [graphDisplayed, setGraphDisplayed] = useState( {"id":{"id":props.clickedNode, "name":props.clickedNode, "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": [], "isVotable":false, "isDagVote":false, "isSwitchable": false}} as GraphDataRendering);
+    const [graphDisplayed, setGraphDisplayed] = useState( {"id":{"id":props.clickedNode, "name":props.clickedNode, "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": [], "isVotable":false, "isDagVote":false, "isSwitchable": false}} as GraphDataRendering);
 
-    var [altNode, setAltNode] = useState("");
+    const [altNode, setAltNode] = useState("");
 
-    var clearingGraph = async () => {
+    const clearingGraph = async () => {
       if (props.account !== undefined)  {
-        await getIsNodeInGraph(props.backendUrl, props.account).then((res)=>{if (res!==isAccountInGraph) {setIsAccountInGraph(res)};})
+        await getIsNodeInGraph(props.backendUrl, props.account).then((res)=>{if (res!==isAccountInGraph) {setIsAccountInGraph(res)}})
       } else {
         if (isAccountInGraph) {setIsAccountInGraph(false)}
       }

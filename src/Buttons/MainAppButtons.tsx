@@ -23,7 +23,7 @@ import {  getRandomLeaf } from '../ExternalConnections/BackendGetters';
 import {JoinTree,} from '../ExternalConnections/SmartContractInteractions'
 
 export function GoHomeButton(props:{account: string, isAccountInGraph :boolean, setClickedNode: any}) {
-    var navigate = useNavigate();
+    const navigate = useNavigate();
     if (!props.isAccountInGraph) {return <></>}
 
     return <button onClick={() => {console.log("gohome"); props.setClickedNode(props.account); navigate("/?id="+props.account);}}>Go to my node</button>
@@ -47,14 +47,14 @@ export function JoinTreeRandomlyButton(props:{AnthillContract: any, chainId: num
     //     }>
     //     Join tree in random position
     //     </button>
-  var [recipient, setRecipient] = useState<string>("");
+  const [recipient, setRecipient] = useState<string>("");
   
   useEffect(()=>{
     getRandomLeaf(props.backendUrl).then((res)=>{setRecipient(res); })
   }, [props.backendUrl])
 
 
-  var joinTree = JoinTree(props.AnthillContract,  props.account, recipient, props.setClickedNode, props.setIsAccountInGraph);
+  const joinTree = JoinTree(props.AnthillContract,  props.account, recipient, props.setClickedNode, props.setIsAccountInGraph);
 
 
   return (

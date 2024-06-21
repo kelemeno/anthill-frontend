@@ -38,7 +38,7 @@ export async function CheckSaveNeighbourHoodWithParentChain(backendUrl: string, 
 async function getBareParentsForDepth(backendUrl: string, sentTreeVote :string, depthDiff: number, anthillGraph:GraphData, anthillGraphBare:GraphDataBare, maxRelRootDepth:number){
   if ((sentTreeVote !== "0x0000000000000000000000000000000000000001") && (sentTreeVote !== "")){
     await checkSaveBareNode(backendUrl, sentTreeVote, anthillGraph, anthillGraphBare, maxRelRootDepth);
-    var newBareNode = anthillGraphBare[sentTreeVote];
+    const newBareNode = anthillGraphBare[sentTreeVote];
     if ((depthDiff>0) && (newBareNode.sentTreeVote !== "0x0000000000000000000000000000000000000001") ){
       await getBareParentsForDepth(backendUrl, newBareNode.sentTreeVote, depthDiff-1, anthillGraph, anthillGraphBare, maxRelRootDepth);
     }
@@ -56,7 +56,7 @@ async function checkSaveBareNodeArray(backendUrl: string, ids: string[], anthill
 
 export async function CheckSaveNode(backendUrl: string, id: string, anthillGraph:GraphData, anthillGraphBare:GraphDataBare, maxRelRootDepth:number){
   if ((anthillGraph[id] === undefined) ){
-    var node = await getNodeFromServer(backendUrl, id);
+    const node = await getNodeFromServer(backendUrl, id);
     anthillGraph[node.id]= node as NodeData;
     anthillGraphBare[id]= node as NodeDataBare;
   } 
@@ -64,7 +64,7 @@ export async function CheckSaveNode(backendUrl: string, id: string, anthillGraph
 
 async function checkSaveBareNode(backendUrl: string, id: string, anthillGraph:GraphData, anthillGraphBare:GraphDataBare, maxRelRootDepth:number){
   if ((anthillGraphBare[id] === undefined) ){
-    var node = await getBareNodeFromServer(backendUrl, id);
+    const node = await getBareNodeFromServer(backendUrl, id);
     anthillGraphBare[node.id]= node as NodeDataBare;
   } 
 }
@@ -72,7 +72,7 @@ async function checkSaveBareNode(backendUrl: string, id: string, anthillGraph:Gr
 export async function CheckSaveWholeGraph(backendUrl: string, id: string, anthillGraph:GraphData, anthillGraphBare:GraphDataBare, maxRelRootDepth:number){
   
   // finding root
-  var potRoot = id;
+  let potRoot = id;
   await CheckSaveNode(backendUrl, potRoot, anthillGraph, anthillGraphBare, maxRelRootDepth);
   while (anthillGraph[potRoot].relRoot !== potRoot) {
     await CheckSaveNode(backendUrl, anthillGraph[potRoot].relRoot, anthillGraph, anthillGraphBare, maxRelRootDepth);
