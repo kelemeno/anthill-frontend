@@ -5,10 +5,10 @@ import useWebSocket from "react-use-websocket";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { zkSyncSepoliaTestnet, zkSyncLocalNode } from "wagmi/chains";
-import { createConfig, WagmiProvider } from "wagmi";
-import { useAccount, useSwitchChain, useConnect, useDisconnect } from "wagmi";
+import { WagmiProvider } from "wagmi";
+import { useAccount, useSwitchChain, useDisconnect } from "wagmi";
 
-import { walletConnect } from "wagmi/connectors";
+// import { walletConnect } from "wagmi/connectors";
 
 import { useWeb3Modal, createWeb3Modal } from "@web3modal/wagmi/react";
 import { defaultWagmiConfig } from "@web3modal/wagmi/react/config";
@@ -22,7 +22,7 @@ import { defaultWagmiConfig } from "@web3modal/wagmi/react/config";
 // import { useConnect } from 'wagmi'
 // import { injected } from 'wagmi/connectors'
 // import { walletConnect } from 'wagmi/connectors'
-import { http } from "viem";
+// import { http } from "viem";
 
 import { AbiItem } from "web3-utils";
 
@@ -51,8 +51,8 @@ console.log("Version 2");
 const queryClient = new QueryClient();
 const projectId = "a768398be97a29d62abe51d94ac7735a";
 
-const chainsA = testing ? [zkSyncLocalNode] : [zkSyncSepoliaTestnet];
-let provider: any;
+// const chainsA = testing ? [zkSyncLocalNode] : [zkSyncSepoliaTestnet];
+// let provider: any;
 
 const metadata = {
   name: "Anthill DAO",
@@ -281,32 +281,32 @@ function Header(props: {
   );
 }
 
-function Footer() {
-  return (
-    <footer>
-      &nbsp; &nbsp;&nbsp;&nbsp;
-      <a href="https://faucet.chainstack.com/zksync-testnet-faucet">
-        Get test tokens{" "}
-      </a>
-      &nbsp; &nbsp;&nbsp;&nbsp;
-      <a href="https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580">
-        Medium post{" "}
-      </a>
-      &nbsp; &nbsp;&nbsp;&nbsp;
-      <a
-        href={
-          "https://sepolia.explorer.zksync.io/address/" + anthillContractAddress
-        }
-      >
-        Blockexplorer
-      </a>
-      &nbsp; &nbsp;&nbsp;&nbsp;
-      <a href="https://github.com/kelemeno/anthill">Github</a>
-      &nbsp; &nbsp;&nbsp;&nbsp;
-      <a href="https://demo.snapshot.org/#/anthilldao.eth">Voting page</a>
-    </footer>
-  );
-}
+// function Footer() {
+//   return (
+//     <footer>
+//       &nbsp; &nbsp;&nbsp;&nbsp;
+//       <a href="https://faucet.chainstack.com/zksync-testnet-faucet">
+//         Get test tokens{" "}
+//       </a>
+//       &nbsp; &nbsp;&nbsp;&nbsp;
+//       <a href="https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580">
+//         Medium post{" "}
+//       </a>
+//       &nbsp; &nbsp;&nbsp;&nbsp;
+//       <a
+//         href={
+//           "https://sepolia.explorer.zksync.io/address/" + anthillContractAddress
+//         }
+//       >
+//         Blockexplorer
+//       </a>
+//       &nbsp; &nbsp;&nbsp;&nbsp;
+//       <a href="https://github.com/kelemeno/anthill">Github</a>
+//       &nbsp; &nbsp;&nbsp;&nbsp;
+//       <a href="https://demo.snapshot.org/#/anthilldao.eth">Voting page</a>
+//     </footer>
+//   );
+// }
 
 root.render(
   <React.StrictMode>

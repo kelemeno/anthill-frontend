@@ -7,7 +7,7 @@ export function AddDagVote(
   account: string,
   recipient: string,
 ): any {
-  const { data, error } = useSimulateContract({
+  const { data } = useSimulateContract({
     address: AnthillContract.address,
     abi: AnthillJson.abi,
     functionName: "addDagVote",
@@ -24,7 +24,7 @@ export function RemoveDagVote(
   account: string,
   recipient: string,
 ) {
-  const { data, error } = useSimulateContract({
+  const { data } = useSimulateContract({
     address: AnthillContract.address,
     abi: AnthillJson.abi,
     functionName: "removeDagVote",
@@ -69,7 +69,7 @@ export function JoinTree(
     ],
   });
   const { writeContract } = useWriteContract();
-
+  console.log(setClickedNodeId, setIsAccountInGraph);
   return () => {
     writeContract(data!.request);
   };
@@ -108,7 +108,7 @@ export function LeaveTree(
     args: [account],
   });
   const { writeContract } = useWriteContract();
-
+  console.log(setIsAccountInGraph)
   return () => {
     writeContract(data!.request);
     setClickedNodeId(altNode);

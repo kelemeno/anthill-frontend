@@ -120,9 +120,9 @@ export function isDagVote(
   //   return false;
   // }
   if (voterId === address0) {
+    console.log(maxRelRootDepth)
     return false;
   }
-
   if (anthillGraph[voterId] === undefined) {
     const error = new Error(
       "isDagVote called with undefined voter with id: " +
@@ -170,6 +170,7 @@ export function isSwitchable(
   // }
 
   if (voterId === address0) {
+    console.log(maxRelRootDepth)
     return false;
   }
 

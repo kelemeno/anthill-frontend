@@ -255,7 +255,8 @@ export const Graph = (props: {
     setAnthillGraphBare({});
   };
 
-  const { sendMessage } = useWebSocket(props.wsUrl, {
+  // const { sendMessage } = 
+  useWebSocket(props.wsUrl, {
     onOpen: () => {
       console.log("WebSocket connection established.");
     },
