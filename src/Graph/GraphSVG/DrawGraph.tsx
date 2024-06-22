@@ -277,7 +277,7 @@ export const DrawGraph = (props: {
   // Plot node circles
   nodes
     .append("circle")
-    .attr("r", (n) => nodeRadius) // /(1.2**n.data.depth)), but we need to change the positions in the graph drawing as well
+    .attr("r", () => nodeRadius) // /(1.2**n.data.depth)), but we need to change the positions in the graph drawing as well
     .attr("fill", (n) => colorMap[n.data.id]);
   // .attr("user-select", "none") //testing for text highlighting
 
@@ -295,7 +295,7 @@ export const DrawGraph = (props: {
       .enter()
       .append("path")
       .attr("d", arrow)
-      .attr("transform", ({ source, target, points }) => {
+      .attr("transform", ({ points }) => { // source, target 
         const [end, start] = points.slice(); //.reverse();
         // This sets the arrows the node radius (20) + a little bit (3) away from the node center, on the last line segment of the edge. This means that edges that only span ine level will work perfectly, but if the edge bends, this will be a little off.
         const dx: number = start.x - end.x;

@@ -1,5 +1,5 @@
 // buttons for the main app.
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { address0 } from "../Graph/GraphBase";
 
 import image1 from "../logo192.png";

@@ -95,7 +95,7 @@ if (!testing) {
   // anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
   // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
   // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
-  chainId = 300; //mumbai testnet
+  chainId = 300; //zksync sepolia testnet
 
 //   backendUrl = "http://localhost:5001/";
 //   wsUrl = "ws://127.0.0.1:5001";

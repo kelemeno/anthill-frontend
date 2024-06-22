@@ -282,7 +282,7 @@ export function SelectWholeGraph(
   anthillGraphBare: GraphDataBare,
 ): GraphDataRendering {
   const neighbourhood = {} as GraphDataRendering;
-
+  console.log(id)
   for (const [key, value] of Object.entries(anthillGraph)) {
     neighbourhood[key] = renderingNodeData(
       value,

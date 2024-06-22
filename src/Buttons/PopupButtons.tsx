@@ -1,6 +1,6 @@
 // we store the buttons that are used in the graph popup
 
-import React, { useState } from "react";
+import { useState } from "react";
 
 import {
   NodeDataRendering,

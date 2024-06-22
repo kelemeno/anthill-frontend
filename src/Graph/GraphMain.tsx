@@ -171,6 +171,7 @@ const loadGraphDetails = async (
   //   if (res!==isAccountInGraph) {setIsAccountInGraph(res)};
   //   console.log("isAccountInGraph", isAccountInGraph, account)
   // }
+  console.log(setIsAccountInGraph);
   await gettingMaxRelRootDepth(backendUrl, maxRelRootDepth, setMaxRelRootDepth);
   await gettingAccount(
     account,
