@@ -97,11 +97,11 @@ if (!testing) {
   // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
   chainId = 300; //mumbai testnet
 
-  backendUrl = "http://localhost:5001/";
-  wsUrl = "ws://127.0.0.1:5001";
+//   backendUrl = "http://localhost:5001/";
+//   wsUrl = "ws://127.0.0.1:5001";
 
-  //   backendUrl = "https://anthill-db.herokuapp.com/";
-  //   wsUrl = "wss://anthill-db.herokuapp.com/";
+    backendUrl = "https://anthill-db.herokuapp.com/";
+    wsUrl = "wss://anthill-db.herokuapp.com/";
 } else {
   anthillContractAddress = "0x111C3E89Ce80e62EE88318C2804920D4c96f92bb"; // forge with lib
   // chainId =1337; //anvil
