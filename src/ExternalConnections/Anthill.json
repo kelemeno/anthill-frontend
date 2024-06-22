@@ -3826,18 +3826,10 @@
     "absolutePath": "src/Anthill.sol",
     "id": 33685,
     "exportedSymbols": {
-      "Anthill": [
-        29096
-      ],
-      "AnthillInner": [
-        33684
-      ],
-      "Dag": [
-        26698
-      ],
-      "DagVote": [
-        26611
-      ]
+      "Anthill": [29096],
+      "AnthillInner": [33684],
+      "Dag": [26698],
+      "DagVote": [26611]
     },
     "nodeType": "SourceUnit",
     "src": "39:79365:16",
@@ -3847,12 +3839,7 @@
         "nodeType": "PragmaDirective",
         "src": "39:24:16",
         "nodes": [],
-        "literals": [
-          "solidity",
-          "^",
-          "0.8",
-          ".13"
-        ]
+        "literals": ["solidity", "^", "0.8", ".13"]
       },
       {
         "id": 26611,
@@ -4512,9 +4499,7 @@
                       "pathNode": {
                         "id": 26656,
                         "name": "DagVote",
-                        "nameLocations": [
-                          "1049:7:16"
-                        ],
+                        "nameLocations": ["1049:7:16"],
                         "nodeType": "IdentifierPath",
                         "referencedDeclaration": 26611,
                         "src": "1049:7:16"
@@ -4847,9 +4832,7 @@
                       "pathNode": {
                         "id": 26687,
                         "name": "DagVote",
-                        "nameLocations": [
-                          "1524:7:16"
-                        ],
+                        "nameLocations": ["1524:7:16"],
                         "nodeType": "IdentifierPath",
                         "referencedDeclaration": 26611,
                         "src": "1524:7:16"
@@ -5167,9 +5150,7 @@
             "libraryName": {
               "id": 26721,
               "name": "AnthillInner",
-              "nameLocations": [
-                "1933:12:16"
-              ],
+              "nameLocations": ["1933:12:16"],
               "nodeType": "IdentifierPath",
               "referencedDeclaration": 33684,
               "src": "1933:12:16"
@@ -5180,9 +5161,7 @@
               "pathNode": {
                 "id": 26722,
                 "name": "Dag",
-                "nameLocations": [
-                  "1950:3:16"
-                ],
+                "nameLocations": ["1950:3:16"],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 26698,
                 "src": "1950:3:16"
@@ -5218,9 +5197,7 @@
               "pathNode": {
                 "id": 26725,
                 "name": "Dag",
-                "nameLocations": [
-                  "1964:3:16"
-                ],
+                "nameLocations": ["1964:3:16"],
                 "nodeType": "IdentifierPath",
                 "referencedDeclaration": 26698,
                 "src": "1964:3:16"
@@ -8467,14 +8444,7 @@
                   "src": "4189:33:16"
                 },
                 {
-                  "assignments": [
-                    26995,
-                    26997,
-                    26999,
-                    27001,
-                    null,
-                    null
-                  ],
+                  "assignments": [26995, 26997, 26999, 27001, null, null],
                   "declarations": [
                     {
                       "constant": false,
@@ -9187,14 +9157,7 @@
                   "src": "4748:33:16"
                 },
                 {
-                  "assignments": [
-                    null,
-                    27044,
-                    27046,
-                    27048,
-                    27050,
-                    null
-                  ],
+                  "assignments": [null, 27044, 27046, 27048, 27050, null],
                   "declarations": [
                     null,
                     {
@@ -10265,9 +10228,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    27124
-                  ],
+                  "assignments": [27124],
                   "declarations": [
                     {
                       "constant": false,
@@ -10454,9 +10415,7 @@
                                 "src": "6065:268:16",
                                 "statements": [
                                   {
-                                    "assignments": [
-                                      27178
-                                    ],
+                                    "assignments": [27178],
                                     "declarations": [
                                       {
                                         "constant": false,
@@ -10479,9 +10438,7 @@
                                           "pathNode": {
                                             "id": 27176,
                                             "name": "DagVote",
-                                            "nameLocations": [
-                                              "6087:7:16"
-                                            ],
+                                            "nameLocations": ["6087:7:16"],
                                             "nodeType": "IdentifierPath",
                                             "referencedDeclaration": 26611,
                                             "src": "6087:7:16"
@@ -11021,9 +10978,7 @@
                               },
                               "id": 27206,
                               "initializationExpression": {
-                                "assignments": [
-                                  27161
-                                ],
+                                "assignments": [27161],
                                 "declarations": [
                                   {
                                     "constant": false,
@@ -11200,9 +11155,7 @@
                         },
                         "id": 27208,
                         "initializationExpression": {
-                          "assignments": [
-                            27148
-                          ],
+                          "assignments": [27148],
                           "declarations": [
                             {
                               "constant": false,
@@ -11349,9 +11302,7 @@
                   },
                   "id": 27210,
                   "initializationExpression": {
-                    "assignments": [
-                      27137
-                    ],
+                    "assignments": [27137],
                     "declarations": [
                       {
                         "constant": false,
@@ -12337,9 +12288,7 @@
                   "src": "7147:33:16"
                 },
                 {
-                  "assignments": [
-                    27283
-                  ],
+                  "assignments": [27283],
                   "declarations": [
                     {
                       "constant": false,
@@ -12694,9 +12643,7 @@
                   "src": "7288:29:16"
                 },
                 {
-                  "assignments": [
-                    27308
-                  ],
+                  "assignments": [27308],
                   "declarations": [
                     {
                       "constant": false,
@@ -12785,9 +12732,7 @@
                   "src": "7331:38:16"
                 },
                 {
-                  "assignments": [
-                    27315
-                  ],
+                  "assignments": [27315],
                   "declarations": [
                     {
                       "constant": false,
@@ -12871,9 +12816,7 @@
                   "src": "7396:45:16"
                 },
                 {
-                  "assignments": [
-                    27321
-                  ],
+                  "assignments": [27321],
                   "declarations": [
                     {
                       "constant": false,
@@ -14063,10 +14006,7 @@
                   "src": "8071:44:16"
                 },
                 {
-                  "assignments": [
-                    27408,
-                    null
-                  ],
+                  "assignments": [27408, null],
                   "declarations": [
                     {
                       "constant": false,
@@ -14184,11 +14124,7 @@
                   "src": "8130:60:16"
                 },
                 {
-                  "assignments": [
-                    27416,
-                    27418,
-                    27420
-                  ],
+                  "assignments": [27416, 27418, 27420],
                   "declarations": [
                     {
                       "constant": false,
@@ -14374,9 +14310,7 @@
                   "src": "8204:114:16"
                 },
                 {
-                  "assignments": [
-                    27429
-                  ],
+                  "assignments": [27429],
                   "declarations": [
                     {
                       "constant": false,
@@ -14453,11 +14387,7 @@
                   "src": "8332:43:16"
                 },
                 {
-                  "assignments": [
-                    27435,
-                    27437,
-                    27439
-                  ],
+                  "assignments": [27435, 27437, 27439],
                   "declarations": [
                     {
                       "constant": false,
@@ -14643,11 +14573,7 @@
                   "src": "8389:104:16"
                 },
                 {
-                  "assignments": [
-                    27448,
-                    27450,
-                    27452
-                  ],
+                  "assignments": [27448, 27450, 27452],
                   "declarations": [
                     {
                       "constant": false,
@@ -14833,9 +14759,7 @@
                   "src": "8507:121:16"
                 },
                 {
-                  "assignments": [
-                    27461
-                  ],
+                  "assignments": [27461],
                   "declarations": [
                     {
                       "constant": false,
@@ -14928,9 +14852,7 @@
                   "src": "8642:66:16"
                 },
                 {
-                  "assignments": [
-                    27468
-                  ],
+                  "assignments": [27468],
                   "declarations": [
                     {
                       "constant": false,
@@ -15007,9 +14929,7 @@
                   "src": "8722:45:16"
                 },
                 {
-                  "assignments": [
-                    27474
-                  ],
+                  "assignments": [27474],
                   "declarations": [
                     {
                       "constant": false,
@@ -18843,9 +18763,7 @@
                     "pathNode": {
                       "id": 27751,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "12732:7:16"
-                      ],
+                      "nameLocations": ["12732:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "12732:7:16"
@@ -19968,9 +19886,7 @@
                     "pathNode": {
                       "id": 27837,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "13789:7:16"
-                      ],
+                      "nameLocations": ["13789:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "13789:7:16"
@@ -22494,9 +22410,7 @@
                     "pathNode": {
                       "id": 28034,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "16937:7:16"
-                      ],
+                      "nameLocations": ["16937:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "16937:7:16"
@@ -22868,9 +22782,7 @@
                     "pathNode": {
                       "id": 28062,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "17335:7:16"
-                      ],
+                      "nameLocations": ["17335:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "17335:7:16"
@@ -23198,9 +23110,7 @@
                     "pathNode": {
                       "id": 28088,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "17608:7:16"
-                      ],
+                      "nameLocations": ["17608:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "17608:7:16"
@@ -23528,9 +23438,7 @@
                     "pathNode": {
                       "id": 28113,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "17874:7:16"
-                      ],
+                      "nameLocations": ["17874:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "17874:7:16"
@@ -23897,9 +23805,7 @@
                     "pathNode": {
                       "id": 28142,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "18310:7:16"
-                      ],
+                      "nameLocations": ["18310:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "18310:7:16"
@@ -24266,9 +24172,7 @@
                     "pathNode": {
                       "id": 28170,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "18754:7:16"
-                      ],
+                      "nameLocations": ["18754:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "18754:7:16"
@@ -35953,9 +35857,7 @@
         "contractDependencies": [],
         "contractKind": "contract",
         "fullyImplemented": true,
-        "linearizedBaseContracts": [
-          29096
-        ],
+        "linearizedBaseContracts": [29096],
         "name": "Anthill",
         "nameLocation": "1674:7:16",
         "scope": 33685,
@@ -36044,9 +35946,7 @@
                     "pathNode": {
                       "id": 29097,
                       "name": "Dag",
-                      "nameLocations": [
-                        "31546:3:16"
-                      ],
+                      "nameLocations": ["31546:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "31546:3:16"
@@ -36181,9 +36081,7 @@
                     "pathNode": {
                       "id": 29109,
                       "name": "Dag",
-                      "nameLocations": [
-                        "31682:3:16"
-                      ],
+                      "nameLocations": ["31682:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "31682:3:16"
@@ -36342,9 +36240,7 @@
                     "pathNode": {
                       "id": 29121,
                       "name": "Dag",
-                      "nameLocations": [
-                        "31857:3:16"
-                      ],
+                      "nameLocations": ["31857:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "31857:3:16"
@@ -36531,9 +36427,7 @@
                     "pathNode": {
                       "id": 29137,
                       "name": "Dag",
-                      "nameLocations": [
-                        "32010:3:16"
-                      ],
+                      "nameLocations": ["32010:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "32010:3:16"
@@ -36720,9 +36614,7 @@
                     "pathNode": {
                       "id": 29153,
                       "name": "Dag",
-                      "nameLocations": [
-                        "32198:3:16"
-                      ],
+                      "nameLocations": ["32198:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "32198:3:16"
@@ -36910,9 +36802,7 @@
                     "pathNode": {
                       "id": 29169,
                       "name": "Dag",
-                      "nameLocations": [
-                        "32361:3:16"
-                      ],
+                      "nameLocations": ["32361:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "32361:3:16"
@@ -37124,9 +37014,7 @@
                     "pathNode": {
                       "id": 29185,
                       "name": "Dag",
-                      "nameLocations": [
-                        "32538:3:16"
-                      ],
+                      "nameLocations": ["32538:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "32538:3:16"
@@ -37341,9 +37229,7 @@
                     "pathNode": {
                       "id": 29205,
                       "name": "Dag",
-                      "nameLocations": [
-                        "32778:3:16"
-                      ],
+                      "nameLocations": ["32778:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "32778:3:16"
@@ -37530,9 +37416,7 @@
                     "pathNode": {
                       "id": 29221,
                       "name": "Dag",
-                      "nameLocations": [
-                        "32961:3:16"
-                      ],
+                      "nameLocations": ["32961:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "32961:3:16"
@@ -37911,9 +37795,7 @@
                     "pathNode": {
                       "id": 29237,
                       "name": "Dag",
-                      "nameLocations": [
-                        "33141:3:16"
-                      ],
+                      "nameLocations": ["33141:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "33141:3:16"
@@ -38371,9 +38253,7 @@
                     "pathNode": {
                       "id": 29271,
                       "name": "Dag",
-                      "nameLocations": [
-                        "33415:3:16"
-                      ],
+                      "nameLocations": ["33415:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "33415:3:16"
@@ -38524,9 +38404,7 @@
                     "pathNode": {
                       "id": 29283,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "33512:7:16"
-                      ],
+                      "nameLocations": ["33512:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "33512:7:16"
@@ -38651,9 +38529,7 @@
                     "pathNode": {
                       "id": 29310,
                       "name": "Dag",
-                      "nameLocations": [
-                        "33738:3:16"
-                      ],
+                      "nameLocations": ["33738:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "33738:3:16"
@@ -38840,9 +38716,7 @@
                     "pathNode": {
                       "id": 29326,
                       "name": "Dag",
-                      "nameLocations": [
-                        "33950:3:16"
-                      ],
+                      "nameLocations": ["33950:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "33950:3:16"
@@ -39029,9 +38903,7 @@
                     "pathNode": {
                       "id": 29342,
                       "name": "Dag",
-                      "nameLocations": [
-                        "34139:3:16"
-                      ],
+                      "nameLocations": ["34139:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "34139:3:16"
@@ -39410,9 +39282,7 @@
                     "pathNode": {
                       "id": 29358,
                       "name": "Dag",
-                      "nameLocations": [
-                        "34324:3:16"
-                      ],
+                      "nameLocations": ["34324:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "34324:3:16"
@@ -39870,9 +39740,7 @@
                     "pathNode": {
                       "id": 29392,
                       "name": "Dag",
-                      "nameLocations": [
-                        "34610:3:16"
-                      ],
+                      "nameLocations": ["34610:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "34610:3:16"
@@ -40023,9 +39891,7 @@
                     "pathNode": {
                       "id": 29404,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "34710:7:16"
-                      ],
+                      "nameLocations": ["34710:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "34710:7:16"
@@ -40321,9 +40187,7 @@
                   },
                   "id": 29472,
                   "initializationExpression": {
-                    "assignments": [
-                      29445
-                    ],
+                    "assignments": [29445],
                     "declarations": [
                       {
                         "constant": false,
@@ -40495,9 +40359,7 @@
                     "pathNode": {
                       "id": 29431,
                       "name": "Dag",
-                      "nameLocations": [
-                        "35067:3:16"
-                      ],
+                      "nameLocations": ["35067:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "35067:3:16"
@@ -40648,9 +40510,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    29487
-                  ],
+                  "assignments": [29487],
                   "declarations": [
                     {
                       "constant": false,
@@ -40739,10 +40599,7 @@
                   "src": "35645:39:16"
                 },
                 {
-                  "assignments": [
-                    null,
-                    29494
-                  ],
+                  "assignments": [null, 29494],
                   "declarations": [
                     null,
                     {
@@ -41666,9 +41523,7 @@
                     "pathNode": {
                       "id": 29479,
                       "name": "Dag",
-                      "nameLocations": [
-                        "35593:3:16"
-                      ],
+                      "nameLocations": ["35593:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "35593:3:16"
@@ -42464,9 +42319,7 @@
                     "pathNode": {
                       "id": 29565,
                       "name": "Dag",
-                      "nameLocations": [
-                        "36297:3:16"
-                      ],
+                      "nameLocations": ["36297:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "36297:3:16"
@@ -43161,9 +43014,7 @@
                     "pathNode": {
                       "id": 29631,
                       "name": "Dag",
-                      "nameLocations": [
-                        "36733:3:16"
-                      ],
+                      "nameLocations": ["36733:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "36733:3:16"
@@ -43259,9 +43110,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    29696
-                  ],
+                  "assignments": [29696],
                   "declarations": [
                     {
                       "constant": false,
@@ -43616,9 +43465,7 @@
                   "src": "37301:29:16"
                 },
                 {
-                  "assignments": [
-                    29721
-                  ],
+                  "assignments": [29721],
                   "declarations": [
                     {
                       "constant": false,
@@ -44182,9 +44029,7 @@
                     "src": "37811:255:16",
                     "statements": [
                       {
-                        "assignments": [
-                          29777
-                        ],
+                        "assignments": [29777],
                         "declarations": [
                           {
                             "constant": false,
@@ -44594,9 +44439,7 @@
                   },
                   "id": 29802,
                   "initializationExpression": {
-                    "assignments": [
-                      29764
-                    ],
+                    "assignments": [29764],
                     "declarations": [
                       {
                         "constant": false,
@@ -44688,9 +44531,7 @@
                     "src": "38224:183:16",
                     "statements": [
                       {
-                        "assignments": [
-                          29817
-                        ],
+                        "assignments": [29817],
                         "declarations": [
                           {
                             "constant": false,
@@ -45046,9 +44887,7 @@
                   },
                   "id": 29837,
                   "initializationExpression": {
-                    "assignments": [
-                      29804
-                    ],
+                    "assignments": [29804],
                     "declarations": [
                       {
                         "constant": false,
@@ -45166,9 +45005,7 @@
                     "pathNode": {
                       "id": 29688,
                       "name": "Dag",
-                      "nameLocations": [
-                        "37156:3:16"
-                      ],
+                      "nameLocations": ["37156:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "37156:3:16"
@@ -45891,9 +45728,7 @@
                     "pathNode": {
                       "id": 29840,
                       "name": "Dag",
-                      "nameLocations": [
-                        "38597:3:16"
-                      ],
+                      "nameLocations": ["38597:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "38597:3:16"
@@ -46234,9 +46069,7 @@
                   "src": "39344:15:16"
                 },
                 {
-                  "assignments": [
-                    29927
-                  ],
+                  "assignments": [29927],
                   "declarations": [
                     {
                       "constant": false,
@@ -46734,9 +46567,7 @@
                     "pathNode": {
                       "id": 29899,
                       "name": "Dag",
-                      "nameLocations": [
-                        "39187:3:16"
-                      ],
+                      "nameLocations": ["39187:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "39187:3:16"
@@ -47240,10 +47071,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    30009,
-                    30011
-                  ],
+                  "assignments": [30009, 30011],
                   "declarations": [
                     {
                       "constant": false,
@@ -47371,9 +47199,7 @@
                   "src": "40169:65:16"
                 },
                 {
-                  "assignments": [
-                    30018
-                  ],
+                  "assignments": [30018],
                   "declarations": [
                     {
                       "constant": false,
@@ -47847,9 +47673,7 @@
                   },
                   "id": 30062,
                   "initializationExpression": {
-                    "assignments": [
-                      30022
-                    ],
+                    "assignments": [30022],
                     "declarations": [
                       {
                         "constant": false,
@@ -48021,9 +47845,7 @@
                     "pathNode": {
                       "id": 29968,
                       "name": "Dag",
-                      "nameLocations": [
-                        "39893:3:16"
-                      ],
+                      "nameLocations": ["39893:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "39893:3:16"
@@ -49428,9 +49250,7 @@
                     "pathNode": {
                       "id": 30069,
                       "name": "Dag",
-                      "nameLocations": [
-                        "40884:3:16"
-                      ],
+                      "nameLocations": ["40884:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "40884:3:16"
@@ -50213,9 +50033,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    30236
-                  ],
+                  "assignments": [30236],
                   "declarations": [
                     {
                       "constant": false,
@@ -50581,9 +50399,7 @@
                     "pathNode": {
                       "id": 30174,
                       "name": "Dag",
-                      "nameLocations": [
-                        "41655:3:16"
-                      ],
+                      "nameLocations": ["41655:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "41655:3:16"
@@ -50767,9 +50583,7 @@
                     "src": "42855:219:16",
                     "statements": [
                       {
-                        "assignments": [
-                          30298
-                        ],
+                        "assignments": [30298],
                         "declarations": [
                           {
                             "constant": false,
@@ -50792,9 +50606,7 @@
                               "pathNode": {
                                 "id": 30296,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "42873:7:16"
-                                ],
+                                "nameLocations": ["42873:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "42873:7:16"
@@ -51189,9 +51001,7 @@
                   },
                   "id": 30319,
                   "initializationExpression": {
-                    "assignments": [
-                      30282
-                    ],
+                    "assignments": [30282],
                     "declarations": [
                       {
                         "constant": false,
@@ -51501,9 +51311,7 @@
                     "pathNode": {
                       "id": 30261,
                       "name": "Dag",
-                      "nameLocations": [
-                        "42614:3:16"
-                      ],
+                      "nameLocations": ["42614:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "42614:3:16"
@@ -51709,9 +51517,7 @@
                     "pathNode": {
                       "id": 30277,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "42742:7:16"
-                      ],
+                      "nameLocations": ["42742:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "42742:7:16"
@@ -51751,9 +51557,7 @@
                     "src": "43546:238:16",
                     "statements": [
                       {
-                        "assignments": [
-                          30371
-                        ],
+                        "assignments": [30371],
                         "declarations": [
                           {
                             "constant": false,
@@ -51776,9 +51580,7 @@
                               "pathNode": {
                                 "id": 30369,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "43568:7:16"
-                                ],
+                                "nameLocations": ["43568:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "43568:7:16"
@@ -52173,9 +51975,7 @@
                   },
                   "id": 30392,
                   "initializationExpression": {
-                    "assignments": [
-                      30355
-                    ],
+                    "assignments": [30355],
                     "declarations": [
                       {
                         "constant": false,
@@ -52485,9 +52285,7 @@
                     "pathNode": {
                       "id": 30334,
                       "name": "Dag",
-                      "nameLocations": [
-                        "43299:3:16"
-                      ],
+                      "nameLocations": ["43299:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "43299:3:16"
@@ -52693,9 +52491,7 @@
                     "pathNode": {
                       "id": 30350,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "43426:7:16"
-                      ],
+                      "nameLocations": ["43426:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "43426:7:16"
@@ -52729,9 +52525,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    30426
-                  ],
+                  "assignments": [30426],
                   "declarations": [
                     {
                       "constant": false,
@@ -53376,9 +53170,7 @@
                     "pathNode": {
                       "id": 30407,
                       "name": "Dag",
-                      "nameLocations": [
-                        "43907:3:16"
-                      ],
+                      "nameLocations": ["43907:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "43907:3:16"
@@ -53556,9 +53348,7 @@
                     "pathNode": {
                       "id": 30421,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "44015:7:16"
-                      ],
+                      "nameLocations": ["44015:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "44015:7:16"
@@ -53592,9 +53382,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    30487
-                  ],
+                  "assignments": [30487],
                   "declarations": [
                     {
                       "constant": false,
@@ -54239,9 +54027,7 @@
                     "pathNode": {
                       "id": 30468,
                       "name": "Dag",
-                      "nameLocations": [
-                        "44383:3:16"
-                      ],
+                      "nameLocations": ["44383:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "44383:3:16"
@@ -54419,9 +54205,7 @@
                     "pathNode": {
                       "id": 30482,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "44495:7:16"
-                      ],
+                      "nameLocations": ["44495:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "44495:7:16"
@@ -54455,9 +54239,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    30552
-                  ],
+                  "assignments": [30552],
                   "declarations": [
                     {
                       "constant": false,
@@ -55352,9 +55134,7 @@
                     "pathNode": {
                       "id": 30529,
                       "name": "Dag",
-                      "nameLocations": [
-                        "45003:3:16"
-                      ],
+                      "nameLocations": ["45003:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "45003:3:16"
@@ -55587,9 +55367,7 @@
                     "pathNode": {
                       "id": 30547,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "45145:7:16"
-                      ],
+                      "nameLocations": ["45145:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "45145:7:16"
@@ -55623,9 +55401,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    30637
-                  ],
+                  "assignments": [30637],
                   "declarations": [
                     {
                       "constant": false,
@@ -55660,9 +55436,7 @@
                   "src": "46017:12:16"
                 },
                 {
-                  "assignments": [
-                    30640
-                  ],
+                  "assignments": [30640],
                   "declarations": [
                     {
                       "constant": false,
@@ -56630,9 +56404,7 @@
                     "pathNode": {
                       "id": 30614,
                       "name": "Dag",
-                      "nameLocations": [
-                        "45835:3:16"
-                      ],
+                      "nameLocations": ["45835:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "45835:3:16"
@@ -56865,9 +56637,7 @@
                     "pathNode": {
                       "id": 30632,
                       "name": "DagVote",
-                      "nameLocations": [
-                        "45976:7:16"
-                      ],
+                      "nameLocations": ["45976:7:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26611,
                       "src": "45976:7:16"
@@ -57017,9 +56787,7 @@
                     "pathNode": {
                       "id": 30708,
                       "name": "Dag",
-                      "nameLocations": [
-                        "46808:3:16"
-                      ],
+                      "nameLocations": ["46808:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "46808:3:16"
@@ -57230,9 +56998,7 @@
                     "pathNode": {
                       "id": 30727,
                       "name": "Dag",
-                      "nameLocations": [
-                        "46993:3:16"
-                      ],
+                      "nameLocations": ["46993:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "46993:3:16"
@@ -57443,9 +57209,7 @@
                     "pathNode": {
                       "id": 30746,
                       "name": "Dag",
-                      "nameLocations": [
-                        "47177:3:16"
-                      ],
+                      "nameLocations": ["47177:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "47177:3:16"
@@ -57656,9 +57420,7 @@
                     "pathNode": {
                       "id": 30765,
                       "name": "Dag",
-                      "nameLocations": [
-                        "47368:3:16"
-                      ],
+                      "nameLocations": ["47368:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "47368:3:16"
@@ -57869,9 +57631,7 @@
                     "pathNode": {
                       "id": 30784,
                       "name": "Dag",
-                      "nameLocations": [
-                        "47561:3:16"
-                      ],
+                      "nameLocations": ["47561:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "47561:3:16"
@@ -58082,9 +57842,7 @@
                     "pathNode": {
                       "id": 30803,
                       "name": "Dag",
-                      "nameLocations": [
-                        "47748:3:16"
-                      ],
+                      "nameLocations": ["47748:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "47748:3:16"
@@ -58295,9 +58053,7 @@
                     "pathNode": {
                       "id": 30822,
                       "name": "Dag",
-                      "nameLocations": [
-                        "47934:3:16"
-                      ],
+                      "nameLocations": ["47934:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "47934:3:16"
@@ -58508,9 +58264,7 @@
                     "pathNode": {
                       "id": 30841,
                       "name": "Dag",
-                      "nameLocations": [
-                        "48127:3:16"
-                      ],
+                      "nameLocations": ["48127:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "48127:3:16"
@@ -58913,9 +58667,7 @@
                     "pathNode": {
                       "id": 30860,
                       "name": "Dag",
-                      "nameLocations": [
-                        "48353:3:16"
-                      ],
+                      "nameLocations": ["48353:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "48353:3:16"
@@ -59372,9 +59124,7 @@
                     "pathNode": {
                       "id": 30897,
                       "name": "Dag",
-                      "nameLocations": [
-                        "48637:3:16"
-                      ],
+                      "nameLocations": ["48637:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "48637:3:16"
@@ -59831,9 +59581,7 @@
                     "pathNode": {
                       "id": 30934,
                       "name": "Dag",
-                      "nameLocations": [
-                        "48920:3:16"
-                      ],
+                      "nameLocations": ["48920:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "48920:3:16"
@@ -60290,9 +60038,7 @@
                     "pathNode": {
                       "id": 30971,
                       "name": "Dag",
-                      "nameLocations": [
-                        "49216:3:16"
-                      ],
+                      "nameLocations": ["49216:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "49216:3:16"
@@ -60795,11 +60541,7 @@
                         "49816:6:16",
                         "49832:10:16"
                       ],
-                      "names": [
-                        "id",
-                        "weight",
-                        "posInOther"
-                      ],
+                      "names": ["id", "weight", "posInOther"],
                       "nodeType": "FunctionCall",
                       "src": "49792:58:16",
                       "tryCall": false,
@@ -60851,9 +60593,7 @@
                     "pathNode": {
                       "id": 31008,
                       "name": "Dag",
-                      "nameLocations": [
-                        "49536:3:16"
-                      ],
+                      "nameLocations": ["49536:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "49536:3:16"
@@ -61438,11 +61178,7 @@
                         "50195:6:16",
                         "50211:10:16"
                       ],
-                      "names": [
-                        "id",
-                        "weight",
-                        "posInOther"
-                      ],
+                      "names": ["id", "weight", "posInOther"],
                       "nodeType": "FunctionCall",
                       "src": "50175:54:16",
                       "tryCall": false,
@@ -61494,9 +61230,7 @@
                     "pathNode": {
                       "id": 31057,
                       "name": "Dag",
-                      "nameLocations": [
-                        "49910:3:16"
-                      ],
+                      "nameLocations": ["49910:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "49910:3:16"
@@ -62132,9 +61866,7 @@
                     "pathNode": {
                       "id": 31106,
                       "name": "Dag",
-                      "nameLocations": [
-                        "50375:3:16"
-                      ],
+                      "nameLocations": ["50375:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "50375:3:16"
@@ -62743,9 +62475,7 @@
                     "pathNode": {
                       "id": 31149,
                       "name": "Dag",
-                      "nameLocations": [
-                        "50767:3:16"
-                      ],
+                      "nameLocations": ["50767:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "50767:3:16"
@@ -63629,9 +63359,7 @@
                     "pathNode": {
                       "id": 31192,
                       "name": "Dag",
-                      "nameLocations": [
-                        "51172:3:16"
-                      ],
+                      "nameLocations": ["51172:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "51172:3:16"
@@ -64157,9 +63885,7 @@
                     "pathNode": {
                       "id": 31253,
                       "name": "Dag",
-                      "nameLocations": [
-                        "51729:3:16"
-                      ],
+                      "nameLocations": ["51729:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "51729:3:16"
@@ -64684,9 +64410,7 @@
                     "pathNode": {
                       "id": 31295,
                       "name": "Dag",
-                      "nameLocations": [
-                        "52039:3:16"
-                      ],
+                      "nameLocations": ["52039:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "52039:3:16"
@@ -65309,9 +65033,7 @@
                     "pathNode": {
                       "id": 31338,
                       "name": "Dag",
-                      "nameLocations": [
-                        "52756:3:16"
-                      ],
+                      "nameLocations": ["52756:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "52756:3:16"
@@ -65880,9 +65602,7 @@
                     "pathNode": {
                       "id": 31381,
                       "name": "Dag",
-                      "nameLocations": [
-                        "53223:3:16"
-                      ],
+                      "nameLocations": ["53223:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "53223:3:16"
@@ -66004,9 +65724,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    31438
-                  ],
+                  "assignments": [31438],
                   "declarations": [
                     {
                       "constant": false,
@@ -66029,9 +65747,7 @@
                         "pathNode": {
                           "id": 31436,
                           "name": "DagVote",
-                          "nameLocations": [
-                            "53850:7:16"
-                          ],
+                          "nameLocations": ["53850:7:16"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 26611,
                           "src": "53850:7:16"
@@ -66434,11 +66150,7 @@
                     "src": "54091:544:16",
                     "statements": [
                       {
-                        "assignments": [
-                          null,
-                          null,
-                          31468
-                        ],
+                        "assignments": [null, null, 31468],
                         "declarations": [
                           null,
                           null,
@@ -66463,9 +66175,7 @@
                               "pathNode": {
                                 "id": 31466,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "54237:7:16"
-                                ],
+                                "nameLocations": ["54237:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "54237:7:16"
@@ -67251,9 +66961,7 @@
                     "pathNode": {
                       "id": 31423,
                       "name": "Dag",
-                      "nameLocations": [
-                        "53701:3:16"
-                      ],
+                      "nameLocations": ["53701:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "53701:3:16"
@@ -67572,11 +67280,7 @@
                     "src": "55224:430:16",
                     "statements": [
                       {
-                        "assignments": [
-                          null,
-                          null,
-                          31548
-                        ],
+                        "assignments": [null, null, 31548],
                         "declarations": [
                           null,
                           null,
@@ -67601,9 +67305,7 @@
                               "pathNode": {
                                 "id": 31546,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "55254:7:16"
-                                ],
+                                "nameLocations": ["55254:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "55254:7:16"
@@ -68395,9 +68097,7 @@
                     "pathNode": {
                       "id": 31523,
                       "name": "Dag",
-                      "nameLocations": [
-                        "55051:3:16"
-                      ],
+                      "nameLocations": ["55051:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "55051:3:16"
@@ -68546,9 +68246,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    31617
-                  ],
+                  "assignments": [31617],
                   "declarations": [
                     {
                       "constant": false,
@@ -68571,9 +68269,7 @@
                         "pathNode": {
                           "id": 31615,
                           "name": "DagVote",
-                          "nameLocations": [
-                            "56092:7:16"
-                          ],
+                          "nameLocations": ["56092:7:16"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 26611,
                           "src": "56092:7:16"
@@ -69036,9 +68732,7 @@
                     "pathNode": {
                       "id": 31602,
                       "name": "Dag",
-                      "nameLocations": [
-                        "55991:3:16"
-                      ],
+                      "nameLocations": ["55991:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "55991:3:16"
@@ -69187,9 +68881,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    31663
-                  ],
+                  "assignments": [31663],
                   "declarations": [
                     {
                       "constant": false,
@@ -69212,9 +68904,7 @@
                         "pathNode": {
                           "id": 31661,
                           "name": "DagVote",
-                          "nameLocations": [
-                            "56626:7:16"
-                          ],
+                          "nameLocations": ["56626:7:16"],
                           "nodeType": "IdentifierPath",
                           "referencedDeclaration": 26611,
                           "src": "56626:7:16"
@@ -69677,9 +69367,7 @@
                     "pathNode": {
                       "id": 31648,
                       "name": "Dag",
-                      "nameLocations": [
-                        "56520:3:16"
-                      ],
+                      "nameLocations": ["56520:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "56520:3:16"
@@ -70212,9 +69900,7 @@
                     "pathNode": {
                       "id": 31694,
                       "name": "Dag",
-                      "nameLocations": [
-                        "57095:3:16"
-                      ],
+                      "nameLocations": ["57095:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "57095:3:16"
@@ -70799,9 +70485,7 @@
                     "pathNode": {
                       "id": 31745,
                       "name": "Dag",
-                      "nameLocations": [
-                        "57687:3:16"
-                      ],
+                      "nameLocations": ["57687:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "57687:3:16"
@@ -71442,9 +71126,7 @@
                   },
                   "id": 31836,
                   "initializationExpression": {
-                    "assignments": [
-                      31811
-                    ],
+                    "assignments": [31811],
                     "declarations": [
                       {
                         "constant": false,
@@ -71643,9 +71325,7 @@
                     "pathNode": {
                       "id": 31788,
                       "name": "Dag",
-                      "nameLocations": [
-                        "58447:3:16"
-                      ],
+                      "nameLocations": ["58447:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "58447:3:16"
@@ -72123,9 +71803,7 @@
                   },
                   "id": 31887,
                   "initializationExpression": {
-                    "assignments": [
-                      31862
-                    ],
+                    "assignments": [31862],
                     "declarations": [
                       {
                         "constant": false,
@@ -72324,9 +72002,7 @@
                     "pathNode": {
                       "id": 31839,
                       "name": "Dag",
-                      "nameLocations": [
-                        "59062:3:16"
-                      ],
+                      "nameLocations": ["59062:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "59062:3:16"
@@ -72454,9 +72130,7 @@
                     "src": "59841:430:16",
                     "statements": [
                       {
-                        "assignments": [
-                          31922
-                        ],
+                        "assignments": [31922],
                         "declarations": [
                           {
                             "constant": false,
@@ -72479,9 +72153,7 @@
                               "pathNode": {
                                 "id": 31920,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "59867:7:16"
-                                ],
+                                "nameLocations": ["59867:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "59867:7:16"
@@ -73349,9 +73021,7 @@
                   },
                   "id": 31971,
                   "initializationExpression": {
-                    "assignments": [
-                      31906
-                    ],
+                    "assignments": [31906],
                     "declarations": [
                       {
                         "constant": false,
@@ -73469,9 +73139,7 @@
                     "pathNode": {
                       "id": 31890,
                       "name": "Dag",
-                      "nameLocations": [
-                        "59642:3:16"
-                      ],
+                      "nameLocations": ["59642:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "59642:3:16"
@@ -73653,9 +73321,7 @@
                     "src": "60554:482:16",
                     "statements": [
                       {
-                        "assignments": [
-                          32006
-                        ],
+                        "assignments": [32006],
                         "declarations": [
                           {
                             "constant": false,
@@ -73678,9 +73344,7 @@
                               "pathNode": {
                                 "id": 32004,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "60630:7:16"
-                                ],
+                                "nameLocations": ["60630:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "60630:7:16"
@@ -74548,9 +74212,7 @@
                   },
                   "id": 32055,
                   "initializationExpression": {
-                    "assignments": [
-                      31990
-                    ],
+                    "assignments": [31990],
                     "declarations": [
                       {
                         "constant": false,
@@ -74668,9 +74330,7 @@
                     "pathNode": {
                       "id": 31974,
                       "name": "Dag",
-                      "nameLocations": [
-                        "60347:3:16"
-                      ],
+                      "nameLocations": ["60347:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "60347:3:16"
@@ -74852,9 +74512,7 @@
                     "src": "61350:329:16",
                     "statements": [
                       {
-                        "assignments": [
-                          32090
-                        ],
+                        "assignments": [32090],
                         "declarations": [
                           {
                             "constant": false,
@@ -74877,9 +74535,7 @@
                               "pathNode": {
                                 "id": 32088,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "61376:7:16"
-                                ],
+                                "nameLocations": ["61376:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "61376:7:16"
@@ -75413,9 +75069,7 @@
                   },
                   "id": 32123,
                   "initializationExpression": {
-                    "assignments": [
-                      32074
-                    ],
+                    "assignments": [32074],
                     "declarations": [
                       {
                         "constant": false,
@@ -75614,9 +75268,7 @@
                     "pathNode": {
                       "id": 32058,
                       "name": "Dag",
-                      "nameLocations": [
-                        "61150:3:16"
-                      ],
+                      "nameLocations": ["61150:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "61150:3:16"
@@ -75798,9 +75450,7 @@
                     "src": "61950:349:16",
                     "statements": [
                       {
-                        "assignments": [
-                          32158
-                        ],
+                        "assignments": [32158],
                         "declarations": [
                           {
                             "constant": false,
@@ -75823,9 +75473,7 @@
                               "pathNode": {
                                 "id": 32156,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "61976:7:16"
-                                ],
+                                "nameLocations": ["61976:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "61976:7:16"
@@ -76389,9 +76037,7 @@
                   },
                   "id": 32193,
                   "initializationExpression": {
-                    "assignments": [
-                      32142
-                    ],
+                    "assignments": [32142],
                     "declarations": [
                       {
                         "constant": false,
@@ -76590,9 +76236,7 @@
                     "pathNode": {
                       "id": 32126,
                       "name": "Dag",
-                      "nameLocations": [
-                        "61743:3:16"
-                      ],
+                      "nameLocations": ["61743:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "61743:3:16"
@@ -76937,9 +76581,7 @@
                   },
                   "id": 32224,
                   "initializationExpression": {
-                    "assignments": [
-                      32206
-                    ],
+                    "assignments": [32206],
                     "declarations": [
                       {
                         "constant": false,
@@ -77053,9 +76695,7 @@
                     "pathNode": {
                       "id": 32196,
                       "name": "Dag",
-                      "nameLocations": [
-                        "62480:3:16"
-                      ],
+                      "nameLocations": ["62480:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "62480:3:16"
@@ -77349,9 +76989,7 @@
                   },
                   "id": 32257,
                   "initializationExpression": {
-                    "assignments": [
-                      32237
-                    ],
+                    "assignments": [32237],
                     "declarations": [
                       {
                         "constant": false,
@@ -77469,9 +77107,7 @@
                     "pathNode": {
                       "id": 32227,
                       "name": "Dag",
-                      "nameLocations": [
-                        "62801:3:16"
-                      ],
+                      "nameLocations": ["62801:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "62801:3:16"
@@ -77719,9 +77355,7 @@
                   },
                   "id": 32287,
                   "initializationExpression": {
-                    "assignments": [
-                      32270
-                    ],
+                    "assignments": [32270],
                     "declarations": [
                       {
                         "constant": false,
@@ -77839,9 +77473,7 @@
                     "pathNode": {
                       "id": 32260,
                       "name": "Dag",
-                      "nameLocations": [
-                        "63122:3:16"
-                      ],
+                      "nameLocations": ["63122:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "63122:3:16"
@@ -77942,9 +77574,7 @@
                     "src": "63650:543:16",
                     "statements": [
                       {
-                        "assignments": [
-                          32320
-                        ],
+                        "assignments": [32320],
                         "declarations": [
                           {
                             "constant": false,
@@ -77967,9 +77597,7 @@
                               "pathNode": {
                                 "id": 32318,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "63676:7:16"
-                                ],
+                                "nameLocations": ["63676:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "63676:7:16"
@@ -78136,10 +77764,7 @@
                         "src": "63676:74:16"
                       },
                       {
-                        "assignments": [
-                          null,
-                          32332
-                        ],
+                        "assignments": [null, 32332],
                         "declarations": [
                           null,
                           {
@@ -78753,9 +78378,7 @@
                   },
                   "id": 32371,
                   "initializationExpression": {
-                    "assignments": [
-                      32304
-                    ],
+                    "assignments": [32304],
                     "declarations": [
                       {
                         "constant": false,
@@ -78954,9 +78577,7 @@
                     "pathNode": {
                       "id": 32290,
                       "name": "Dag",
-                      "nameLocations": [
-                        "63456:3:16"
-                      ],
+                      "nameLocations": ["63456:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "63456:3:16"
@@ -79112,9 +78733,7 @@
                     "src": "64453:662:16",
                     "statements": [
                       {
-                        "assignments": [
-                          32404
-                        ],
+                        "assignments": [32404],
                         "declarations": [
                           {
                             "constant": false,
@@ -79137,9 +78756,7 @@
                               "pathNode": {
                                 "id": 32402,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "64479:7:16"
-                                ],
+                                "nameLocations": ["64479:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "64479:7:16"
@@ -79306,9 +78923,7 @@
                         "src": "64479:77:16"
                       },
                       {
-                        "assignments": [
-                          32416
-                        ],
+                        "assignments": [32416],
                         "declarations": [
                           {
                             "constant": false,
@@ -79475,10 +79090,7 @@
                         "src": "64583:77:16"
                       },
                       {
-                        "assignments": [
-                          32427,
-                          32429
-                        ],
+                        "assignments": [32427, 32429],
                         "declarations": [
                           {
                             "constant": false,
@@ -80106,9 +79718,7 @@
                   },
                   "id": 32466,
                   "initializationExpression": {
-                    "assignments": [
-                      32388
-                    ],
+                    "assignments": [32388],
                     "declarations": [
                       {
                         "constant": false,
@@ -80307,9 +79917,7 @@
                     "pathNode": {
                       "id": 32374,
                       "name": "Dag",
-                      "nameLocations": [
-                        "64257:3:16"
-                      ],
+                      "nameLocations": ["64257:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "64257:3:16"
@@ -80465,9 +80073,7 @@
                     "src": "65364:516:16",
                     "statements": [
                       {
-                        "assignments": [
-                          32497
-                        ],
+                        "assignments": [32497],
                         "declarations": [
                           {
                             "constant": false,
@@ -80490,9 +80096,7 @@
                               "pathNode": {
                                 "id": 32495,
                                 "name": "DagVote",
-                                "nameLocations": [
-                                  "65390:7:16"
-                                ],
+                                "nameLocations": ["65390:7:16"],
                                 "nodeType": "IdentifierPath",
                                 "referencedDeclaration": 26611,
                                 "src": "65390:7:16"
@@ -80663,9 +80267,7 @@
                         "src": "65390:75:16"
                       },
                       {
-                        "assignments": [
-                          32509
-                        ],
+                        "assignments": [32509],
                         "declarations": [
                           {
                             "constant": false,
@@ -81223,9 +80825,7 @@
                   },
                   "id": 32544,
                   "initializationExpression": {
-                    "assignments": [
-                      32481
-                    ],
+                    "assignments": [32481],
                     "declarations": [
                       {
                         "constant": false,
@@ -81428,9 +81028,7 @@
                     "pathNode": {
                       "id": 32469,
                       "name": "Dag",
-                      "nameLocations": [
-                        "65190:3:16"
-                      ],
+                      "nameLocations": ["65190:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "65190:3:16"
@@ -81706,9 +81304,7 @@
                   },
                   "id": 32572,
                   "initializationExpression": {
-                    "assignments": [
-                      32555
-                    ],
+                    "assignments": [32555],
                     "declarations": [
                       {
                         "constant": false,
@@ -81826,9 +81422,7 @@
                     "pathNode": {
                       "id": 32547,
                       "name": "Dag",
-                      "nameLocations": [
-                        "66097:3:16"
-                      ],
+                      "nameLocations": ["66097:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "66097:3:16"
@@ -82049,9 +81643,7 @@
                   },
                   "id": 32600,
                   "initializationExpression": {
-                    "assignments": [
-                      32583
-                    ],
+                    "assignments": [32583],
                     "declarations": [
                       {
                         "constant": false,
@@ -82169,9 +81761,7 @@
                     "pathNode": {
                       "id": 32575,
                       "name": "Dag",
-                      "nameLocations": [
-                        "66419:3:16"
-                      ],
+                      "nameLocations": ["66419:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "66419:3:16"
@@ -82392,9 +81982,7 @@
                   },
                   "id": 32630,
                   "initializationExpression": {
-                    "assignments": [
-                      32613
-                    ],
+                    "assignments": [32613],
                     "declarations": [
                       {
                         "constant": false,
@@ -82508,9 +82096,7 @@
                     "pathNode": {
                       "id": 32603,
                       "name": "Dag",
-                      "nameLocations": [
-                        "66836:3:16"
-                      ],
+                      "nameLocations": ["66836:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "66836:3:16"
@@ -82742,9 +82328,7 @@
                   },
                   "id": 32659,
                   "initializationExpression": {
-                    "assignments": [
-                      32643
-                    ],
+                    "assignments": [32643],
                     "declarations": [
                       {
                         "constant": false,
@@ -82862,9 +82446,7 @@
                     "pathNode": {
                       "id": 32633,
                       "name": "Dag",
-                      "nameLocations": [
-                        "67229:3:16"
-                      ],
+                      "nameLocations": ["67229:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "67229:3:16"
@@ -83112,9 +82694,7 @@
                   },
                   "id": 32689,
                   "initializationExpression": {
-                    "assignments": [
-                      32672
-                    ],
+                    "assignments": [32672],
                     "declarations": [
                       {
                         "constant": false,
@@ -83228,9 +82808,7 @@
                     "pathNode": {
                       "id": 32662,
                       "name": "Dag",
-                      "nameLocations": [
-                        "67577:3:16"
-                      ],
+                      "nameLocations": ["67577:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "67577:3:16"
@@ -83462,9 +83040,7 @@
                   },
                   "id": 32718,
                   "initializationExpression": {
-                    "assignments": [
-                      32702
-                    ],
+                    "assignments": [32702],
                     "declarations": [
                       {
                         "constant": false,
@@ -83582,9 +83158,7 @@
                     "pathNode": {
                       "id": 32692,
                       "name": "Dag",
-                      "nameLocations": [
-                        "67934:3:16"
-                      ],
+                      "nameLocations": ["67934:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "67934:3:16"
@@ -83832,9 +83406,7 @@
                   },
                   "id": 32748,
                   "initializationExpression": {
-                    "assignments": [
-                      32731
-                    ],
+                    "assignments": [32731],
                     "declarations": [
                       {
                         "constant": false,
@@ -83948,9 +83520,7 @@
                     "pathNode": {
                       "id": 32721,
                       "name": "Dag",
-                      "nameLocations": [
-                        "68298:3:16"
-                      ],
+                      "nameLocations": ["68298:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "68298:3:16"
@@ -84296,9 +83866,7 @@
                         },
                         "id": 32795,
                         "initializationExpression": {
-                          "assignments": [
-                            32772
-                          ],
+                          "assignments": [32772],
                           "declarations": [
                             {
                               "constant": false,
@@ -84441,9 +84009,7 @@
                   },
                   "id": 32797,
                   "initializationExpression": {
-                    "assignments": [
-                      32761
-                    ],
+                    "assignments": [32761],
                     "declarations": [
                       {
                         "constant": false,
@@ -84557,9 +84123,7 @@
                     "pathNode": {
                       "id": 32751,
                       "name": "Dag",
-                      "nameLocations": [
-                        "68754:3:16"
-                      ],
+                      "nameLocations": ["68754:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "68754:3:16"
@@ -84905,9 +84469,7 @@
                         },
                         "id": 32844,
                         "initializationExpression": {
-                          "assignments": [
-                            32821
-                          ],
+                          "assignments": [32821],
                           "declarations": [
                             {
                               "constant": false,
@@ -85054,9 +84616,7 @@
                   },
                   "id": 32846,
                   "initializationExpression": {
-                    "assignments": [
-                      32810
-                    ],
+                    "assignments": [32810],
                     "declarations": [
                       {
                         "constant": false,
@@ -85174,9 +84734,7 @@
                     "pathNode": {
                       "id": 32800,
                       "name": "Dag",
-                      "nameLocations": [
-                        "69319:3:16"
-                      ],
+                      "nameLocations": ["69319:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "69319:3:16"
@@ -85568,9 +85126,7 @@
                         },
                         "id": 32896,
                         "initializationExpression": {
-                          "assignments": [
-                            32870
-                          ],
+                          "assignments": [32870],
                           "declarations": [
                             {
                               "constant": false,
@@ -85717,9 +85273,7 @@
                   },
                   "id": 32898,
                   "initializationExpression": {
-                    "assignments": [
-                      32859
-                    ],
+                    "assignments": [32859],
                     "declarations": [
                       {
                         "constant": false,
@@ -85833,9 +85387,7 @@
                     "pathNode": {
                       "id": 32849,
                       "name": "Dag",
-                      "nameLocations": [
-                        "69765:3:16"
-                      ],
+                      "nameLocations": ["69765:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "69765:3:16"
@@ -86227,9 +85779,7 @@
                         },
                         "id": 32948,
                         "initializationExpression": {
-                          "assignments": [
-                            32922
-                          ],
+                          "assignments": [32922],
                           "declarations": [
                             {
                               "constant": false,
@@ -86372,9 +85922,7 @@
                   },
                   "id": 32950,
                   "initializationExpression": {
-                    "assignments": [
-                      32911
-                    ],
+                    "assignments": [32911],
                     "declarations": [
                       {
                         "constant": false,
@@ -86492,9 +86040,7 @@
                     "pathNode": {
                       "id": 32901,
                       "name": "Dag",
-                      "nameLocations": [
-                        "70302:3:16"
-                      ],
+                      "nameLocations": ["70302:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "70302:3:16"
@@ -86879,9 +86425,7 @@
                     "pathNode": {
                       "id": 32953,
                       "name": "Dag",
-                      "nameLocations": [
-                        "70898:3:16"
-                      ],
+                      "nameLocations": ["70898:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "70898:3:16"
@@ -87266,9 +86810,7 @@
                     "pathNode": {
                       "id": 32982,
                       "name": "Dag",
-                      "nameLocations": [
-                        "71237:3:16"
-                      ],
+                      "nameLocations": ["71237:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "71237:3:16"
@@ -87653,9 +87195,7 @@
                     "pathNode": {
                       "id": 33011,
                       "name": "Dag",
-                      "nameLocations": [
-                        "71575:3:16"
-                      ],
+                      "nameLocations": ["71575:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "71575:3:16"
@@ -88040,9 +87580,7 @@
                     "pathNode": {
                       "id": 33040,
                       "name": "Dag",
-                      "nameLocations": [
-                        "71908:3:16"
-                      ],
+                      "nameLocations": ["71908:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "71908:3:16"
@@ -88328,9 +87866,7 @@
                         },
                         "id": 33108,
                         "initializationExpression": {
-                          "assignments": [
-                            33089
-                          ],
+                          "assignments": [33089],
                           "declarations": [
                             {
                               "constant": false,
@@ -88461,9 +87997,7 @@
                   },
                   "id": 33110,
                   "initializationExpression": {
-                    "assignments": [
-                      33079
-                    ],
+                    "assignments": [33079],
                     "declarations": [
                       {
                         "constant": false,
@@ -88581,9 +88115,7 @@
                     "pathNode": {
                       "id": 33069,
                       "name": "Dag",
-                      "nameLocations": [
-                        "72307:3:16"
-                      ],
+                      "nameLocations": ["72307:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "72307:3:16"
@@ -89124,9 +88656,7 @@
                         },
                         "id": 33171,
                         "initializationExpression": {
-                          "assignments": [
-                            33133
-                          ],
+                          "assignments": [33133],
                           "declarations": [
                             {
                               "constant": false,
@@ -89257,9 +88787,7 @@
                   },
                   "id": 33173,
                   "initializationExpression": {
-                    "assignments": [
-                      33123
-                    ],
+                    "assignments": [33123],
                     "declarations": [
                       {
                         "constant": false,
@@ -89377,9 +88905,7 @@
                     "pathNode": {
                       "id": 33113,
                       "name": "Dag",
-                      "nameLocations": [
-                        "72760:3:16"
-                      ],
+                      "nameLocations": ["72760:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "72760:3:16"
@@ -89474,9 +89000,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    33188
-                  ],
+                  "assignments": [33188],
                   "declarations": [
                     {
                       "constant": false,
@@ -89777,9 +89301,7 @@
                   },
                   "id": 33217,
                   "initializationExpression": {
-                    "assignments": [
-                      33192
-                    ],
+                    "assignments": [33192],
                     "declarations": [
                       {
                         "constant": false,
@@ -89897,9 +89419,7 @@
                     "pathNode": {
                       "id": 33176,
                       "name": "Dag",
-                      "nameLocations": [
-                        "73454:3:16"
-                      ],
+                      "nameLocations": ["73454:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "73454:3:16"
@@ -90237,9 +89757,7 @@
                   },
                   "id": 33253,
                   "initializationExpression": {
-                    "assignments": [
-                      33232
-                    ],
+                    "assignments": [33232],
                     "declarations": [
                       {
                         "constant": false,
@@ -90357,9 +89875,7 @@
                     "pathNode": {
                       "id": 33220,
                       "name": "Dag",
-                      "nameLocations": [
-                        "73912:3:16"
-                      ],
+                      "nameLocations": ["73912:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "73912:3:16"
@@ -90685,9 +90201,7 @@
                   },
                   "id": 33286,
                   "initializationExpression": {
-                    "assignments": [
-                      33266
-                    ],
+                    "assignments": [33266],
                     "declarations": [
                       {
                         "constant": false,
@@ -90805,9 +90319,7 @@
                     "pathNode": {
                       "id": 33256,
                       "name": "Dag",
-                      "nameLocations": [
-                        "74291:3:16"
-                      ],
+                      "nameLocations": ["74291:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "74291:3:16"
@@ -92154,9 +91666,7 @@
                     "pathNode": {
                       "id": 33289,
                       "name": "Dag",
-                      "nameLocations": [
-                        "74873:3:16"
-                      ],
+                      "nameLocations": ["74873:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "74873:3:16"
@@ -93785,9 +93295,7 @@
                     "pathNode": {
                       "id": 33389,
                       "name": "Dag",
-                      "nameLocations": [
-                        "75984:3:16"
-                      ],
+                      "nameLocations": ["75984:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "75984:3:16"
@@ -93965,9 +93473,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    33512
-                  ],
+                  "assignments": [33512],
                   "declarations": [
                     {
                       "constant": false,
@@ -94088,9 +93594,7 @@
                   "src": "77730:59:16"
                 },
                 {
-                  "assignments": [
-                    33520
-                  ],
+                  "assignments": [33520],
                   "declarations": [
                     {
                       "constant": false,
@@ -94833,9 +94337,7 @@
                     "pathNode": {
                       "id": 33502,
                       "name": "Dag",
-                      "nameLocations": [
-                        "77380:3:16"
-                      ],
+                      "nameLocations": ["77380:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "77380:3:16"
@@ -94931,9 +94433,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    33579
-                  ],
+                  "assignments": [33579],
                   "declarations": [
                     {
                       "constant": false,
@@ -95022,9 +94522,7 @@
                   "src": "78513:36:16"
                 },
                 {
-                  "assignments": [
-                    33586
-                  ],
+                  "assignments": [33586],
                   "declarations": [
                     {
                       "constant": false,
@@ -95145,9 +94643,7 @@
                   "src": "78564:53:16"
                 },
                 {
-                  "assignments": [
-                    33594
-                  ],
+                  "assignments": [33594],
                   "declarations": [
                     {
                       "constant": false,
@@ -96378,9 +95874,7 @@
                     "pathNode": {
                       "id": 33571,
                       "name": "Dag",
-                      "nameLocations": [
-                        "78352:3:16"
-                      ],
+                      "nameLocations": ["78352:3:16"],
                       "nodeType": "IdentifierPath",
                       "referencedDeclaration": 26698,
                       "src": "78352:3:16"
@@ -96443,9 +95937,7 @@
         "contractDependencies": [],
         "contractKind": "library",
         "fullyImplemented": true,
-        "linearizedBaseContracts": [
-          33684
-        ],
+        "linearizedBaseContracts": [33684],
         "name": "AnthillInner",
         "nameLocation": "31342:12:16",
         "scope": 33685,

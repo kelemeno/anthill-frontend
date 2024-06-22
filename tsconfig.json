@@ -1,8 +1,6 @@
 {
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "strictPropertyInitialization": false,
     "allowJs": true,
     "esModuleInterop": true,
@@ -36,7 +34,7 @@
     "isolatedModules": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "jsx": "react-jsx",
+    "jsx": "react-jsx"
   },
   "include": [
     "src",
@@ -45,14 +43,11 @@
     "src/*.ts",
     "src/**/Anthill.json"
   ],
-  "exclude": [
-    "node_modules"
-  ],
+  "exclude": ["node_modules"],
   "files": [],
   "references": [
     {
       "path": "./tsconfig.node.json"
     }
   ]
-
 }
