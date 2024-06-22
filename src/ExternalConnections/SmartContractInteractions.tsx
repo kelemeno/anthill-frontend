@@ -14,13 +14,7 @@ export function AddDagVote(
     args: [account, recipient, 1],
   });
   const { writeContract } = useWriteContract();
-
-  return writeContract(data!.request);
-  // return ()=>{}
-
-  // then((res:any)=>{console.log(res)});
-
-  // await AnthillContract.addDagVote(account, recipient, 1).then((res:any)=>{console.log(res)});
+  return () => { writeContract(data!.request);}
 }
 
 export function RemoveDagVote(
@@ -28,8 +22,6 @@ export function RemoveDagVote(
   account: string,
   recipient: string,
 ) {
-  // await AnthillContract.removeDagVote(account, recipient).then((res:any)=>{console.log(res)});
-
   const { data, error } = useSimulateContract({
     address: AnthillContract.address,
     abi: AnthillJson.abi,
@@ -41,7 +33,6 @@ export function RemoveDagVote(
   return () => {
     writeContract(data!.request);
   };
-  // return ()=>{}
 }
 
 export function SwitchWithParent(AnthillContract: any, account: string) {
@@ -56,9 +47,6 @@ export function SwitchWithParent(AnthillContract: any, account: string) {
   return () => {
     writeContract(data!.request);
   };
-  // return ()=>{}
-
-  // await AnthillContract.switchPositionWithParent(account).then((res:any)=>{console.log(res)});
 }
 
 export function JoinTree(
@@ -83,9 +71,6 @@ export function JoinTree(
   return () => {
     writeContract(data!.request);
   };
-  // return ()=>{}
-
-  // await AnthillContract.joinTree(account, account.slice(0, 3)+"..."+account.slice(-3), recipient).then((res:any)=>{ setClickedNodeId(account); console.log(res)});
 }
 
 export function ChangeName(
@@ -104,9 +89,6 @@ export function ChangeName(
   return () => {
     writeContract(data!.request);
   };
-  // return ()=>{}
-
-  // await AnthillContract.changeName(account, name).then((res:any)=>{console.log(res)});
 }
 
 export function LeaveTree(
@@ -130,16 +112,6 @@ export function LeaveTree(
     setClickedNodeId(altNode);
     navigate("/?id=" + altNode);
   };
-
-  // return ()=>{}
-
-  // await AnthillContract.leaveTree(account).then((res:any)=>{
-  //   console.log(res);
-  //   setIsAccountInGraph(false);
-  //   setClickedNodeId(altNode);
-  //   // console.log("parent", parent);
-  //   navigate("/?id="+altNode);
-  // });
 }
 
 export function MoveTreeVote(
@@ -162,10 +134,4 @@ export function MoveTreeVote(
     setClickedNodeId(recipient);
     navigate("/?id=" + recipient);
   };
-  // return ()=>{}
-
-  // await AnthillContract.moveTreeVote(account, recipient).then((res:any)=>{
-  //     setClickedNodeId(recipient);
-  //     navigate("/?id="+recipient);
-  //     console.log(res)});
 }

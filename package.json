@@ -39,11 +39,7 @@
     "web3modal": "^1.9.12"
   },
   "scripts": {
-    "start": "next start",
-    "build2": "next build",
-    "test": "next test",
-    "eject": "next eject",
-    "dev": "vite",
+    "start": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",

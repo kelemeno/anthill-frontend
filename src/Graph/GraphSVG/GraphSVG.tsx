@@ -285,7 +285,7 @@ export const GraphSVG = (props: {
         <div className="Popover">
           {" "}
           Address:{" "}
-          <a href={"https://mumbai.polygonscan.com/address/" + hoverNode.id}>
+          <a href={"https://sepolia.explorer.zksync.io/address/" + hoverNode.id}>
             {hoverNode.id.slice(0, 5)}...{hoverNode.id.slice(-3)}
           </a>{" "}
         </div>

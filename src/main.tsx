@@ -45,7 +45,7 @@ import {
 const doc = document.getElementById("root");
 const root = client.createRoot(doc!);
 
-const testing = true;
+const testing = false;
 console.log("Version 2");
 
 const queryClient = new QueryClient();
@@ -90,17 +90,18 @@ let backendUrl = "";
 let wsUrl: string;
 
 if (!testing) {
-  anthillContractAddress = "0x69649a6E7E9c090a742f0671C64f4c7c31a1e4ce"; //mumbai v4
+    anthillContractAddress = "0xe42923350EF3a534f84bb101453D9B442d42Bf0c"; // zksyncTesnet sepolia 
+//   anthillContractAddress = "0x69649a6E7E9c090a742f0671C64f4c7c31a1e4ce"; //mumbai v4
   // anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
   // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
   // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
-  chainId = 80001; //mumbai testnet
+  chainId = 300; //mumbai testnet
 
-  // backendUrl = "http://localhost:5001/"
-  // wsUrl = 'ws://127.0.0.1:5001';
+  backendUrl = "http://localhost:5001/"
+  wsUrl = 'ws://127.0.0.1:5001';
 
-  backendUrl = "https://anthill-db.herokuapp.com/";
-  wsUrl = "wss://anthill-db.herokuapp.com/";
+//   backendUrl = "https://anthill-db.herokuapp.com/";
+//   wsUrl = "wss://anthill-db.herokuapp.com/";
 } else {
   anthillContractAddress = "0x111C3E89Ce80e62EE88318C2804920D4c96f92bb"; // forge with lib
   // chainId =1337; //anvil
@@ -284,7 +285,7 @@ function Footer() {
   return (
     <footer>
       &nbsp; &nbsp;&nbsp;&nbsp;
-      <a href="https://faucet.polygon.technology/">Get test tokens </a>
+      <a href="https://faucet.chainstack.com/zksync-testnet-faucet">Get test tokens </a>
       &nbsp; &nbsp;&nbsp;&nbsp;
       <a href="https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580">
         Medium post{" "}
@@ -292,7 +293,7 @@ function Footer() {
       &nbsp; &nbsp;&nbsp;&nbsp;
       <a
         href={
-          "https://mumbai.polygonscan.com/address/" + anthillContractAddress
+          "https://sepolia.explorer.zksync.io/address/" + anthillContractAddress
         }
       >
         Blockexplorer
