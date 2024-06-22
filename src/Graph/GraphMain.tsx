@@ -117,7 +117,13 @@ const gettingClickedNode = async (
         anthillGraphBare,
       );
     } else {
-      await CheckSaveNode(backendUrl, clickedNode, anthillGraph, anthillGraphBare, maxRelRootDepth)
+      await CheckSaveNode(
+        backendUrl,
+        clickedNode,
+        anthillGraph,
+        anthillGraphBare,
+        maxRelRootDepth,
+      );
       graphToRender = SelectSentRecDagVotes(
         clickedNode,
         account,
@@ -332,8 +338,22 @@ export const Graph = (props: {
   return (
     <>
       <div className="insideButton" style={{ textAlign: "left" }}>
-        <GoHomeButton account={props.account} isAccountInGraph={isAccountInGraph} setClickedNode= {setClickedNode}/>
-        {(JoinTreeRandomlyCheck(isAccountInGraph, props.account ))&&(<JoinTreeRandomlyButton AnthillContract= {props.AnthillContract} chainId={props.chainId} account={props.account} isAccountInGraph= {isAccountInGraph} setClickedNode= {setClickedNode} setIsAccountInGraph={setIsAccountInGraph} backendUrl={props.backendUrl}/>)}
+        <GoHomeButton
+          account={props.account}
+          isAccountInGraph={isAccountInGraph}
+          setClickedNode={setClickedNode}
+        />
+        {JoinTreeRandomlyCheck(isAccountInGraph, props.account) && (
+          <JoinTreeRandomlyButton
+            AnthillContract={props.AnthillContract}
+            chainId={props.chainId}
+            account={props.account}
+            isAccountInGraph={isAccountInGraph}
+            setClickedNode={setClickedNode}
+            setIsAccountInGraph={setIsAccountInGraph}
+            backendUrl={props.backendUrl}
+          />
+        )}
       </div>
       <GraphSVG {...props2} />
     </>

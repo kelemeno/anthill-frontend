@@ -14,7 +14,9 @@ export function AddDagVote(
     args: [account, recipient, 1],
   });
   const { writeContract } = useWriteContract();
-  return () => { writeContract(data!.request);}
+  return () => {
+    writeContract(data!.request);
+  };
 }
 
 export function RemoveDagVote(
