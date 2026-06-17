@@ -1,17 +1,17 @@
 .Graph {
   text-align: center;
-  
+
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.Popover{
+.Popover {
   padding: 10px;
 }
 
-.PopoverButton{
+.PopoverButton {
   align-items: right;
 }
 /* .container {
@@ -20,7 +20,3 @@
   position: fixed;
   transform: translate(-50%, -50%);
 } */
-
-
-
-

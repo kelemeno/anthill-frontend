@@ -2,17 +2,16 @@
 // it is a copy of https://observablehq.com/@erikbrinkman/d3-dag-sugiyama
 
 import * as d3Base from "d3";
-// import {useState} from 'react';
-// import React from 'react';
 
 import * as d3Dag from "d3-dag";
 import * as svg from "svg";
 
 import {
-  GraphDataRendering,
+  type GraphDataRendering,
+  type NodeDataRendering,
   nameShortener,
-  NodeDataRendering,
 } from "../GraphBase";
+
 // var svg = require('svg');
 
 function GraphDataToArray(graph: GraphDataRendering): NodeDataRendering[] {
@@ -192,10 +191,8 @@ export const DrawGraph = (props: {
 
   // How to draw edges
   type Datatype = { x: any; y: any };
-  const curve =
-    undefined ??
-    // splines.get(spline) ??
-    (true ? d3Base.curveMonotoneY : d3Base.curveCatmullRom);
+  // splines.get(spline) ??
+  const curve = d3Base.curveMonotoneY;
   // coord === "Simplex (medium)" ? ...
   const line = d3Base
     .line<Datatype>()
@@ -295,7 +292,8 @@ export const DrawGraph = (props: {
       .enter()
       .append("path")
       .attr("d", arrow)
-      .attr("transform", ({ points }) => { // source, target 
+      .attr("transform", ({ points }) => {
+        // source, target
         const [end, start] = points.slice(); //.reverse();
         // This sets the arrows the node radius (20) + a little bit (3) away from the node center, on the last line segment of the edge. This means that edges that only span ine level will work perfectly, but if the edge bends, this will be a little off.
         const dx: number = start.x - end.x;

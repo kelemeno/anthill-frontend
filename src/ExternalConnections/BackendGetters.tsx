@@ -1,59 +1,60 @@
-import axios from "axios";
-import { NodeData, NodeDataBare } from "../Graph/GraphBase";
+import type { NodeData, NodeDataBare } from "../Graph/GraphBase";
+
+// Small wrapper around the native fetch API. Throws on non-2xx so callers keep
+// the same "reject on error" behavior the previous axios client provided.
+async function getJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`GET ${url} failed: ${response.status}`);
+  }
+  return (await response.json()) as T;
+}
 
 export async function getMaxRelRootDepth(backendUrl: string): Promise<number> {
-  return await axios.get(backendUrl + "maxRelRootDepth").then((response) => {
-    return response.data.maxRelRootDepth;
-  });
+  const data = await getJson<{ maxRelRootDepth: number }>(
+    backendUrl + "maxRelRootDepth",
+  );
+  return data.maxRelRootDepth;
 }
 
 export async function getIsNodeInGraph(
   backendUrl: string,
   id: string,
 ): Promise<boolean> {
-  // console.log("gettingIsNodeInGraph", id)
-  return await axios
-    .get(backendUrl + "isNodeInGraph/" + id)
-    .then((response) => {
-      return response.data.isNodeInGraph;
-    });
+  const data = await getJson<{ isNodeInGraph: boolean }>(
+    backendUrl + "isNodeInGraph/" + id,
+  );
+  return data.isNodeInGraph;
 }
 
 export async function getRootNodeId(backendUrl: string): Promise<string> {
-  return await axios.get(backendUrl + "rootId").then((response) => {
-    return response.data.id;
-  });
+  const data = await getJson<{ id: string }>(backendUrl + "rootId");
+  return data.id;
 }
-
-// export async function getAnthillGraphNum(backendUrl: string, ): Promise<number>{
-//   return await axios.get(backendUrl+"anthillGraphNum").then(response => {return response.data.anthillGraphNum});
-// }
 
 export async function getNodeFromServer(
   backendUrl: string,
   id: string,
 ): Promise<NodeData> {
-  // console.log("getting id", id)
   if (id === undefined) {
     console.log("bug: trying to get undefined from backend");
     return {} as NodeData;
   }
-  return await axios.get(backendUrl + "id/" + id).then((response) => {
-    return response.data.nodeData;
-  });
+  const data = await getJson<{ nodeData: NodeData }>(backendUrl + "id/" + id);
+  return data.nodeData;
 }
 
 export async function getBareNodeFromServer(
   backendUrl: string,
   id: string,
 ): Promise<NodeDataBare> {
-  return await axios.get(backendUrl + "bareId/" + id).then((response) => {
-    return response.data.nodeData;
-  });
+  const data = await getJson<{ nodeData: NodeDataBare }>(
+    backendUrl + "bareId/" + id,
+  );
+  return data.nodeData;
 }
 
 export async function getRandomLeaf(backendUrl: string): Promise<string> {
-  return await axios.get(backendUrl + "randomLeaf").then((response) => {
-    return response.data.randomLeaf;
-  });
+  const data = await getJson<{ randomLeaf: string }>(backendUrl + "randomLeaf");
+  return data.randomLeaf;
 }

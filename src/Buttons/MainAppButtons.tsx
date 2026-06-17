@@ -1,23 +1,14 @@
 // buttons for the main app.
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import styled from "styled-components";
 import { address0 } from "../Graph/GraphBase";
-
 import image1 from "../logo192.png";
 import image2 from "../logo192.png";
 import image3 from "../logo192.png";
 
-import styled from "styled-components";
-// import COLORS from "./color";
-
-import { useNavigate } from "react-router-dom";
-// import detectEthereumProvider from '@metamask/detect-provider';
-// import {ethers} from  "ethers";
-
 import ".././App.css";
 import { getRandomLeaf } from "../ExternalConnections/BackendGetters";
-// import { getIsNodeInGraph } from '../ExternalConnections/BackendGetters';
-
-// import { NodeData, NodeDataBare, GraphData, GraphDataBare, NodeDataRendering, GraphDataRendering } from "../Graph/GraphBase";
 
 import { JoinTree } from "../ExternalConnections/SmartContractInteractions";
 

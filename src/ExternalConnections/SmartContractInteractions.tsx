@@ -1,5 +1,4 @@
-// import { serveParent } from "../Graph/LoadGraph";
-import { useWriteContract, useSimulateContract } from "wagmi";
+import { useSimulateContract, useWriteContract } from "wagmi";
 import AnthillJson from "./Anthill.json";
 
 export function AddDagVote(
@@ -108,7 +107,7 @@ export function LeaveTree(
     args: [account],
   });
   const { writeContract } = useWriteContract();
-  console.log(setIsAccountInGraph)
+  console.log(setIsAccountInGraph);
   return () => {
     writeContract(data!.request);
     setClickedNodeId(altNode);

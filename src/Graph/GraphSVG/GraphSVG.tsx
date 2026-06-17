@@ -1,18 +1,33 @@
 // this is where we create the image of the graph, adding in the popover and the buttons
 
-import React, { useState } from "react";
 import Popover from "@mui/material/Popover";
+import React, { useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
 import ".././../App.css";
 import {
+  AddDagVoteButton,
+  AddDagVoteCheck,
+  ChangeNameButton,
+  ChangeNameCheck,
+  JoinTreeButton,
+  JoinTreeCheck,
+  LeaveTreeButton,
+  LeaveTreeCheck,
+  MoveTreeVoteButton,
+  MoveTreeVoteCheck,
+  RemoveDagVoteButton,
+  RemoveDagVoteCheck,
+  SwitchParentButton,
+  SwitchParentCheck,
+} from "../../Buttons/PopupButtons";
+import type {
   GraphData,
   GraphDataBare,
-  NodeDataRendering,
   GraphDataRendering,
+  NodeDataRendering,
 } from "../GraphBase";
-
 import { DrawGraph } from "./DrawGraph";
 import {
   handleClick,
@@ -20,24 +35,6 @@ import {
   handleMouseOver,
   handleMouseStay,
 } from "./GraphNodeMouseInteractions";
-import {
-  SwitchParentButton,
-  MoveTreeVoteButton,
-  ChangeNameButton,
-  LeaveTreeButton,
-  JoinTreeButton,
-  RemoveDagVoteButton,
-  AddDagVoteButton,
-} from "../../Buttons/PopupButtons";
-import {
-  SwitchParentCheck,
-  MoveTreeVoteCheck,
-  ChangeNameCheck,
-  LeaveTreeCheck,
-  JoinTreeCheck,
-  RemoveDagVoteCheck,
-  AddDagVoteCheck,
-} from "../../Buttons/PopupButtons";
 
 export const GraphSVG = (props: {
   account: string;
@@ -168,11 +165,13 @@ export const GraphSVG = (props: {
           horizontal: "left",
         }}
         onClose={() => handleMouseOut(loaded, setOpen, setAnchorEl)}
-        PaperProps={{
-          onMouseEnter: () =>
-            handleMouseStay(anchorElSaver, setAnchorEl, setOpen, loaded),
-          onMouseLeave: () => handleMouseOut(loaded, setOpen, setAnchorEl),
-          sx: { pointerEvents: "auto" },
+        slotProps={{
+          paper: {
+            onMouseEnter: () =>
+              handleMouseStay(anchorElSaver, setAnchorEl, setOpen, loaded),
+            onMouseLeave: () => handleMouseOut(loaded, setOpen, setAnchorEl),
+            sx: { pointerEvents: "auto" },
+          },
         }}
         transitionDuration="auto"
       >
@@ -285,9 +284,7 @@ export const GraphSVG = (props: {
         <div className="Popover">
           {" "}
           Address:{" "}
-          <a
-            href={"https://sepolia.explorer.zksync.io/address/" + hoverNode.id}
-          >
+          <a href={"https://sepolia.etherscan.io/address/" + hoverNode.id}>
             {hoverNode.id.slice(0, 5)}...{hoverNode.id.slice(-3)}
           </a>{" "}
         </div>

@@ -1,16 +1,15 @@
 import {
-  NodeData,
-  NodeDataBare,
-  GraphData,
-  GraphDataBare,
-  NodeDataRendering,
-  GraphDataRendering,
-  isVotable,
+  address1,
+  type GraphData,
+  type GraphDataBare,
+  type GraphDataRendering,
   isDagVote,
   isSwitchable,
-  address1,
+  isVotable,
+  type NodeData,
+  type NodeDataBare,
+  type NodeDataRendering,
 } from "./GraphBase";
-// import { CheckSaveWholeGraph } from "./LoadGraph";
 
 ////// selecting the graph to render
 
@@ -282,7 +281,7 @@ export function SelectWholeGraph(
   anthillGraphBare: GraphDataBare,
 ): GraphDataRendering {
   const neighbourhood = {} as GraphDataRendering;
-  console.log(id)
+  console.log(id);
   for (const [key, value] of Object.entries(anthillGraph)) {
     neighbourhood[key] = renderingNodeData(
       value,

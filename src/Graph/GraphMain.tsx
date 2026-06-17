@@ -4,31 +4,35 @@
 
 import React, { useState } from "react";
 
-import useWebSocket from "react-use-websocket";
+import useWebSocketDefault from "react-use-websocket";
+
+// react-use-websocket ships CommonJS; under Vite's ESM interop the default import
+// can resolve to the module namespace, so unwrap a nested `.default` if present.
+const useWebSocket = ((useWebSocketDefault as any).default ??
+  useWebSocketDefault) as typeof useWebSocketDefault;
 
 import {
+  GoHomeButton,
   JoinTreeRandomlyButton,
   JoinTreeRandomlyCheck,
-  GoHomeButton,
   // TreeOrRepModeSwitch,
 } from "../Buttons/MainAppButtons";
-
-import { GraphSVG } from "./GraphSVG/GraphSVG";
 import {
-  GraphData,
-  GraphDataBare,
-  GraphDataRendering,
+  getIsNodeInGraph,
+  getMaxRelRootDepth,
+} from "../ExternalConnections/BackendGetters";
+import {
   address1,
+  type GraphData,
+  type GraphDataBare,
+  type GraphDataRendering,
 } from "./GraphBase";
+import { GraphSVG } from "./GraphSVG/GraphSVG";
 import {
   CheckSaveNeighbourHoodWithParentChain,
   CheckSaveNode,
   CheckSaveWholeGraph,
 } from "./LoadGraph";
-import {
-  getMaxRelRootDepth,
-  getIsNodeInGraph,
-} from "../ExternalConnections/BackendGetters";
 import { SelectSentRecDagVotes, SelectWholeGraph } from "./SubGraphSelectors";
 
 function deepEqual(x: any, y: any): boolean {
@@ -256,7 +260,7 @@ export const Graph = (props: {
     setAnthillGraphBare({});
   };
 
-  // const { sendMessage } = 
+  // const { sendMessage } =
   useWebSocket(props.wsUrl, {
     onOpen: () => {
       console.log("WebSocket connection established.");

@@ -1,25 +1,20 @@
 // we store the buttons that are used in the graph popup
 
 import { useState } from "react";
-
 import {
-  NodeDataRendering,
-  GraphDataRendering,
-  address0,
-} from "../Graph/GraphBase";
-
-import {
-  JoinTree,
-  RemoveDagVote,
   AddDagVote,
-  MoveTreeVote,
   ChangeName,
-  SwitchWithParent,
+  JoinTree,
   LeaveTree,
+  MoveTreeVote,
+  RemoveDagVote,
+  SwitchWithParent,
 } from "../ExternalConnections/SmartContractInteractions";
-
-// import { useWriteContract, useSimulateContract } from 'wagmi'
-// import AnthillJson from "../ExternalConnections/Anthill.json"
+import {
+  address0,
+  type GraphDataRendering,
+  type NodeDataRendering,
+} from "../Graph/GraphBase";
 
 export const AddDagVoteCheck = (
   isAccountInGraph: boolean,

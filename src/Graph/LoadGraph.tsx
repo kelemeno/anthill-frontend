@@ -1,13 +1,15 @@
 // this is where we store the functions that load the graph from the backend.
 
-// import { max } from "d3";
-// import { Graph } from "@antv/x6";
-// import { max } from "d3";
 import {
   getBareNodeFromServer,
   getNodeFromServer,
 } from "../ExternalConnections/BackendGetters";
-import { NodeData, NodeDataBare, GraphData, GraphDataBare } from "./GraphBase";
+import type {
+  GraphData,
+  GraphDataBare,
+  NodeData,
+  NodeDataBare,
+} from "./GraphBase";
 
 //// utils, checkers
 
@@ -139,7 +141,7 @@ export async function CheckSaveNode(
   anthillGraphBare: GraphDataBare,
   maxRelRootDepth: number,
 ) {
-  console.log(maxRelRootDepth)
+  console.log(maxRelRootDepth);
   if (anthillGraph[id] === undefined) {
     const node = await getNodeFromServer(backendUrl, id);
     anthillGraph[node.id] = node as NodeData;
@@ -154,7 +156,7 @@ async function checkSaveBareNode(
   anthillGraphBare: GraphDataBare,
   maxRelRootDepth: number,
 ) {
-  console.log(anthillGraph, maxRelRootDepth)
+  console.log(anthillGraph, maxRelRootDepth);
   if (anthillGraphBare[id] === undefined) {
     const node = await getBareNodeFromServer(backendUrl, id);
     anthillGraphBare[node.id] = node as NodeDataBare;

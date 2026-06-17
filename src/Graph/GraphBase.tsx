@@ -120,7 +120,7 @@ export function isDagVote(
   //   return false;
   // }
   if (voterId === address0) {
-    console.log(maxRelRootDepth)
+    console.log(maxRelRootDepth);
     return false;
   }
   if (anthillGraph[voterId] === undefined) {
@@ -170,7 +170,7 @@ export function isSwitchable(
   // }
 
   if (voterId === address0) {
-    console.log(maxRelRootDepth)
+    console.log(maxRelRootDepth);
     return false;
   }
 

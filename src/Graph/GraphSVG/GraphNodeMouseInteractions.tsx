@@ -1,8 +1,6 @@
 // this is where the mouse and graphnode interactions are defined
 
-// import { useNavigate, useParams } from "react-router-dom";
-
-import { NodeDataRendering } from "../GraphBase";
+import type { NodeDataRendering } from "../GraphBase";
 
 export const handleClick = (props: {
   id: string;

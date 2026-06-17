@@ -1,58 +1,56 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React, { useState } from "react";
 import * as client from "react-dom/client";
-import { Routes, Route, BrowserRouter, useNavigate } from "react-router-dom";
-import useWebSocket from "react-use-websocket";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
+import useWebSocketDefault from "react-use-websocket";
 
-import { zkSyncSepoliaTestnet, zkSyncLocalNode } from "wagmi/chains";
-import { WagmiProvider } from "wagmi";
-import { useAccount, useSwitchChain, useDisconnect } from "wagmi";
+// react-use-websocket ships CommonJS; under Vite's ESM interop the default import
+// can resolve to the module namespace, so unwrap a nested `.default` if present.
+const useWebSocket = ((useWebSocketDefault as any).default ??
+  useWebSocketDefault) as typeof useWebSocketDefault;
 
-// import { walletConnect } from "wagmi/connectors";
-
-import { useWeb3Modal, createWeb3Modal } from "@web3modal/wagmi/react";
-import { defaultWagmiConfig } from "@web3modal/wagmi/react/config";
-
-// import { defaultWagmiConfig } from '@web3modal/wagmi/react/config'
-// import { customElement } from '@web3modal/ui/dist/esm/index.js';
-
-// import { Web3Button } from '@web3modal/wagmi'
-
-// import { EthereumClient } from '@web3modal/ethereum'
-// import { useConnect } from 'wagmi'
-// import { injected } from 'wagmi/connectors'
-// import { walletConnect } from 'wagmi/connectors'
-// import { http } from "viem";
-
-import { AbiItem } from "web3-utils";
+import { defineChain, sepolia } from "@reown/appkit/networks";
+import { createAppKit, useAppKit } from "@reown/appkit/react";
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import type { Abi } from "viem";
+import {
+  useAccount,
+  useDisconnect,
+  useSwitchChain,
+  WagmiProvider,
+} from "wagmi";
 
 import { Graph } from "./Graph/GraphMain";
 import "./main.css";
-import AnthillJson from "./ExternalConnections/Anthill.json";
 import TutorialPopup, {
-  TutorialButton,
   TreeOrRepModeSwitch,
+  TutorialButton,
 } from "./Buttons/MainAppButtons";
+import AnthillJson from "./ExternalConnections/Anthill.json";
 import {
   getIsNodeInGraph,
   getRandomLeaf,
 } from "./ExternalConnections/BackendGetters";
 
-// const connector = walletConnect({
-//     projectId: projectId,
-//   })
-
 const doc = document.getElementById("root");
 const root = client.createRoot(doc!);
 
-const testing = false;
+const testing = true;
 console.log("Version 2");
 
 const queryClient = new QueryClient();
 const projectId = "a768398be97a29d62abe51d94ac7735a";
 
-// const chainsA = testing ? [zkSyncLocalNode] : [zkSyncSepoliaTestnet];
-// let provider: any;
+const anvilLocal = defineChain({
+  id: 1337,
+  caipNetworkId: "eip155:1337",
+  chainNamespace: "eip155",
+  name: "Anvil",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: {
+    default: { http: ["http://localhost:8545"] },
+  },
+});
 
 const metadata = {
   name: "Anthill DAO",
@@ -61,16 +59,26 @@ const metadata = {
   icons: ["https://avatars.githubusercontent.com/u/37784886"],
 };
 
-const chains = [zkSyncLocalNode, zkSyncSepoliaTestnet] as const;
+const networks = [anvilLocal, sepolia] as const;
 
-const wagmiConfig = defaultWagmiConfig({ chains, projectId, metadata });
+const wagmiAdapter = new WagmiAdapter({
+  networks: [...networks],
+  projectId,
+});
 
-createWeb3Modal({ wagmiConfig: wagmiConfig, projectId });
+const wagmiConfig = wagmiAdapter.wagmiConfig;
+
+createAppKit({
+  adapters: [wagmiAdapter],
+  networks: [...networks],
+  projectId,
+  metadata,
+});
 
 const Web3Button = () => {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
-  const { open } = useWeb3Modal();
+  const { open } = useAppKit();
 
   if (isConnected) {
     return (
@@ -90,22 +98,17 @@ let backendUrl = "";
 let wsUrl: string;
 
 if (!testing) {
-  anthillContractAddress = "0xe42923350EF3a534f84bb101453D9B442d42Bf0c"; // zksyncTesnet sepolia
-  //   anthillContractAddress = "0x69649a6E7E9c090a742f0671C64f4c7c31a1e4ce"; //mumbai v4
-  // anthillContractAddress = "0xb2218969ECF92a3085B8345665d65FCdFED9F981"; // mumbai v3
-  // const anthillContractAddress = "0x7b7D7Ea1c6aBA7aa7de1DC8595A9e839B0ee58FB"; // mumbai v2
-  // const anthillContractAddress =  "0xE2C8d9C92eAb868C6078C778f12f794858147947"; //mumbai v1
-  chainId = 300; //zksync sepolia testnet
+  anthillContractAddress = "0x0000000000000000000000000000000000000000"; // TODO: set deployed contract address on Ethereum Sepolia
+  chainId = 11155111; // Ethereum Sepolia testnet
 
-//   backendUrl = "http://localhost:5001/";
-//   wsUrl = "ws://127.0.0.1:5001";
+  //   backendUrl = "http://localhost:5001/";
+  //   wsUrl = "ws://127.0.0.1:5001";
 
-    backendUrl = "https://anthill-db.herokuapp.com/";
-    wsUrl = "wss://anthill-db.herokuapp.com/";
+  backendUrl = "https://anthill-db.herokuapp.com/";
+  wsUrl = "wss://anthill-db.herokuapp.com/";
 } else {
-  anthillContractAddress = "0x111C3E89Ce80e62EE88318C2804920D4c96f92bb"; // forge with lib
-  // chainId =1337; //anvil
-  chainId = 270; // zksync dockerized node
+  anthillContractAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3"; // anvil (forge without lib, nonce 0)
+  chainId = 1337; //anvil
   backendUrl = "http://localhost:5001/";
   wsUrl = "ws://127.0.0.1:5001";
 }
@@ -119,14 +122,10 @@ const App = () => {
     },
   });
 
-  //   const { connect } = useConnect()
-
-  //  connect({ connector: injected() })
-
   let AnthillContract: any;
   AnthillContract = {
     address: anthillContractAddress,
-    abi: AnthillJson.abi as AbiItem[],
+    abi: AnthillJson.abi as Abi,
   }; //signerOrProvider: signer}; //provider({chainId: chainId})});
 
   const queryParameters = new URLSearchParams(window.location.search);
@@ -281,43 +280,12 @@ function Header(props: {
   );
 }
 
-// function Footer() {
-//   return (
-//     <footer>
-//       &nbsp; &nbsp;&nbsp;&nbsp;
-//       <a href="https://faucet.chainstack.com/zksync-testnet-faucet">
-//         Get test tokens{" "}
-//       </a>
-//       &nbsp; &nbsp;&nbsp;&nbsp;
-//       <a href="https://medium.com/@kalman_94947/anthill-a-liquid-reputation-system-ebd69a98e580">
-//         Medium post{" "}
-//       </a>
-//       &nbsp; &nbsp;&nbsp;&nbsp;
-//       <a
-//         href={
-//           "https://sepolia.explorer.zksync.io/address/" + anthillContractAddress
-//         }
-//       >
-//         Blockexplorer
-//       </a>
-//       &nbsp; &nbsp;&nbsp;&nbsp;
-//       <a href="https://github.com/kelemeno/anthill">Github</a>
-//       &nbsp; &nbsp;&nbsp;&nbsp;
-//       <a href="https://demo.snapshot.org/#/anthilldao.eth">Voting page</a>
-//     </footer>
-//   );
-// }
-
 root.render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
-        <WagmiProvider
-          config={wagmiConfig}
-          // reconnectOnMount={true}
-        >
+        <WagmiProvider config={wagmiConfig}>
           <App />
-          {/* <Footer /> */}
         </WagmiProvider>
       </QueryClientProvider>
     </BrowserRouter>
