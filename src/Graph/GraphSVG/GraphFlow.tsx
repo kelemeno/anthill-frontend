@@ -5,7 +5,6 @@
 // idiomatic React components.
 import {
   BaseEdge,
-  Background,
   Controls,
   type Edge,
   type EdgeProps,
@@ -82,7 +81,8 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           justifyContent: "center",
           color: "#fff",
           fontWeight: "bold",
-          fontSize: 11,
+          fontFamily: "sans-serif",
+          fontSize: 14,
           textAlign: "center",
           lineHeight: 1.1,
           textShadow: "0 1px 2px rgba(0,0,0,0.65)",
@@ -242,6 +242,7 @@ export const GraphFlow = (props: {
         nodesConnectable={false}
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
+        style={{ background: "#ffffff" }}
         onNodeClick={(_event, node) =>
           props.onNodeClick(
             node.data.node.id,
@@ -257,7 +258,6 @@ export const GraphFlow = (props: {
         }
         onNodeMouseLeave={() => props.onNodeMouseLeave()}
       >
-        <Background />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>
