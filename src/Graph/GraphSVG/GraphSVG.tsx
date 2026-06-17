@@ -28,7 +28,7 @@ import type {
   GraphDataRendering,
   NodeDataRendering,
 } from "../GraphBase";
-import { DrawGraph } from "./DrawGraph";
+import { GraphFlow } from "./GraphFlow";
 import {
   handleClick,
   handleMouseOut,
@@ -53,11 +53,6 @@ export const GraphSVG = (props: {
   // console.log("rendering graph")
 
   const navigate = useNavigate();
-
-  // we have to use a ref to render the svg (or at least, I couldn't get it to work without it)
-  const svg = React.useRef<HTMLDivElement>(null);
-  // we use this and compare it with props.clickedNodeId to see if we need to reload the graph
-  // const clickedNodeId = React.useRef("");
 
   // the actual data
   const [hoverNode, setHoverNode] = useState({
@@ -93,62 +88,54 @@ export const GraphSVG = (props: {
   //     handleClickConstructed( props.clickedNodeId )}
   // }
 
+  const handleClickConstructed = (id: string, name: string, rep: number) =>
+    handleClick({
+      id: id,
+      name: name,
+      rep: rep,
+      setOpen: setOpen,
+      setAnchorEl: setAnchorEl,
+      setAnchorElSaver: setAnchorElSaver,
+      clickedNode: props.clickedNode,
+      setClickedNodeId: props.setClickedNode,
+      setLoaded: setLoaded,
+      setHoverNode: setHoverNode,
+      navigate: navigate,
+    });
+
+  // Reset the popover whenever the rendered graph/selection changes, then mark
+  // the graph loaded so hovers start producing popovers again.
   React.useEffect(() => {
-    const handleClickConstructed = (id: string, name: string, rep: number) =>
-      handleClick({
-        id: id,
-        name: name,
-        rep: rep,
-        setOpen: setOpen,
-        setAnchorEl: setAnchorEl,
-        setAnchorElSaver: setAnchorElSaver,
-        // "setAnthillGraphNum":setAnthillGraphNum,
-        clickedNode: props.clickedNode,
-        setClickedNodeId: props.setClickedNode,
-        setLoaded: setLoaded,
-        setHoverNode: setHoverNode,
-        navigate: navigate,
-      });
-
-    if (svg.current) {
-      setOpen(false);
-      setLoaded(false);
-      setAnchorEl(null);
-      setAnchorElSaver(null);
-      // setHoverNode();
-
-      svg.current.replaceChildren(
-        DrawGraph({
-          graph: props.graph,
-          clickedNode: props.clickedNode,
-          handleClick: handleClickConstructed,
-          handleMouseOver: (
-            event: React.MouseEvent<HTMLElement>,
-            node: NodeDataRendering,
-          ) =>
-            handleMouseOver(
-              event,
-              node,
-              loaded,
-              setHoverNode,
-              setAnchorEl,
-              setAnchorElSaver,
-              setOpen,
-            ),
-          handleMouseOut: () => handleMouseOut(loaded, setOpen, setAnchorEl),
-        }),
-      );
-    }
-    // checkForClick();
-
-    // this has to be the last one (maybe because we rerender multiple times)
-    setLoaded(true);
-    // console.log("open4", open, anchorEl, loaded);
-  }, [props.graph, props.clickedNode, props.setClickedNode, loaded, navigate]);
+    setOpen(false);
+    setLoaded(false);
+    setAnchorEl(null);
+    setAnchorElSaver(null);
+    const t = setTimeout(() => setLoaded(true), 0);
+    return () => clearTimeout(t);
+  }, [props.graph, props.clickedNode]);
 
   return (
     <div>
-      <div className="Graph" ref={svg} />
+      <GraphFlow
+        graph={props.graph}
+        clickedNode={props.clickedNode}
+        onNodeClick={handleClickConstructed}
+        onNodeMouseEnter={(
+          event: React.MouseEvent<HTMLElement>,
+          node: NodeDataRendering,
+        ) =>
+          handleMouseOver(
+            event,
+            node,
+            loaded,
+            setHoverNode,
+            setAnchorEl,
+            setAnchorElSaver,
+            setOpen,
+          )
+        }
+        onNodeMouseLeave={() => handleMouseOut(loaded, setOpen, setAnchorEl)}
+      />
       <Popover
         id="mouse-over-popover"
         sx={{
