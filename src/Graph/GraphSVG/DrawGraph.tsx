@@ -113,7 +113,7 @@ export const DrawGraph = (props: {
 
   // dag
   // const [key, reader] = sources.get(source);
-  const [, reader] = ["grafo", d3Dag.dagStratify()];
+  const [, reader] = ["grafo", d3Dag.graphStratify()];
   // const dag_data = await d3.json(`https://raw.githubusercontent.com/erikbrinkman/d3-dag/master/examples/${key}.json`);
   const dag_data = props.graph;
   if (dag_data === undefined) {
@@ -178,7 +178,7 @@ export const DrawGraph = (props: {
   // const steps = dag.size();
   const interp = d3Base.interpolateRainbow;
   const colorMap: { [key: string]: string } = {};
-  for (const [, node] of [...dag].entries()) {
+  for (const [, node] of [...dag.nodes()].entries()) {
     const stringUniqueHash = [...node.data.id].reduce((acc, char) => {
       return char.charCodeAt(0) + ((acc << 5) - acc);
     }, 0);
@@ -203,10 +203,10 @@ export const DrawGraph = (props: {
   svgSelection
     .append("g")
     .selectAll("path")
-    .data(dag.links())
+    .data([...dag.links()])
     .enter()
     .append("path")
-    .attr("d", ({ points }) => line(points))
+    .attr("d", ({ points }) => line(points.map(([x, y]) => ({ x, y }))))
     .attr("fill", "none")
     .attr("stroke-width", ({ source, target }) => {
       if (props.graph[target.data.id].sentTreeVote === source.data.id) {
@@ -242,7 +242,7 @@ export const DrawGraph = (props: {
   const nodes = svgSelection
     .append("g")
     .selectAll("g")
-    .data(dag.descendants())
+    .data([...dag.nodes()])
     .enter()
     .append("g")
     .attr("transform", ({ x, y }) => `translate(${x}, ${y})`)
@@ -288,13 +288,13 @@ export const DrawGraph = (props: {
     svgSelection
       .append("g")
       .selectAll("path")
-      .data(dag.links())
+      .data([...dag.links()])
       .enter()
       .append("path")
       .attr("d", arrow)
       .attr("transform", ({ points }) => {
-        // source, target
-        const [end, start] = points.slice(); //.reverse();
+        // source, target. d3-dag v1 link points are [x, y] tuples.
+        const [end, start] = points.map(([x, y]) => ({ x, y })); //.reverse();
         // This sets the arrows the node radius (20) + a little bit (3) away from the node center, on the last line segment of the edge. This means that edges that only span ine level will work perfectly, but if the edge bends, this will be a little off.
         const dx: number = start.x - end.x;
         const dy: number = start.y - end.y;
