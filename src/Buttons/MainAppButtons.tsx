@@ -1,7 +1,6 @@
 // buttons for the main app.
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import styled from "styled-components";
 import { address0 } from "../Graph/GraphBase";
 
 import ".././App.css";
@@ -77,58 +76,49 @@ export function JoinTreeRandomlyButton(props: {
 }
 
 export function TreeOrRepModeSwitch(props: {
-  treeMode: boolean;
-  setTreeMode: any;
+  viewMode: "tree" | "votes" | "rep";
+  setViewMode: any;
 }) {
-  function handleOnChange() {
-    // console.log("---", e.target.checked);
-    props.setTreeMode(!props.treeMode);
-  }
+  const options: { key: "tree" | "votes" | "rep"; label: string }[] = [
+    { key: "tree", label: "Tree" },
+    { key: "votes", label: "+ Votes" },
+    { key: "rep", label: "Reputation" },
+  ];
   return (
-    <>
-      <StyledLabel htmlFor="checkbox" checked={props.treeMode}>
-        <input
-          id="checkbox"
-          type="checkbox"
-          checked={props.treeMode}
-          onChange={handleOnChange}
-        />
-      </StyledLabel>
-      <div style={{ textAlign: "center", width: "80px" }}>
-        {props.treeMode ? "Tree" : "Reputation"}
-      </div>
-    </>
+    <div
+      style={{
+        display: "inline-flex",
+        border: "1px solid #d8dde3",
+        borderRadius: 8,
+        overflow: "hidden",
+      }}
+    >
+      {options.map((o, i) => {
+        const active = props.viewMode === o.key;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => props.setViewMode(o.key)}
+            style={{
+              border: "none",
+              borderLeft: i === 0 ? "none" : "1px solid #d8dde3",
+              borderRadius: 0,
+              background: active ? "#2b6cb0" : "#fff",
+              color: active ? "#fff" : "#2d3748",
+              padding: "7px 12px",
+              fontSize: 13,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
-
-const StyledLabel = styled.label<{ checked: boolean }>`
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  text-indent: -9999px;
-  width: 60px;
-  height: 30px;
-  background: ${({ checked }) => (checked ? "#00ff00" : "#808080")};
-  display: block;
-  border-radius: 20px;
-  position: relative;
-  margin-top: 10px;
-  margin-left: 10px;
-  user-select: none;
-
-  &:after {
-    content: "";
-    position: absolute;
-    left: ${({ checked }) => (checked ? "6px" : "calc(55% - 1px)")};
-    top: 4.5px;
-    width: 20px;
-    height: 20px;
-    background: #fff;
-    border-radius: 20px;
-    transition: 0.3s;
-    appearance: none;
-  }
-`;
 
 export function TutorialButton(props: {
   showTutorial: boolean;

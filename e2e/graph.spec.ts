@@ -100,17 +100,21 @@ test.describe("graph interactions", () => {
     ).toBe(1);
   });
 
-  test("the focused node's outgoing votes overlay on the tree", async ({
+  test("'+ Votes' overlays the focused node's outgoing votes on the tree", async ({
     page,
   }) => {
-    // 0x..08 has outgoing reputation votes; focusing it overlays them as
-    // green "vote-" edges on the tree.
     await page.goto(`/?id=0x0000000000000000000000000000000000000008`);
     await waitForGraph(page);
-    const voteEdges = await page
-      .locator('.react-flow__edge[data-id^="vote-"]')
-      .count();
-    expect(voteEdges).toBeGreaterThan(0);
+    // default Tree view: no vote overlay
+    expect(
+      await page.locator('.react-flow__edge[data-id^="vote-"]').count(),
+    ).toBe(0);
+    // switch to "+ Votes": outgoing (green) vote edges appear
+    await page.getByRole("button", { name: "+ Votes" }).click();
+    await page.waitForTimeout(1200);
+    expect(
+      await page.locator('.react-flow__edge[data-id^="vote-out-"]').count(),
+    ).toBeGreaterThan(0);
   });
 
   test("layout stays put when expanding (no viewport jump)", async ({

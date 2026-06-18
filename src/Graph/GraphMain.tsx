@@ -206,11 +206,13 @@ export const Graph = (props: {
   chainId: number;
   clickedNode: string;
   setClickedNode: any;
-  treeMode: boolean;
+  viewMode: "tree" | "votes" | "rep";
   AnthillContract: any;
   backendUrl: string;
   wsUrl: string;
 }) => {
+  // All three views use the tree layout; viewMode only changes the vote overlay.
+  const treeMode = true;
   // variables
 
   // const navigate = useNavigate();
@@ -278,7 +280,7 @@ export const Graph = (props: {
     props.account,
     isAccountInGraph,
     setIsAccountInGraph,
-    props.treeMode,
+    treeMode,
     clickedNode,
     altNode,
     setAltNode,
@@ -315,7 +317,7 @@ export const Graph = (props: {
     anthillGraphBare,
     maxRelRootDepth,
     graphDisplayed,
-    props.treeMode,
+    treeMode,
     altNode,
   ]);
 
@@ -339,7 +341,8 @@ export const Graph = (props: {
     maxRelRootDepth: maxRelRootDepth,
     anthillGraph: anthillGraph,
     anthillGraphBare: anthillGraphBare,
-    treeMode: props.treeMode,
+    treeMode: treeMode,
+    viewMode: props.viewMode,
     backendUrl: props.backendUrl,
   };
 

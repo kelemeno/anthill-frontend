@@ -147,7 +147,12 @@ const App = () => {
   const [clickedNode, setClickedNode] = useState("Enter");
   const [isClickedNodeInGraph, setIsClickedNodeInGraph] = useState(false);
 
-  const [treeMode, setTreeMode] = useState(true);
+  // Three views, all on the same (unchanging) tree layout — viewMode only
+  // toggles which dag-vote overlay the focused node shows:
+  //   "tree"  → no votes
+  //   "votes" → outgoing votes (green, up)
+  //   "rep"   → incoming votes (blue, down), no outgoing
+  const [viewMode, setViewMode] = useState<"tree" | "votes" | "rep">("tree");
 
   // console.log("rendering main app, clickedNode: ", clickedNode)
   // var [account, setAccount] =  useState(address);
@@ -202,8 +207,8 @@ const App = () => {
               showTutorial={showTutorial}
               setShowTutorial={setShowTutorial}
               setChain={switchChain}
-              treeMode={treeMode}
-              setTreeMode={setTreeMode}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
             />
 
             <TutorialPopup
@@ -214,7 +219,7 @@ const App = () => {
               account={account as string}
               chainId={chainId}
               clickedNode={clickedNode}
-              treeMode={treeMode}
+              viewMode={viewMode}
               AnthillContract={AnthillContract}
               setClickedNode={setClickedNode}
               backendUrl={backendUrl}
@@ -231,8 +236,8 @@ const App = () => {
               showTutorial={showTutorial}
               setShowTutorial={setShowTutorial}
               setChain={switchChain}
-              treeMode={treeMode}
-              setTreeMode={setTreeMode}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
             />
 
             <TutorialPopup
@@ -243,7 +248,7 @@ const App = () => {
               account={account as string}
               chainId={chainId}
               clickedNode={clickedNode}
-              treeMode={treeMode}
+              viewMode={viewMode}
               AnthillContract={AnthillContract}
               setClickedNode={setClickedNode}
               backendUrl={backendUrl}
@@ -260,16 +265,16 @@ function Header(props: {
   showTutorial: boolean;
   setShowTutorial: any;
   setChain: any;
-  treeMode: boolean;
-  setTreeMode: any;
+  viewMode: "tree" | "votes" | "rep";
+  setViewMode: any;
 }) {
   return (
     <header>
       <div className="header__left">
         <span className="brand">🐜 Anthill</span>
         <TreeOrRepModeSwitch
-          treeMode={props.treeMode}
-          setTreeMode={props.setTreeMode}
+          viewMode={props.viewMode}
+          setViewMode={props.setViewMode}
         />
       </div>
       <div className="header__right">

@@ -85,6 +85,7 @@ export const GraphDemo = () => {
         graph={graph}
         clickedNode={idOf(0)}
         treeMode={true}
+        viewMode={"tree"}
         onNodeClick={() => {}}
         onNodeMouseEnter={() => {}}
         onNodeMouseLeave={() => {}}

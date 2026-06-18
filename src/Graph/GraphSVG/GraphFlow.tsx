@@ -460,6 +460,9 @@ export const GraphFlow = (props: {
   // Tree mode = hierarchy with collapse/drill. Reputation (dag) mode = flat
   // 3-row vote view (no collapse).
   treeMode: boolean;
+  // Which dag-vote overlay the focused node shows on the tree: none / outgoing
+  // (green) / incoming (blue).
+  viewMode: "tree" | "votes" | "rep";
   onNodeClick: (id: string, name: string, rep: number) => void;
   onNodeMouseEnter: (
     event: React.MouseEvent<HTMLElement>,
@@ -594,11 +597,14 @@ export const GraphFlow = (props: {
     const effectiveCollapsed = forced ? new Set(forced) : new Set(collapsed);
     if (!forced) {
       const anchors: (string | null | undefined)[] = [hoveredId, props.clickedNode];
-      // Also reveal the focused node's outgoing-vote recipients, so the overlay
-      // edges have something to point at.
+      // Also reveal the focused node's vote partners (outgoing recipients in
+      // "votes", incoming voters in "rep"), so the overlay edges have endpoints.
       const fn = graph[props.clickedNode];
       if (fn?.dagEdges) {
-        for (const e of fn.dagEdges) if (e.outgoing) anchors.push(e.to);
+        for (const e of fn.dagEdges) {
+          if (props.viewMode === "votes" && e.outgoing) anchors.push(e.to);
+          if (props.viewMode === "rep" && !e.outgoing) anchors.push(e.to);
+        }
       }
       for (const anchor of anchors) {
         let cur: string | undefined = anchor ?? undefined;
@@ -707,25 +713,32 @@ export const GraphFlow = (props: {
       }
     }
 
-    // Overlay the FOCUSED node's outgoing reputation votes on the tree (green,
-    // thickness = weight). Votes always point up the tree, so these ride the
-    // existing layout. Recipients are above → drawn as recipient→focus (like a
-    // tree edge) but green to read as "reputation", not "structure".
+    // Overlay the FOCUSED node's dag votes on the tree (thickness = weight),
+    // depending on the view:
+    //  - "votes": OUTGOING votes (green). Recipients are above → drawn
+    //    recipient→focus, like a tree edge but green = "reputation out".
+    //  - "rep":   INCOMING votes (blue). Voters are below → drawn focus→voter,
+    //    replacing the tree-children reading with "who votes for me".
+    //  - "tree":  nothing.
     const focusNode = graph[props.clickedNode];
-    const outVotes = (focusNode?.dagEdges ?? []).filter(
-      (e) => e.outgoing && visibleIds.has(e.to),
+    const wantOut = props.viewMode === "votes";
+    const wantIn = props.viewMode === "rep";
+    const overlay = (focusNode?.dagEdges ?? []).filter(
+      (e) => visibleIds.has(e.to) && (e.outgoing ? wantOut : wantIn),
     );
-    if (outVotes.length > 0) {
-      const maxW = Math.max(1, ...outVotes.map((e) => e.weight));
-      for (const e of outVotes) {
+    if (overlay.length > 0) {
+      const maxW = Math.max(1, ...overlay.map((e) => e.weight));
+      for (const e of overlay) {
+        const color = e.outgoing ? DAG_OUT_COLOR : DAG_IN_COLOR;
         edges.push({
-          id: `vote-${props.clickedNode}-${e.to}`,
-          source: e.to,
-          target: props.clickedNode,
+          id: `vote-${e.outgoing ? "out" : "in"}-${props.clickedNode}-${e.to}`,
+          // outgoing: recipient (above) → focus; incoming: focus → voter (below)
+          source: e.outgoing ? e.to : props.clickedNode,
+          target: e.outgoing ? props.clickedNode : e.to,
           type: "gradient",
           data: {
-            sourceColor: DAG_OUT_COLOR,
-            targetColor: DAG_OUT_COLOR,
+            sourceColor: color,
+            targetColor: color,
             width: 1.5 + 4 * (e.weight / maxW),
           },
         });
@@ -743,6 +756,7 @@ export const GraphFlow = (props: {
     props.onNodeClick,
     props.forcedCollapsed,
     props.treeMode,
+    props.viewMode,
   ]);
 
   // Report the live view (rendered nodes + collapsed-branch roots and their

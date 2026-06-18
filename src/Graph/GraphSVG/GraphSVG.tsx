@@ -56,6 +56,7 @@ export const GraphSVG = (props: {
   anthillGraph: GraphData;
   anthillGraphBare: GraphDataBare;
   treeMode: boolean;
+  viewMode: "tree" | "votes" | "rep";
   backendUrl: string;
 }) => {
   // console.log("rendering graph")
@@ -196,6 +197,7 @@ export const GraphSVG = (props: {
         layoutGraph={props.graph}
         clickedNode={props.clickedNode}
         treeMode={props.treeMode}
+        viewMode={props.viewMode}
         forcedCollapsed={forcedCollapsed}
         onViewChange={onViewChange}
         onNodeClick={handleClickConstructed}

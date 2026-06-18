@@ -1,42 +1,45 @@
-// Regression coverage for the Reputation (dag-vote) view: a flat 3-row vote
-// neighbourhood, not a tree with collapse. Requires the full local stack.
+// Regression coverage for the three-way view toggle (Tree / + Votes /
+// Reputation). All three share the tree layout; the toggle only changes which
+// dag-vote overlay the focused node shows. Requires the full local stack.
 import { expect, test } from "@playwright/test";
 import { waitForGraph } from "./util";
 
-test.describe("reputation view", () => {
-  test("renders a 3-row vote view with no tree-collapse badges", async ({
+const NODE = "0x0000000000000000000000000000000000000008";
+const outCount = (page: import("@playwright/test").Page) =>
+  page.locator('.react-flow__edge[data-id^="vote-out-"]').count();
+const inCount = (page: import("@playwright/test").Page) =>
+  page.locator('.react-flow__edge[data-id^="vote-in-"]').count();
+
+test.describe("view toggle", () => {
+  test("Tree shows no vote overlay", async ({ page }) => {
+    await page.goto(`/?id=${NODE}`);
+    await waitForGraph(page);
+    expect(await outCount(page)).toBe(0);
+    expect(await inCount(page)).toBe(0);
+  });
+
+  test("Reputation shows incoming votes (blue) and no outgoing", async ({
     page,
   }) => {
-    await page.goto(`/?id=0x0000000000000000000000000000000000000008`);
+    await page.goto(`/?id=${NODE}`);
     await waitForGraph(page);
-    // switch to Reputation mode
-    await page.locator('label[for="checkbox"]').click({ force: true });
-    await page.waitForTimeout(2500);
+    await page.getByRole("button", { name: "Reputation" }).click();
+    await page.waitForTimeout(1500);
+    // reputation view: incoming dag votes, never outgoing
+    expect(await outCount(page)).toBe(0);
+    expect(await inCount(page)).toBeGreaterThan(0);
+  });
 
-    const info = await page.evaluate(() => {
-      const ns = Array.from(document.querySelectorAll(".react-flow__node"));
-      // cluster node centers into y-bands
-      const ys = ns.map((n) => {
-        const r = n.getBoundingClientRect();
-        return Math.round((r.y + r.height / 2) / 40);
-      });
-      const widths = Array.from(
-        document.querySelectorAll(".react-flow__edge path"),
-      ).map((p) => Number((p as SVGElement).getAttribute("stroke-width") || 0));
-      return {
-        count: ns.length,
-        bands: new Set(ys).size,
-        badges: document.querySelectorAll(".react-flow__node button").length,
-        edges: widths.length,
-      };
-    });
+  test("switching the toggle swaps the overlay direction", async ({ page }) => {
+    await page.goto(`/?id=${NODE}`);
+    await waitForGraph(page);
+    await page.getByRole("button", { name: "+ Votes" }).click();
+    await page.waitForTimeout(1200);
+    expect(await outCount(page)).toBeGreaterThan(0);
+    expect(await inCount(page)).toBe(0);
 
-    expect(info.count).toBeGreaterThan(1);
-    // person + (some above) + (some below) → up to 3 bands, never tree-deep
-    expect(info.bands).toBeLessThanOrEqual(3);
-    // no +N collapse badges in the dag view
-    expect(info.badges).toBe(0);
-    // edges to/from the centre
-    expect(info.edges).toBeGreaterThan(0);
+    await page.getByRole("button", { name: "Reputation" }).click();
+    await page.waitForTimeout(1200);
+    expect(await outCount(page)).toBe(0);
   });
 });
