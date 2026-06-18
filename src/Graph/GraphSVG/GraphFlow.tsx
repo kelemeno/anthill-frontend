@@ -269,6 +269,32 @@ function distancesFrom(
   return dist;
 }
 
+// Sugiyama layout for a set of nodes; returns center positions by id.
+function layoutPositions(
+  visible: NodeDataRendering[],
+): Map<string, { x: number; y: number }> {
+  const positions = new Map<string, { x: number; y: number }>();
+  if (visible.length === 0) return positions;
+  const visibleIds = new Set(visible.map((n) => n.id));
+  const layoutInput = visible.map((n) => ({
+    id: n.id,
+    parentIds: n.parentIds.filter((p) => visibleIds.has(p)),
+  }));
+  const dag = graphStratify()(layoutInput);
+  sugiyama()
+    .layering(layeringLongestPath())
+    // Deterministic DFS ordering: stable left-to-right order that doesn't
+    // re-shuffle when a branch opens.
+    .decross(decrossDfs())
+    .coord(coordCenter())
+    .nodeSize(() => [2 * BASE_RADIUS, 1.4 * 2 * BASE_RADIUS])
+    .gap([BASE_RADIUS, BASE_RADIUS * 1.2])(dag);
+  for (const node of dag.nodes()) {
+    positions.set(node.data.id, { x: node.x ?? 0, y: node.y ?? 0 });
+  }
+  return positions;
+}
+
 // Default collapse state: keep the top 3 levels open and fold everything below
 // (relative to the shallowest node in the displayed graph), so the graph opens
 // compact and you expand to drill in.
@@ -331,6 +357,33 @@ export const GraphFlow = (props: {
     hoverTimer.current = setTimeout(() => setHoveredId(null), 250);
   }, []);
 
+  // Stable layout of the full graph (positions never change) — used to fan
+  // hover-revealed children off their parent without disturbing anything.
+  const fullPositions = useMemo(
+    () => layoutPositions(Object.values(props.graph)),
+    [props.graph],
+  );
+
+  // Layout of the persistently-pinned state — recomputed only on pin/unpin,
+  // NOT on hover, so hovering never moves on-screen nodes.
+  const persistent = useMemo(() => {
+    const graph = props.graph;
+    const hiddenByPins = (id: string) => {
+      let cur = graph[id]?.sentTreeVote;
+      let guard = 0;
+      while (cur && graph[cur] && guard++ < 1000) {
+        if (collapsed.has(cur)) return true;
+        cur = graph[cur].sentTreeVote;
+      }
+      return false;
+    };
+    const visible = Object.values(graph).filter((n) => !hiddenByPins(n.id));
+    return {
+      ids: new Set(visible.map((n) => n.id)),
+      positions: layoutPositions(visible),
+    };
+  }, [props.graph, collapsed]);
+
   const { nodes, edges } = useMemo(() => {
     const graph = props.graph;
     const distances = distancesFrom(graph, props.clickedNode);
@@ -384,24 +437,24 @@ export const GraphFlow = (props: {
     const visible = Object.values(graph).filter((n) => !isHidden(n.id));
     const visibleIds = new Set(visible.map((n) => n.id));
 
-    // Layout the visible nodes, sizing each layout cell by its (distance) radius.
-    const positions = new Map<string, { x: number; y: number }>();
-    if (visible.length > 0) {
-      const layoutInput = visible.map((n) => ({
-        id: n.id,
-        parentIds: n.parentIds.filter((p) => visibleIds.has(p)),
-      }));
-      const dag = graphStratify()(layoutInput);
-      sugiyama()
-        .layering(layeringLongestPath())
-        // Deterministic DFS ordering: stable left-to-right order that doesn't
-        // re-shuffle when a branch opens, so nodes don't jump around on hover.
-        .decross(decrossDfs())
-        .coord(coordCenter())
-        .nodeSize(() => [2 * BASE_RADIUS, 1.4 * 2 * BASE_RADIUS])
-        .gap([BASE_RADIUS, BASE_RADIUS * 1.2])(dag);
-      for (const node of dag.nodes()) {
-        positions.set(node.data.id, { x: node.x ?? 0, y: node.y ?? 0 });
+    // Positions: persistently-visible nodes keep their stable (pinned-layout)
+    // position; hover-revealed nodes fan off their parent using the full-layout
+    // geometry — so nothing already on screen moves when you peek a branch.
+    const positions = new Map(persistent.positions);
+    const revealed = visible
+      .filter((n) => !persistent.ids.has(n.id))
+      .sort((a, b) => a.depth - b.depth);
+    for (const n of revealed) {
+      const parentPos = positions.get(n.sentTreeVote);
+      const childFull = fullPositions.get(n.id);
+      const parentFull = fullPositions.get(n.sentTreeVote);
+      if (parentPos && childFull && parentFull) {
+        positions.set(n.id, {
+          x: parentPos.x + (childFull.x - parentFull.x),
+          y: parentPos.y + (childFull.y - parentFull.y),
+        });
+      } else {
+        positions.set(n.id, parentPos ?? { x: 0, y: 0 });
       }
     }
 
@@ -456,7 +509,15 @@ export const GraphFlow = (props: {
     }
 
     return { nodes, edges };
-  }, [props.graph, props.clickedNode, collapsed, hoveredId, toggleCollapse]);
+  }, [
+    props.graph,
+    props.clickedNode,
+    collapsed,
+    hoveredId,
+    persistent,
+    fullPositions,
+    toggleCollapse,
+  ]);
 
   return (
     <div className="Graph" style={{ width: "100%", height: "80vh" }}>
