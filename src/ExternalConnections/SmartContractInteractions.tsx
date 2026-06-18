@@ -1,11 +1,15 @@
+// Custom hooks wrapping the Anthill contract writes. Each prepares the call
+// with useSimulateContract and returns an action that submits the prepared
+// request — or `undefined` while the simulation isn't ready (callers invoke
+// with `?.()`), so we never dereference an unprepared request.
 import { useSimulateContract, useWriteContract } from "wagmi";
 import AnthillJson from "./Anthill.json";
 
-export function AddDagVote(
+export function useAddDagVote(
   AnthillContract: any,
   account: string,
   recipient: string,
-): any {
+) {
   const { data } = useSimulateContract({
     address: AnthillContract.address,
     abi: AnthillJson.abi,
@@ -13,12 +17,10 @@ export function AddDagVote(
     args: [account, recipient, 1],
   });
   const { writeContract } = useWriteContract();
-  return () => {
-    writeContract(data!.request);
-  };
+  return data ? () => writeContract(data.request) : undefined;
 }
 
-export function RemoveDagVote(
+export function useRemoveDagVote(
   AnthillContract: any,
   account: string,
   recipient: string,
@@ -30,13 +32,10 @@ export function RemoveDagVote(
     args: [account, recipient],
   });
   const { writeContract } = useWriteContract();
-
-  return () => {
-    writeContract(data!.request);
-  };
+  return data ? () => writeContract(data.request) : undefined;
 }
 
-export function SwitchWithParent(AnthillContract: any, account: string) {
+export function useSwitchWithParent(AnthillContract: any, account: string) {
   const { data } = useSimulateContract({
     address: AnthillContract.address,
     abi: AnthillJson.abi,
@@ -44,18 +43,13 @@ export function SwitchWithParent(AnthillContract: any, account: string) {
     args: [account],
   });
   const { writeContract } = useWriteContract();
-
-  return () => {
-    writeContract(data!.request);
-  };
+  return data ? () => writeContract(data.request) : undefined;
 }
 
-export function JoinTree(
+export function useJoinTree(
   AnthillContract: any,
   account: string,
   recipient: string,
-  setClickedNodeId: any,
-  setIsAccountInGraph: any,
 ) {
   const { data } = useSimulateContract({
     address: AnthillContract.address,
@@ -68,13 +62,10 @@ export function JoinTree(
     ],
   });
   const { writeContract } = useWriteContract();
-  console.log(setClickedNodeId, setIsAccountInGraph);
-  return () => {
-    writeContract(data!.request);
-  };
+  return data ? () => writeContract(data.request) : undefined;
 }
 
-export function ChangeName(
+export function useChangeName(
   AnthillContract: any,
   account: string,
   name: string,
@@ -86,16 +77,12 @@ export function ChangeName(
     args: [account, name],
   });
   const { writeContract } = useWriteContract();
-
-  return () => {
-    writeContract(data!.request);
-  };
+  return data ? () => writeContract(data.request) : undefined;
 }
 
-export function LeaveTree(
+export function useLeaveTree(
   AnthillContract: any,
   account: string,
-  setIsAccountInGraph: any,
   navigate: any,
   setClickedNodeId: any,
   altNode: string,
@@ -107,15 +94,16 @@ export function LeaveTree(
     args: [account],
   });
   const { writeContract } = useWriteContract();
-  console.log(setIsAccountInGraph);
-  return () => {
-    writeContract(data!.request);
-    setClickedNodeId(altNode);
-    navigate("/?id=" + altNode);
-  };
+  return data
+    ? () => {
+        writeContract(data.request);
+        setClickedNodeId(altNode);
+        navigate("/?id=" + altNode);
+      }
+    : undefined;
 }
 
-export function MoveTreeVote(
+export function useMoveTreeVote(
   AnthillContract: any,
   account: string,
   recipient: string,
@@ -129,10 +117,11 @@ export function MoveTreeVote(
     args: [account, recipient],
   });
   const { writeContract } = useWriteContract();
-
-  return () => {
-    writeContract(data!.request);
-    setClickedNodeId(recipient);
-    navigate("/?id=" + recipient);
-  };
+  return data
+    ? () => {
+        writeContract(data.request);
+        setClickedNodeId(recipient);
+        navigate("/?id=" + recipient);
+      }
+    : undefined;
 }

@@ -2,7 +2,7 @@
 // give/remove a vote, change name, leave, switch position, move tree vote).
 //
 // wagmi is mocked: useSimulateContract returns a canned prepared `request`, and
-// useWriteContract returns a spy. We assert each workflow (a) prepares the right
+// useWriteContract returns a spy. We assert each hook (a) prepares the right
 // contract call (functionName + args) and (b) submits that prepared request when
 // the returned action is invoked — plus any navigation/state side effects.
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,17 +21,17 @@ const { useSimulateContract, useWriteContract, writeContract } = vi.hoisted(
 vi.mock("wagmi", () => ({ useSimulateContract, useWriteContract }));
 
 import {
-  AddDagVote,
-  ChangeName,
-  JoinTree,
-  LeaveTree,
-  MoveTreeVote,
-  RemoveDagVote,
-  SwitchWithParent,
+  useAddDagVote,
+  useChangeName,
+  useJoinTree,
+  useLeaveTree,
+  useMoveTreeVote,
+  useRemoveDagVote,
+  useSwitchWithParent,
 } from "./SmartContractInteractions";
 
 // Sentinel object that useSimulateContract hands back as the prepared request;
-// the workflow must pass exactly this to writeContract.
+// the action must pass exactly this to writeContract.
 const REQUEST = { __preparedRequest: true };
 
 const contract = { address: "0x00000000000000000000000000000000000000c0" };
@@ -44,18 +44,9 @@ beforeEach(() => {
   useWriteContract.mockReturnValue({ writeContract });
 });
 
-describe("JoinTree (join the system)", () => {
+describe("useJoinTree (join the system)", () => {
   it("prepares joinTree with account, an auto-truncated display name, and the parent", () => {
-    const setClickedNodeId = vi.fn();
-    const setIsAccountInGraph = vi.fn();
-
-    const join = JoinTree(
-      contract,
-      account,
-      recipient,
-      setClickedNodeId,
-      setIsAccountInGraph,
-    );
+    const join = useJoinTree(contract, account, recipient);
 
     const expectedName = account.slice(0, 3) + "..." + account.slice(-3);
     expect(useSimulateContract).toHaveBeenCalledWith(
@@ -68,76 +59,80 @@ describe("JoinTree (join the system)", () => {
 
     // Nothing is written until the user invokes the action.
     expect(writeContract).not.toHaveBeenCalled();
-    join();
+    join?.();
     expect(writeContract).toHaveBeenCalledWith(REQUEST);
+  });
+
+  it("returns undefined while the simulation is not ready (no crash)", () => {
+    useSimulateContract.mockReturnValue({ data: undefined });
+    const join = useJoinTree(contract, account, recipient);
+    expect(join).toBeUndefined();
   });
 });
 
-describe("AddDagVote / RemoveDagVote (give and revoke reputation votes)", () => {
-  it("AddDagVote prepares addDagVote with weight 1 and submits on invoke", () => {
-    const add = AddDagVote(contract, account, recipient);
+describe("useAddDagVote / useRemoveDagVote (give and revoke reputation votes)", () => {
+  it("useAddDagVote prepares addDagVote with weight 1 and submits on invoke", () => {
+    const add = useAddDagVote(contract, account, recipient);
     expect(useSimulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "addDagVote",
         args: [account, recipient, 1],
       }),
     );
-    add();
+    add?.();
     expect(writeContract).toHaveBeenCalledWith(REQUEST);
   });
 
-  it("RemoveDagVote prepares removeDagVote(account, recipient)", () => {
-    const remove = RemoveDagVote(contract, account, recipient);
+  it("useRemoveDagVote prepares removeDagVote(account, recipient)", () => {
+    const remove = useRemoveDagVote(contract, account, recipient);
     expect(useSimulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "removeDagVote",
         args: [account, recipient],
       }),
     );
-    remove();
+    remove?.();
     expect(writeContract).toHaveBeenCalledWith(REQUEST);
   });
 });
 
-describe("ChangeName", () => {
+describe("useChangeName", () => {
   it("prepares changeName(account, name)", () => {
-    const change = ChangeName(contract, account, "Alice");
+    const change = useChangeName(contract, account, "Alice");
     expect(useSimulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "changeName",
         args: [account, "Alice"],
       }),
     );
-    change();
+    change?.();
     expect(writeContract).toHaveBeenCalledWith(REQUEST);
   });
 });
 
-describe("SwitchWithParent (climb the tree)", () => {
+describe("useSwitchWithParent (climb the tree)", () => {
   it("prepares switchPositionWithParent(account)", () => {
-    const sw = SwitchWithParent(contract, account);
+    const sw = useSwitchWithParent(contract, account);
     expect(useSimulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "switchPositionWithParent",
         args: [account],
       }),
     );
-    sw();
+    sw?.();
     expect(writeContract).toHaveBeenCalledWith(REQUEST);
   });
 });
 
-describe("LeaveTree", () => {
+describe("useLeaveTree", () => {
   it("prepares leaveTree(account) and navigates to the alt node on invoke", () => {
-    const setIsAccountInGraph = vi.fn();
     const navigate = vi.fn();
     const setClickedNodeId = vi.fn();
     const altNode = recipient;
 
-    const leave = LeaveTree(
+    const leave = useLeaveTree(
       contract,
       account,
-      setIsAccountInGraph,
       navigate,
       setClickedNodeId,
       altNode,
@@ -146,19 +141,19 @@ describe("LeaveTree", () => {
       expect.objectContaining({ functionName: "leaveTree", args: [account] }),
     );
 
-    leave();
+    leave?.();
     expect(writeContract).toHaveBeenCalledWith(REQUEST);
     expect(setClickedNodeId).toHaveBeenCalledWith(altNode);
     expect(navigate).toHaveBeenCalledWith("/?id=" + altNode);
   });
 });
 
-describe("MoveTreeVote (move to an unoccupied spot)", () => {
+describe("useMoveTreeVote (move to an unoccupied spot)", () => {
   it("prepares moveTreeVote(account, recipient) and navigates to the new spot", () => {
     const setClickedNodeId = vi.fn();
     const navigate = vi.fn();
 
-    const move = MoveTreeVote(
+    const move = useMoveTreeVote(
       contract,
       account,
       recipient,
@@ -172,7 +167,7 @@ describe("MoveTreeVote (move to an unoccupied spot)", () => {
       }),
     );
 
-    move();
+    move?.();
     expect(writeContract).toHaveBeenCalledWith(REQUEST);
     expect(setClickedNodeId).toHaveBeenCalledWith(recipient);
     expect(navigate).toHaveBeenCalledWith("/?id=" + recipient);

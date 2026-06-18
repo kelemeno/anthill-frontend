@@ -10,7 +10,6 @@ import {
   type EdgeProps,
   getBezierPath,
   Handle,
-  MarkerType,
   type Node,
   type NodeProps,
   Position,
@@ -211,12 +210,6 @@ export const GraphFlow = (props: {
           source: parentId,
           target: n.id,
           type: "gradient",
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: colorOf(parentId),
-            width: 16,
-            height: 16,
-          },
           data: {
             sourceColor: colorOf(parentId),
             targetColor: colorOf(n.id),

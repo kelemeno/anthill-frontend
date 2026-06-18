@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import {
-  AddDagVote,
-  ChangeName,
-  JoinTree,
-  LeaveTree,
-  MoveTreeVote,
-  RemoveDagVote,
-  SwitchWithParent,
+  useAddDagVote,
+  useChangeName,
+  useJoinTree,
+  useLeaveTree,
+  useMoveTreeVote,
+  useRemoveDagVote,
+  useSwitchWithParent,
 } from "../ExternalConnections/SmartContractInteractions";
 import {
   address0,
@@ -31,7 +31,7 @@ export const AddDagVoteButton = (props: {
   recipient: string;
   graph: GraphDataRendering;
 }) => {
-  const addDagVote = AddDagVote(
+  const addDagVote = useAddDagVote(
     props.AnthillContract,
     props.account,
     props.recipient,
@@ -61,7 +61,7 @@ export const RemoveDagVoteButton = (props: {
   graph: GraphDataRendering;
 }) => {
   // var addDagVote = AddDagVote(props.AnthillContract,  props.account, props.recipient)
-  const removeDagVote = RemoveDagVote(
+  const removeDagVote = useRemoveDagVote(
     props.AnthillContract,
     props.account,
     props.recipient,
@@ -90,7 +90,7 @@ export const SwitchParentButton = (props: {
   recipient: NodeDataRendering;
   graph: GraphDataRendering;
 }) => {
-  const switchWithParent = SwitchWithParent(props.AnthillContract, props.voter);
+  const switchWithParent = useSwitchWithParent(props.AnthillContract, props.voter);
 
   // var switchable= props.graph[props.recipient.id].isSwitchable
 
@@ -126,12 +126,10 @@ export const JoinTreeButton = (props: {
   setClickedNode: any;
   setIsAccountInGraph: any;
 }) => {
-  const joinTree = JoinTree(
+  const joinTree = useJoinTree(
     props.AnthillContract,
     props.voter,
     props.recipient.id,
-    props.setClickedNode,
-    props.setIsAccountInGraph,
   );
 
   return (
@@ -165,7 +163,7 @@ export const ChangeNameButton = (props: {
 }) => {
   const [nameInput, setNameInput] = useState("");
 
-  const changeName = ChangeName(props.AnthillContract, props.voter, nameInput);
+  const changeName = useChangeName(props.AnthillContract, props.voter, nameInput);
 
   return (
     <div className="Popover">
@@ -207,10 +205,9 @@ export const LeaveTreeButton = (props: {
   navigate: any;
   altNode: string;
 }) => {
-  const leaveTree = LeaveTree(
+  const leaveTree = useLeaveTree(
     props.AnthillContract,
     props.voter,
-    props.setIsAccountInGraph,
     props.navigate,
     props.setClickedNode,
     props.altNode,
@@ -252,7 +249,7 @@ export const MoveTreeVoteButton = (props: {
   setClickedNode: any;
   navigate: any;
 }) => {
-  const moveTreeVote = MoveTreeVote(
+  const moveTreeVote = useMoveTreeVote(
     props.AnthillContract,
     props.voter,
     props.recipient.id,
