@@ -595,23 +595,29 @@ export const GraphFlow = (props: {
     //    clickedNode each render makes it survive any collapse reset.
     const forced = props.forcedCollapsed;
     const effectiveCollapsed = forced ? new Set(forced) : new Set(collapsed);
-    if (!forced) {
-      const anchors: (string | null | undefined)[] = [hoveredId, props.clickedNode];
-      // Also reveal the focused node's vote partners (outgoing recipients in
-      // "votes", incoming voters in "rep"), so the overlay edges have endpoints.
-      const fn = graph[props.clickedNode];
-      if (fn?.dagEdges) {
-        for (const e of fn.dagEdges) {
-          if (props.viewMode === "votes" && e.outgoing) anchors.push(e.to);
-          if (props.viewMode === "rep" && !e.outgoing) anchors.push(e.to);
-        }
+    // Open the path to a node (node + every collapsed ancestor).
+    const openPath = (id: string | null | undefined) => {
+      let cur: string | undefined = id ?? undefined;
+      let guard = 0;
+      while (cur && graph[cur] && guard++ < 1000) {
+        effectiveCollapsed.delete(cur);
+        cur = graph[cur].sentTreeVote;
       }
-      for (const anchor of anchors) {
-        let cur: string | undefined = anchor ?? undefined;
-        let guard = 0;
-        while (cur && graph[cur] && guard++ < 1000) {
-          effectiveCollapsed.delete(cur);
-          cur = graph[cur].sentTreeVote;
+    };
+    const fn = graph[props.clickedNode];
+    if (!forced) {
+      openPath(hoveredId);
+      if (props.viewMode === "rep") {
+        // Reputation: show the tree only DOWN TO the focus (open its ancestors)
+        // and collapse the focus's subtree — the incoming voters are shown
+        // explicitly below instead of the tree children, so it stays clean.
+        openPath(fn?.sentTreeVote);
+        effectiveCollapsed.add(props.clickedNode);
+      } else {
+        openPath(props.clickedNode);
+        // "+ Votes": reveal the focus's outgoing-vote recipients (above).
+        if (props.viewMode === "votes" && fn?.dagEdges) {
+          for (const e of fn.dagEdges) if (e.outgoing) openPath(e.to);
         }
       }
     }
@@ -652,6 +658,16 @@ export const GraphFlow = (props: {
 
     const visible = Object.values(graph).filter((n) => !isHidden(n.id));
     const visibleIds = new Set(visible.map((n) => n.id));
+    // Reputation: surface the focus's incoming voters even though their tree
+    // ancestors are collapsed — they're shown in place of the tree children.
+    if (props.viewMode === "rep") {
+      for (const e of fn?.dagEdges ?? []) {
+        if (!e.outgoing && graph[e.to] && !visibleIds.has(e.to)) {
+          visible.push(graph[e.to]);
+          visibleIds.add(e.to);
+        }
+      }
+    }
 
     // Every node sits at its fixed full-layout position (locked layout).
     const positions = fullPositions;
