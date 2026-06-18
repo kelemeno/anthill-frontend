@@ -81,6 +81,34 @@ test.describe("history scrubber", () => {
     expect(lastT).toBe(live);
   });
 
+  test("the rightmost step matches Live (same nodes + viewport)", async ({
+    page,
+  }) => {
+    await page.goto(`/?id=${NODE}`);
+    await waitForGraph(page);
+    const ids = () =>
+      page.evaluate(() =>
+        Array.from(document.querySelectorAll(".react-flow__node"))
+          .map((n) => n.getAttribute("data-id"))
+          .sort(),
+      );
+    const vt = () =>
+      page
+        .locator(".react-flow__viewport")
+        .first()
+        .evaluate((el) => getComputedStyle(el).transform);
+    const slider = page.locator("input[type=range]");
+    const max = Number(await slider.getAttribute("max"));
+    await slider.fill(String(max));
+    await page.waitForTimeout(400);
+    const lastIds = await ids();
+    const lastVt = await vt();
+    await page.getByRole("button", { name: "Live" }).click();
+    await page.waitForTimeout(500);
+    expect(await ids()).toEqual(lastIds);
+    expect(await vt()).toBe(lastVt);
+  });
+
   test("Live button returns to the current state", async ({ page }) => {
     await page.goto(`/?id=${NODE}`);
     await waitForGraph(page);

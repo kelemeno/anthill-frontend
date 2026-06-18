@@ -435,7 +435,14 @@ export const GraphFlow = (props: {
 
   const { nodes, edges } = useMemo(() => {
     const graph = props.graph;
-    const distances = distancesFrom(graph, props.clickedNode);
+    // Size nodes by distance from the focus. During playback the focus may not
+    // exist yet at this step — fall back to the shallowest present node so the
+    // whole view doesn't collapse to minimum-size dots.
+    const focusId = graph[props.clickedNode]
+      ? props.clickedNode
+      : (Object.values(graph).sort((a, b) => a.depth - b.depth)[0]?.id ??
+        props.clickedNode);
+    const distances = distancesFrom(graph, focusId);
 
     // Effective collapse = persistent set, minus the hovered node + its
     // ancestors (so hovering peeks that branch open without a click).

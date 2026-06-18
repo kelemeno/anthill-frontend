@@ -140,7 +140,11 @@ export const GraphSVG = (props: {
 
   // Live view = props.graph; while scrubbing, show the historical sub-view with
   // the same branches collapsed (so it mirrors the live opened/closed state).
-  const scrubStep = scrubIndex == null ? null : viewSteps[scrubIndex];
+  // The rightmost position IS "now": render the live interactive graph there so
+  // the last step and the Live button look and behave identically (no
+  // read-only reconstructed graph at the end of the timeline).
+  const onLatest = scrubIndex == null || scrubIndex >= viewSteps.length - 1;
+  const scrubStep = onLatest ? null : viewSteps[scrubIndex];
   const displayGraph = scrubStep?.graph ?? props.graph;
   const forcedCollapsed = scrubStep
     ? new Set(scrubStep.collapsedIds)
