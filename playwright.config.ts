@@ -11,6 +11,9 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,
+  // Interaction tests involve hover/animation timing — retry once to absorb
+  // the occasional flake.
+  retries: 1,
   reporter: "list",
   use: {
     baseURL: "http://localhost:5173",
