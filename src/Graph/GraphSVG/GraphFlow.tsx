@@ -485,6 +485,8 @@ export const GraphFlow = (props: {
   onViewChange?: (view: {
     visibleIds: string[];
     collapseRoots: { id: string; descendants: string[] }[];
+    focus: string;
+    viewMode: "tree" | "votes" | "rep";
   }) => void;
 }) => {
   // No tree-collapse in reputation (dag) mode — the dag view is a flat 3-row
@@ -796,16 +798,44 @@ export const GraphFlow = (props: {
         childMap.set(n.sentTreeVote, arr);
       }
     }
+    // Effective collapse for the SETTLED view (no hover), matching what's
+    // rendered — so the reported view reflects the focus + the active mode.
+    const eff = new Set(collapsed);
+    const openPath = (id: string | null | undefined) => {
+      let cur: string | undefined = id ?? undefined;
+      let g = 0;
+      while (cur && graph[cur] && g++ < 1000) {
+        eff.delete(cur);
+        cur = graph[cur].sentTreeVote;
+      }
+    };
+    const fn = graph[props.clickedNode];
+    if (props.viewMode === "rep") {
+      openPath(fn?.sentTreeVote);
+      eff.add(props.clickedNode);
+    } else {
+      openPath(props.clickedNode);
+      if (props.viewMode === "votes" && fn?.dagEdges) {
+        for (const e of fn.dagEdges) if (e.outgoing) openPath(graph[e.to]?.sentTreeVote);
+      }
+    }
     const hidden = (id: string) => {
       let cur = graph[id]?.sentTreeVote;
       let g = 0;
       while (cur && graph[cur] && g++ < 1000) {
-        if (collapsed.has(cur)) return true;
+        if (eff.has(cur)) return true;
         cur = graph[cur].sentTreeVote;
       }
       return false;
     };
     const visibleIds = Object.keys(graph).filter((id) => !hidden(id));
+    if (props.viewMode === "rep" && fn?.dagEdges) {
+      for (const e of fn.dagEdges) {
+        if (!e.outgoing && graph[e.to] && !visibleIds.includes(e.to)) {
+          visibleIds.push(e.to);
+        }
+      }
+    }
     const descendantsOf = (root: string) => {
       const out: string[] = [];
       const stack = [...(childMap.get(root) ?? [])];
@@ -818,15 +848,33 @@ export const GraphFlow = (props: {
       return out;
     };
     const collapseRoots = visibleIds
-      .filter((id) => collapsed.has(id) && (childMap.get(id)?.length ?? 0) > 0)
+      .filter(
+        (id) =>
+          eff.has(id) &&
+          (childMap.get(id)?.length ?? 0) > 0 &&
+          // in rep the focus is collapsed but its children are shown as voters,
+          // not aggregated, so don't treat it as an aggregate branch.
+          !(props.viewMode === "rep" && id === props.clickedNode),
+      )
       .map((id) => ({ id, descendants: descendantsOf(id) }));
     const sig = `${[...visibleIds].sort().join(",")}|${collapseRoots
       .map((r) => `${r.id}:${r.descendants.length}`)
-      .join(",")}`;
+      .join(",")}|${props.clickedNode}|${props.viewMode}`;
     if (sig === lastViewSig.current) return;
     lastViewSig.current = sig;
-    onViewChangeRef.current({ visibleIds, collapseRoots });
-  }, [props.graph, collapsed, props.forcedCollapsed]);
+    onViewChangeRef.current({
+      visibleIds,
+      collapseRoots,
+      focus: props.clickedNode,
+      viewMode: props.viewMode,
+    });
+  }, [
+    props.graph,
+    collapsed,
+    props.forcedCollapsed,
+    props.clickedNode,
+    props.viewMode,
+  ]);
 
   return (
     <div

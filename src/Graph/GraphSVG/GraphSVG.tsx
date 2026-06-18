@@ -113,15 +113,15 @@ export const GraphSVG = (props: {
   const onViewChange = useCallback((v: LiveView) => setLiveView(v), []);
 
   const viewSteps = useMemo(
-    () => (liveView ? buildViewSteps(history, liveView, props.treeMode) : []),
-    [history, liveView, props.treeMode],
+    () => (liveView ? buildViewSteps(history, liveView) : []),
+    [history, liveView],
   );
 
-  // Reset the scrubber to "live" whenever the view or mode changes.
+  // Reset the scrubber to "live" whenever the view/focus (i.e. liveView) changes.
   useEffect(() => {
     setScrubIndex(null);
     setPlaying(false);
-  }, [liveView, props.treeMode]);
+  }, [liveView]);
 
   // Play: advance one step at a time, stop at the end.
   useEffect(() => {

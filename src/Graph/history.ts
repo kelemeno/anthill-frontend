@@ -32,6 +32,10 @@ export type HistoryStep = {
 export type LiveView = {
   visibleIds: string[];
   collapseRoots: { id: string; descendants: string[] }[];
+  // The currently focused node + the active view — the history is scoped to
+  // these so the scrubber always shows the changes relevant to what's on screen.
+  focus: string;
+  viewMode: "tree" | "votes" | "rep";
 };
 
 export type ViewStep = {
@@ -48,11 +52,11 @@ export const describeStep = (step?: ViewStep): string => step?.label ?? "";
 export function buildViewSteps(
   history: HistoryStep[],
   view: LiveView,
-  treeMode: boolean,
 ): ViewStep[] {
   const visible = new Set(view.visibleIds);
   if (history.length === 0 || visible.size === 0) return [];
 
+  const { focus, viewMode } = view;
   const rootIds = view.collapseRoots.map((r) => r.id);
   const rootDesc = new Map(
     view.collapseRoots.map((r) => [r.id, new Set(r.descendants)]),
@@ -63,8 +67,8 @@ export function buildViewSteps(
   const steps: ViewStep[] = [];
   let lastSig = "";
   let prevVisible = new Set<string>();
-  let prevEdges = new Map<string, string>(); // visible id -> sorted parentIds
   let prevCounts = new Map<string, number>(); // root id -> hidden child count
+  let prevDag = ""; // previous view-specific vote set (for diffing labels)
 
   for (const step of history) {
     const present = new Set(
@@ -72,15 +76,16 @@ export function buildViewSteps(
     );
     if (![...present].some((id) => visible.has(id))) continue;
 
+    // The focused node's votes at this point in time.
+    const focusNode = step.nodes.find((n) => n.id === focus);
+    const outVotes = (focusNode?.dagVotes ?? []).filter((id) => present.has(id));
+    const inVoters = step.nodes
+      .filter((n) => present.has(n.id) && n.dagVotes.includes(focus))
+      .map((n) => n.id);
+
     const graph: GraphDataRendering = {};
     for (const n of step.nodes) {
       if (!present.has(n.id)) continue;
-      const parentIds: string[] = [];
-      if (treeMode) {
-        if (present.has(n.sentTreeVote)) parentIds.push(n.sentTreeVote);
-      } else {
-        for (const v of n.dagVotes) if (present.has(v)) parentIds.push(v);
-      }
       graph[n.id] = {
         id: n.id,
         name: n.name,
@@ -90,14 +95,21 @@ export function buildViewSteps(
         relRoot: "",
         sentTreeVote: n.sentTreeVote,
         recTreeVotes: n.recTreeVotes,
-        parentIds: [...new Set(parentIds)],
+        parentIds: present.has(n.sentTreeVote) ? [n.sentTreeVote] : [],
         isVotable: false,
         isSwitchable: false,
         isDagVote: false,
       } as NodeDataRendering;
     }
+    // Carry the focus's votes so the overlay renders during playback too.
+    if (graph[focus]) {
+      graph[focus].dagEdges = [
+        ...outVotes.map((to) => ({ to, weight: 1, outgoing: true })),
+        ...inVoters.map((to) => ({ to, weight: 1, outgoing: false })),
+      ];
+    }
 
-    // Visible structure: opened nodes + their mode-edges among visible.
+    // Visible tree structure (opened nodes + their tree edges among visible).
     const visiblePresent = [...present].filter((id) => visible.has(id));
     const edges = new Map<string, string>();
     for (const id of visiblePresent) {
@@ -113,20 +125,30 @@ export function buildViewSteps(
       for (const d of rootDesc.get(r) ?? []) if (present.has(d)) c++;
       counts.set(r, c);
     }
+    // View-specific vote signature: outgoing in "+ Votes", incoming in "Rep".
+    const dagSig =
+      viewMode === "votes"
+        ? `out:${[...outVotes].sort().join(",")}`
+        : viewMode === "rep"
+          ? `in:${[...inVoters].sort().join(",")}`
+          : "";
 
-    const sig =
-      visiblePresent
-        .sort()
-        .map((id) => `${id}:${edges.get(id)}`)
-        .join("|") +
-      "#" +
-      [...counts.entries()].sort().map(([r, c]) => `${r}:${c}`).join(",");
+    const sig = `${visiblePresent
+      .sort()
+      .map((id) => `${id}:${edges.get(id)}`)
+      .join("|")}#${[...counts.entries()]
+      .sort()
+      .map(([r, c]) => `${r}:${c}`)
+      .join(",")}||${dagSig}`;
     if (sig === lastSig) continue;
     lastSig = sig;
 
     // Label from the diff vs the previous shown step.
     let label = "";
     const newNodes = visiblePresent.filter((id) => !prevVisible.has(id));
+    const grown = rootIds.find(
+      (r) => counts.has(r) && counts.get(r) !== (prevCounts.get(r) ?? 0),
+    );
     if (newNodes.length > 0) {
       const n0 = newNodes[0];
       const parent = graph[n0]?.sentTreeVote;
@@ -134,33 +156,30 @@ export function buildViewSteps(
         parent && present.has(parent)
           ? `${short(n0)} joined under ${short(parent)}`
           : `${short(n0)} joined`;
-    } else {
-      const grown = rootIds.find(
-        (r) => counts.has(r) && counts.get(r) !== (prevCounts.get(r) ?? 0),
+    } else if (grown) {
+      label = `branch ${short(grown)} grew to ${counts.get(grown)} hidden`;
+    } else if (dagSig !== prevDag) {
+      const before = new Set(
+        prevDag.replace(/^(out|in):/, "").split(",").filter(Boolean),
       );
-      if (grown) {
-        label = `branch ${short(grown)} grew to ${counts.get(grown)} hidden`;
+      const now = viewMode === "votes" ? outVotes : inVoters;
+      const added = now.find((v) => !before.has(v));
+      const removed = [...before].find((v) => !now.includes(v));
+      if (viewMode === "votes") {
+        label = added
+          ? `${short(focus)} voted for ${short(added)}`
+          : removed
+            ? `${short(focus)} removed vote for ${short(removed)}`
+            : "votes changed";
       } else {
-        // an edge changed among visible nodes (a dag vote in dag mode)
-        let changed = "";
-        for (const id of visiblePresent) {
-          const before = new Set(
-            (prevEdges.get(id) ?? "").split(",").filter(Boolean),
-          );
-          const after = (edges.get(id) ?? "").split(",").filter(Boolean);
-          const added = after.find((p) => !before.has(p));
-          if (added) {
-            changed = `${short(id)} voted for ${short(added)}`;
-            break;
-          }
-          const removed = [...before].find((p) => !after.includes(p));
-          if (removed) {
-            changed = `${short(id)} removed vote for ${short(removed)}`;
-            break;
-          }
-        }
-        label = changed || "updated";
+        label = added
+          ? `${short(added)} voted for ${short(focus)}`
+          : removed
+            ? `${short(removed)} removed vote for ${short(focus)}`
+            : "votes changed";
       }
+    } else {
+      label = "updated";
     }
 
     steps.push({
@@ -170,8 +189,8 @@ export function buildViewSteps(
     });
 
     prevVisible = new Set(visiblePresent);
-    prevEdges = edges;
     prevCounts = counts;
+    prevDag = dagSig;
   }
 
   // Collapse a run of consecutive aggregate-only steps into a single step (its
