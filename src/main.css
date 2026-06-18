@@ -69,3 +69,23 @@ header {
 .insideButton {
   margin: 10px;
 }
+
+/* Mobile: let the header wrap and tighten spacing so it fits narrow screens. */
+@media (max-width: 600px) {
+  header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+  .header__left {
+    margin-right: 8px;
+  }
+}
+
+/* Comfortable tap targets for buttons on touch screens. */
+@media (pointer: coarse) {
+  header button {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+}

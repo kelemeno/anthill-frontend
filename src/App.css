@@ -9,10 +9,16 @@
 
 .Popover {
   padding: 10px;
+  max-width: 82vw;
 }
 
 .PopoverButton {
-  align-items: right;
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  margin: 4px 0;
+  min-height: 38px;
+  cursor: pointer;
 }
 /* .container {
   top: 50%;

@@ -209,11 +209,12 @@ export const GraphSVG = (props: {
             zIndex: 10,
             display: "flex",
             alignItems: "center",
-            gap: 10,
-            padding: "8px 14px",
+            flexWrap: "wrap",
+            gap: 8,
+            padding: "8px 12px",
             fontFamily: "sans-serif",
             fontSize: 13,
-            background: "rgba(255,255,255,0.95)",
+            background: "rgba(255,255,255,0.96)",
             borderTop: "1px solid #ddd",
             boxShadow: "0 -1px 4px rgba(0,0,0,0.06)",
           }}
@@ -233,6 +234,7 @@ export const GraphSVG = (props: {
                 setPlaying(true);
               }
             }}
+            style={{ padding: "6px 12px", minHeight: 32 }}
           >
             {playing ? "⏸ Pause" : "▶ Play"}
           </button>
@@ -245,12 +247,21 @@ export const GraphSVG = (props: {
               setPlaying(false);
               setScrubIndex(Number(e.target.value));
             }}
-            style={{ flex: 1 }}
+            style={{ flex: "1 1 130px" }}
           />
           <span style={{ whiteSpace: "nowrap" }}>
             {(scrubIndex ?? viewSteps.length - 1) + 1}/{viewSteps.length}
           </span>
-          <span style={{ color: "#555", minWidth: 200 }}>
+          <span
+            style={{
+              color: "#555",
+              flex: "1 1 90px",
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {describeStep(viewSteps[scrubIndex ?? viewSteps.length - 1])}
           </span>
           {scrubIndex != null && (
@@ -260,6 +271,7 @@ export const GraphSVG = (props: {
                 setPlaying(false);
                 setScrubIndex(null);
               }}
+              style={{ padding: "6px 12px", minHeight: 32 }}
             >
               Live
             </button>

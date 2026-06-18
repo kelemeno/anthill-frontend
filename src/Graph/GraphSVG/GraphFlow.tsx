@@ -39,6 +39,12 @@ const BASE_RADIUS = 30;
 const MIN_RADIUS = 8;
 const SHRINK = 0.8; // radius multiplier per hop away from focus
 
+// Touch devices have no hover; enlarge tap targets (the collapse badge) there.
+const IS_TOUCH =
+  typeof window !== "undefined" &&
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(hover: none)").matches;
+
 function radiusForDistance(distance: number): number {
   if (!Number.isFinite(distance)) return MIN_RADIUS;
   return Math.max(MIN_RADIUS, BASE_RADIUS * SHRINK ** distance);
@@ -136,18 +142,18 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           style={{
             position: "absolute",
             // Kept inside the node box so hovering it keeps the node enlarged.
-            bottom: 0,
+            bottom: IS_TOUCH ? -6 : 0,
             left: "50%",
             transform: "translateX(-50%)",
-            minWidth: 16,
-            height: 14,
-            padding: "0 4px",
-            borderRadius: 7,
+            minWidth: IS_TOUCH ? 28 : 16,
+            height: IS_TOUCH ? 24 : 14,
+            padding: "0 6px",
+            borderRadius: IS_TOUCH ? 12 : 7,
             border: "1px solid #888",
             background: "#fff",
             color: "#333",
-            fontSize: 9,
-            lineHeight: "12px",
+            fontSize: IS_TOUCH ? 13 : 9,
+            lineHeight: IS_TOUCH ? "22px" : "12px",
             cursor: "pointer",
             zIndex: 2,
           }}
