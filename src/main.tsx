@@ -42,6 +42,13 @@ console.log("Version 2");
 const queryClient = new QueryClient();
 const projectId = "a768398be97a29d62abe51d94ac7735a";
 
+// The local-dev backend/RPC live on the same machine that serves this page, so
+// key their host off how the page was opened. Open http://<mac-LAN-IP>:5173 on
+// another device on the network and the backend (:5001) and anvil RPC (:8545)
+// resolve to that same machine — no hardcoded IP needed.
+const localHost =
+  typeof window !== "undefined" ? window.location.hostname : "localhost";
+
 const anvilLocal = defineChain({
   id: 1337,
   caipNetworkId: "eip155:1337",
@@ -49,7 +56,7 @@ const anvilLocal = defineChain({
   name: "Anvil",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: {
-    default: { http: ["http://localhost:8545"] },
+    default: { http: [`http://${localHost}:8545`] },
   },
 });
 
@@ -110,8 +117,8 @@ if (!testing) {
 } else {
   anthillContractAddress = "0x5fbdb2315678afecb367f032d93f642f64180aa3"; // anvil (forge without lib, nonce 0)
   chainId = 1337; //anvil
-  backendUrl = "http://localhost:5001/";
-  wsUrl = "ws://127.0.0.1:5001";
+  backendUrl = `http://${localHost}:5001/`;
+  wsUrl = `ws://${localHost}:5001`;
 }
 
 const App = () => {
