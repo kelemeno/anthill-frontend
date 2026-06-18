@@ -178,7 +178,7 @@ export const GraphSVG = (props: {
   }, [props.graph, props.clickedNode]);
 
   return (
-    <div>
+    <div style={{ position: "relative" }}>
       <GraphFlow
         graph={displayGraph}
         clickedNode={props.clickedNode}
@@ -202,13 +202,20 @@ export const GraphSVG = (props: {
       {viewSteps.length > 1 && (
         <div
           style={{
+            position: "fixed",
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10,
             display: "flex",
             alignItems: "center",
             gap: 10,
             padding: "8px 14px",
             fontFamily: "sans-serif",
             fontSize: 13,
-            borderTop: "1px solid #eee",
+            background: "rgba(255,255,255,0.95)",
+            borderTop: "1px solid #ddd",
+            boxShadow: "0 -1px 4px rgba(0,0,0,0.06)",
           }}
         >
           <button

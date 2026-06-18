@@ -553,7 +553,7 @@ export const GraphFlow = (props: {
         }}
       >
         <AutoFitView graph={props.graph} focus={props.clickedNode} />
-        <Controls showInteractive={false} />
+        <Controls showInteractive={false} position="top-left" />
       </ReactFlow>
     </div>
   );
