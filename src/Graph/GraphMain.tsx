@@ -339,6 +339,8 @@ export const Graph = (props: {
     maxRelRootDepth: maxRelRootDepth,
     anthillGraph: anthillGraph,
     anthillGraphBare: anthillGraphBare,
+    treeMode: props.treeMode,
+    backendUrl: props.backendUrl,
   };
 
   return (
