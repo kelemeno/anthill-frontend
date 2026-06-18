@@ -321,15 +321,20 @@ export const GraphFlow = (props: {
     node: NodeDataRendering,
   ) => void;
   onNodeMouseLeave: () => void;
+  // When true, start fully expanded (no default top-3 collapse) — used by the
+  // history view so the whole graph at each step is visible.
+  expandAll?: boolean;
 }) => {
   const [collapsed, setCollapsed] = useState<Set<string>>(() =>
-    defaultCollapsed(props.graph),
+    props.expandAll ? new Set() : defaultCollapsed(props.graph),
   );
 
-  // Reset to the default (top-3-levels-open) collapse state when a different
-  // (sub)graph is loaded.
+  // Reset collapse state when a different (sub)graph is loaded.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => setCollapsed(defaultCollapsed(props.graph)), [props.graph]);
+  useEffect(
+    () => setCollapsed(props.expandAll ? new Set() : defaultCollapsed(props.graph)),
+    [props.graph, props.expandAll],
+  );
 
   // Click pins/unpins a branch. Opening pins the WHOLE path to the node (the
   // node + every collapsed ancestor) so it stays visible after you stop

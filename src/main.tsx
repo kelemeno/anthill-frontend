@@ -21,6 +21,7 @@ import {
 } from "wagmi";
 
 import { GraphDemo } from "./Graph/GraphDemo";
+import { GraphHistory } from "./Graph/GraphHistory";
 import { Graph } from "./Graph/GraphMain";
 import "./main.css";
 import TutorialPopup, {
@@ -281,16 +282,22 @@ function Header(props: {
   );
 }
 
-// /demo renders a synthetic large graph for stress-testing the renderer,
-// bypassing the wallet/backend app flow.
-const isDemo = window.location.pathname.startsWith("/demo");
+// Standalone views that bypass the wallet/backend app flow:
+//   /demo    — synthetic large graph for stress-testing the renderer
+//   /history — timeline scrubber of how the graph evolved
+const path = window.location.pathname;
+const standalone = path.startsWith("/demo") ? (
+  <GraphDemo />
+) : path.startsWith("/history") ? (
+  <GraphHistory />
+) : null;
 
 root.render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
-          {isDemo ? <GraphDemo /> : <App />}
+          {standalone ?? <App />}
         </WagmiProvider>
       </QueryClientProvider>
     </BrowserRouter>
