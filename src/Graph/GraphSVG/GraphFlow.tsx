@@ -331,15 +331,32 @@ export const GraphFlow = (props: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => setCollapsed(defaultCollapsed(props.graph)), [props.graph]);
 
-  // Click pins/unpins a node's expansion (persists in `collapsed`).
-  const toggleCollapse = useCallback((id: string) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  // Click pins/unpins a branch. Opening pins the WHOLE path to the node (the
+  // node + every collapsed ancestor) so it stays visible after you stop
+  // hovering, even if you drilled in via hover. Clicking an open node collapses
+  // it again.
+  const toggleCollapse = useCallback(
+    (id: string) => {
+      const graph = props.graph;
+      setCollapsed((prev) => {
+        const next = new Set(prev);
+        if (!prev.has(id)) {
+          // Currently open → collapse this node.
+          next.add(id);
+        } else {
+          // Collapsed/peeked → pin the path to it open (node + ancestors).
+          let cur: string | undefined = id;
+          let guard = 0;
+          while (cur && graph[cur] && guard++ < 1000) {
+            next.delete(cur);
+            cur = graph[cur].sentTreeVote;
+          }
+        }
+        return next;
+      });
+    },
+    [props.graph],
+  );
 
   // Hover peeks a branch open: the hovered node (and the path to it) opens.
   const [hoveredId, setHoveredId] = useState<string | null>(null);
