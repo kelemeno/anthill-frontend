@@ -57,6 +57,30 @@ test.describe("history scrubber", () => {
     expect(uniq.some((l) => /grew to/.test(l))).toBe(true);
   });
 
+  test("the viewport stays put while scrubbing (no jumping)", async ({
+    page,
+  }) => {
+    await page.goto(`/?id=${NODE}`);
+    await waitForGraph(page);
+    const vt = () =>
+      page
+        .locator(".react-flow__viewport")
+        .first()
+        .evaluate((el) => getComputedStyle(el).transform);
+    const slider = page.locator("input[type=range]");
+    const max = Number(await slider.getAttribute("max"));
+    const live = await vt();
+    await slider.fill("0");
+    await page.waitForTimeout(400);
+    const first = await vt();
+    await slider.fill(String(max));
+    await page.waitForTimeout(400);
+    const lastT = await vt();
+    // locked layout + stable fit: the transform must not change across steps
+    expect(first).toBe(live);
+    expect(lastT).toBe(live);
+  });
+
   test("Live button returns to the current state", async ({ page }) => {
     await page.goto(`/?id=${NODE}`);
     await waitForGraph(page);

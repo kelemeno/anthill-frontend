@@ -189,6 +189,7 @@ export const GraphSVG = (props: {
     <div style={{ position: "relative" }}>
       <GraphFlow
         graph={displayGraph}
+        layoutGraph={props.graph}
         clickedNode={props.clickedNode}
         forcedCollapsed={forcedCollapsed}
         onViewChange={onViewChange}
@@ -241,7 +242,7 @@ export const GraphSVG = (props: {
                 onClick={() => step(cur - 1)}
                 style={{ ...btn, opacity: cur <= 0 ? 0.4 : 1 }}
               >
-                ◀
+                ⏮
               </button>
               <button
                 type="button"
@@ -275,7 +276,7 @@ export const GraphSVG = (props: {
                 onClick={() => step(cur + 1)}
                 style={{ ...btn, opacity: cur >= last ? 0.4 : 1 }}
               >
-                ▶
+                ⏭
               </button>
               <input
                 type="range"

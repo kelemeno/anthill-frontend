@@ -341,6 +341,11 @@ export const GraphFlow = (props: {
   // collapsed (no internal collapse/hover/select), so playback mirrors the
   // live view's opened/collapsed structure.
   forcedCollapsed?: Set<string>;
+  // Graph used for layout + fit (positions). Defaults to `graph`. During
+  // history playback this is the stable full view, so positions and the
+  // viewport stay fixed while the rendered subset (`graph`) changes per step —
+  // nodes appear/disappear in place instead of the whole graph jumping.
+  layoutGraph?: GraphDataRendering;
   // Reports the live view (rendered nodes + collapsed-branch roots & their
   // hidden descendants) so the history scrubber can scope to it.
   onViewChange?: (view: {
@@ -420,10 +425,12 @@ export const GraphFlow = (props: {
 
   // The graph is laid out ONCE; every node keeps a fixed position. Collapse,
   // hover and pin only toggle which nodes are shown — nothing ever moves, so
-  // the relative layout stays locked on click and hover alike.
+  // the relative layout stays locked on click and hover alike. During playback
+  // the layout comes from the stable full view, not the per-step subset.
+  const layoutSource = props.layoutGraph ?? props.graph;
   const fullPositions = useMemo(
-    () => layoutPositions(Object.values(props.graph)),
-    [props.graph],
+    () => layoutPositions(Object.values(layoutSource)),
+    [layoutSource],
   );
 
   const { nodes, edges } = useMemo(() => {
@@ -641,7 +648,7 @@ export const GraphFlow = (props: {
           props.onNodeMouseLeave();
         }}
       >
-        <AutoFitView graph={props.graph} focus={props.clickedNode} />
+        <AutoFitView graph={layoutSource} focus={props.clickedNode} />
         <Controls showInteractive={false} position="top-left" />
       </ReactFlow>
     </div>
