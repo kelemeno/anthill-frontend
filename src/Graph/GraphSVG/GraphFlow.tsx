@@ -69,6 +69,7 @@ type AnthillNodeData = {
   collapsed: boolean;
   hiddenCount: number;
   onToggle: (id: string) => void;
+  onSelect: () => void;
 };
 type AnthillNode = Node<AnthillNodeData, "anthill">;
 
@@ -109,6 +110,9 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         style={{ opacity: 0 }}
       />
       <div
+        // Select via a direct DOM pointerup (fires on touch tap, unlike React
+        // Flow's onNodeClick which the pan/zoom layer can swallow on mobile).
+        onPointerUp={() => data.onSelect()}
         style={{
           width: d,
           height: d,
@@ -481,6 +485,8 @@ export const GraphFlow = (props: {
           collapsed: isCollapsed,
           hiddenCount: isCollapsed ? subtreeCount(n.id) : 0,
           onToggle: toggleCollapse,
+          onSelect: () =>
+            props.onNodeClick(n.id, n.name, n.currentRep),
         },
       };
     });
@@ -516,6 +522,7 @@ export const GraphFlow = (props: {
     hoveredId,
     fullPositions,
     toggleCollapse,
+    props.onNodeClick,
   ]);
 
   return (
@@ -540,11 +547,13 @@ export const GraphFlow = (props: {
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
         style={{ background: "#ffffff" }}
-        onNodeClick={(_event, node) => {
-          // Click pins/unpins the hovered branch (lock into place). It does not
-          // re-center/reload, so the pinned expansion persists.
-          toggleCollapse(node.data.node.id);
-        }}
+        onNodeClick={(_event, node) =>
+          props.onNodeClick(
+            node.data.node.id,
+            node.data.node.name,
+            node.data.node.currentRep,
+          )
+        }
         onNodeMouseEnter={(event, node) => {
           onHoverEnter(node.data.node.id);
           props.onNodeMouseEnter(

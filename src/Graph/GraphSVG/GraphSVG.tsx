@@ -1,7 +1,7 @@
 // this is where we create the image of the graph, adding in the popover and the buttons
 
 import Popover from "@mui/material/Popover";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
@@ -151,20 +151,25 @@ export const GraphSVG = (props: {
   //     handleClickConstructed( props.clickedNodeId )}
   // }
 
-  const handleClickConstructed = (id: string, name: string, rep: number) =>
-    handleClick({
-      id: id,
-      name: name,
-      rep: rep,
-      setOpen: setOpen,
-      setAnchorEl: setAnchorEl,
-      setAnchorElSaver: setAnchorElSaver,
-      clickedNode: props.clickedNode,
-      setClickedNodeId: props.setClickedNode,
-      setLoaded: setLoaded,
-      setHoverNode: setHoverNode,
-      navigate: navigate,
-    });
+  // Stable identity (it feeds GraphFlow's layout memo via onSelect).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const handleClickConstructed = useCallback(
+    (id: string, name: string, rep: number) =>
+      handleClick({
+        id: id,
+        name: name,
+        rep: rep,
+        setOpen: setOpen,
+        setAnchorEl: setAnchorEl,
+        setAnchorElSaver: setAnchorElSaver,
+        clickedNode: props.clickedNode,
+        setClickedNodeId: props.setClickedNode,
+        setLoaded: setLoaded,
+        setHoverNode: setHoverNode,
+        navigate: navigate,
+      }),
+    [props.clickedNode, props.setClickedNode, navigate],
+  );
 
   // Reset the popover whenever the rendered graph/selection changes, then mark
   // the graph loaded so hovers start producing popovers again.
