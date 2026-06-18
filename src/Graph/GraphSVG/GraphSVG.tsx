@@ -209,85 +209,121 @@ export const GraphSVG = (props: {
         }
         onNodeMouseLeave={() => handleMouseOut(loaded, setOpen, setAnchorEl)}
       />
-      {viewSteps.length > 1 && (
-        <div
-          style={{
-            position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 10,
-            display: "flex",
+      {viewSteps.length > 1 &&
+        (() => {
+          const last = viewSteps.length - 1;
+          const cur = scrubIndex ?? last;
+          const btn: React.CSSProperties = {
+            display: "inline-flex",
             alignItems: "center",
-            flexWrap: "wrap",
-            gap: 8,
-            padding: "8px 12px",
-            fontFamily: "sans-serif",
-            fontSize: 13,
-            background: "rgba(255,255,255,0.96)",
-            borderTop: "1px solid #ddd",
-            boxShadow: "0 -1px 4px rgba(0,0,0,0.06)",
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              if (playing) {
-                setPlaying(false);
-              } else {
-                if (
-                  scrubIndex == null ||
-                  scrubIndex >= viewSteps.length - 1
-                ) {
-                  setScrubIndex(0);
-                }
-                setPlaying(true);
-              }
-            }}
-            style={{ padding: "6px 12px", minHeight: 32 }}
-          >
-            {playing ? "⏸ Pause" : "▶ Play"}
-          </button>
-          <input
-            type="range"
-            min={0}
-            max={viewSteps.length - 1}
-            value={scrubIndex ?? viewSteps.length - 1}
-            onChange={(e) => {
-              setPlaying(false);
-              setScrubIndex(Number(e.target.value));
-            }}
-            style={{ flex: "1 1 130px" }}
-          />
-          <span style={{ whiteSpace: "nowrap" }}>
-            {(scrubIndex ?? viewSteps.length - 1) + 1}/{viewSteps.length}
-          </span>
-          <span
-            style={{
-              color: "#555",
-              flex: "1 1 90px",
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {describeStep(viewSteps[scrubIndex ?? viewSteps.length - 1])}
-          </span>
-          {scrubIndex != null && (
-            <button
-              type="button"
-              onClick={() => {
-                setPlaying(false);
-                setScrubIndex(null);
-              }}
-              style={{ padding: "6px 12px", minHeight: 32 }}
-            >
-              Live
-            </button>
-          )}
-        </div>
-      )}
+            justifyContent: "center",
+            minWidth: 36,
+            height: 34,
+            padding: "0 10px",
+            border: "1px solid #d8dde3",
+            borderRadius: 8,
+            background: "#fff",
+            color: "#2d3748",
+            fontSize: 14,
+            cursor: "pointer",
+          };
+          const step = (i: number) => {
+            setPlaying(false);
+            setScrubIndex(Math.max(0, Math.min(last, i)));
+          };
+          return (
+            <div className="HistoryBar">
+              <button
+                type="button"
+                title="Previous step"
+                aria-label="Previous step"
+                disabled={cur <= 0}
+                onClick={() => step(cur - 1)}
+                style={{ ...btn, opacity: cur <= 0 ? 0.4 : 1 }}
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                title={playing ? "Pause" : "Play"}
+                aria-label={playing ? "Pause" : "Play"}
+                onClick={() => {
+                  if (playing) setPlaying(false);
+                  else {
+                    if (scrubIndex == null || scrubIndex >= last) {
+                      setScrubIndex(0);
+                    }
+                    setPlaying(true);
+                  }
+                }}
+                style={{
+                  ...btn,
+                  minWidth: 40,
+                  background: "#2b6cb0",
+                  borderColor: "#2b6cb0",
+                  color: "#fff",
+                  fontSize: 15,
+                }}
+              >
+                {playing ? "⏸" : "▶"}
+              </button>
+              <button
+                type="button"
+                title="Next step"
+                aria-label="Next step"
+                disabled={cur >= last}
+                onClick={() => step(cur + 1)}
+                style={{ ...btn, opacity: cur >= last ? 0.4 : 1 }}
+              >
+                ▶
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={last}
+                value={cur}
+                onChange={(e) => {
+                  setPlaying(false);
+                  setScrubIndex(Number(e.target.value));
+                }}
+                style={{ flex: "1 1 120px", accentColor: "#2b6cb0" }}
+              />
+              <span
+                style={{
+                  whiteSpace: "nowrap",
+                  fontVariantNumeric: "tabular-nums",
+                  color: "#718096",
+                }}
+              >
+                {cur + 1} / {viewSteps.length}
+              </span>
+              <span
+                style={{
+                  color: "#2d3748",
+                  flex: "1 1 90px",
+                  minWidth: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {describeStep(viewSteps[cur])}
+              </span>
+              {scrubIndex != null && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPlaying(false);
+                    setScrubIndex(null);
+                  }}
+                  style={{ ...btn, color: "#2b6cb0", fontSize: 13 }}
+                >
+                  Live
+                </button>
+              )}
+            </div>
+          );
+        })()}
       <Popover
         id="mouse-over-popover"
         sx={{

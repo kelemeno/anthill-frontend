@@ -258,11 +258,8 @@ function Header(props: {
 }) {
   return (
     <header>
-      {/* <p>
-                <div style = {{fontSize:"20px", textAlign:"center"}}>🐜</div>
-            </p> */}
-
       <div className="header__left">
+        <span className="brand">🐜 Anthill</span>
         <TreeOrRepModeSwitch
           treeMode={props.treeMode}
           setTreeMode={props.setTreeMode}
@@ -270,12 +267,10 @@ function Header(props: {
       </div>
       <div className="header__right">
         <Web3Button />
-        &nbsp; &nbsp;
         <TutorialButton
           showTutorial={props.showTutorial}
           setShowTutorial={props.setShowTutorial}
         />
-        &nbsp; &nbsp;
       </div>
     </header>
   );

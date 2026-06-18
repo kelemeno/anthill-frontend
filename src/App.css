@@ -7,6 +7,36 @@
   justify-content: center;
 }
 
+.HistoryBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  color: #2d3748;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid #e6e6e6;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.07);
+}
+.HistoryBar button {
+  transition: filter 0.12s ease, background 0.12s ease;
+}
+.HistoryBar button:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+.HistoryBar button:disabled {
+  cursor: default;
+}
+
 .Popover {
   padding: 10px;
   max-width: 82vw;
