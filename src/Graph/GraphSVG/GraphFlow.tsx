@@ -615,9 +615,13 @@ export const GraphFlow = (props: {
         effectiveCollapsed.add(props.clickedNode);
       } else {
         openPath(props.clickedNode);
-        // "+ Votes": reveal the focus's outgoing-vote recipients (above).
+        // "+ Votes": make the focus's outgoing-vote recipients visible WITHOUT
+        // expanding them — open their parent path, not the recipient itself, so
+        // we don't reveal each recipient's own tree children.
         if (props.viewMode === "votes" && fn?.dagEdges) {
-          for (const e of fn.dagEdges) if (e.outgoing) openPath(e.to);
+          for (const e of fn.dagEdges) {
+            if (e.outgoing) openPath(graph[e.to]?.sentTreeVote);
+          }
         }
       }
     }
