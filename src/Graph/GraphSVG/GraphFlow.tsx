@@ -27,7 +27,7 @@ import {
   layeringLongestPath,
   sugiyama,
 } from "d3-dag";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   type GraphDataRendering,
@@ -297,6 +297,7 @@ export const GraphFlow = (props: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => setCollapsed(defaultCollapsed(props.graph)), [props.graph]);
 
+  // Click pins/unpins a node's expansion (persists in `collapsed`).
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -306,9 +307,37 @@ export const GraphFlow = (props: {
     });
   }, []);
 
+  // Hover peeks a branch open: the hovered node (and the path to it) is opened
+  // temporarily; it closes again shortly after the cursor leaves.
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onHoverEnter = useCallback((id: string) => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+    setHoveredId(id);
+  }, []);
+  const onHoverLeave = useCallback(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHoveredId(null), 150);
+  }, []);
+
   const { nodes, edges } = useMemo(() => {
     const graph = props.graph;
     const distances = distancesFrom(graph, props.clickedNode);
+
+    // Effective collapse = persistent set, minus the hovered node + its
+    // ancestors (so hovering peeks that branch open without a click).
+    const effectiveCollapsed = new Set(collapsed);
+    if (hoveredId && graph[hoveredId]) {
+      let cur: string | undefined = hoveredId;
+      let guard = 0;
+      while (cur && graph[cur] && guard++ < 1000) {
+        effectiveCollapsed.delete(cur);
+        cur = graph[cur].sentTreeVote;
+      }
+    }
 
     // Tree children (a node's tree parent is its sentTreeVote).
     const children = new Map<string, string[]>();
@@ -325,7 +354,7 @@ export const GraphFlow = (props: {
       let cur = graph[id]?.sentTreeVote;
       let guard = 0;
       while (cur && graph[cur] && guard++ < 1000) {
-        if (collapsed.has(cur)) return true;
+        if (effectiveCollapsed.has(cur)) return true;
         cur = graph[cur].sentTreeVote;
       }
       return false;
@@ -370,6 +399,7 @@ export const GraphFlow = (props: {
       const r = radiusForDistance(distances.get(n.id) ?? Infinity);
       const p = positions.get(n.id) ?? { x: 0, y: 0 };
       const hasChildren = (children.get(n.id) ?? []).length > 0;
+      // Badge shows the persistent pin state (stays +N while hover-peeking).
       const isCollapsed = collapsed.has(n.id);
       return {
         id: n.id,
@@ -416,7 +446,7 @@ export const GraphFlow = (props: {
     }
 
     return { nodes, edges };
-  }, [props.graph, props.clickedNode, collapsed, toggleCollapse]);
+  }, [props.graph, props.clickedNode, collapsed, hoveredId, toggleCollapse]);
 
   return (
     <div className="Graph" style={{ width: "100%", height: "80vh" }}>
@@ -433,20 +463,22 @@ export const GraphFlow = (props: {
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
         style={{ background: "#ffffff" }}
-        onNodeClick={(_event, node) =>
-          props.onNodeClick(
-            node.data.node.id,
-            node.data.node.name,
-            node.data.node.currentRep,
-          )
-        }
-        onNodeMouseEnter={(event, node) =>
+        onNodeClick={(_event, node) => {
+          // Click pins/unpins the hovered branch (lock into place). It does not
+          // re-center/reload, so the pinned expansion persists.
+          toggleCollapse(node.data.node.id);
+        }}
+        onNodeMouseEnter={(event, node) => {
+          onHoverEnter(node.data.node.id);
           props.onNodeMouseEnter(
             event as unknown as React.MouseEvent<HTMLElement>,
             node.data.node,
-          )
-        }
-        onNodeMouseLeave={() => props.onNodeMouseLeave()}
+          );
+        }}
+        onNodeMouseLeave={() => {
+          onHoverLeave();
+          props.onNodeMouseLeave();
+        }}
       >
         <AutoFitView signature={`${props.clickedNode}|${nodes.length}`} />
         <Controls showInteractive={false} />
