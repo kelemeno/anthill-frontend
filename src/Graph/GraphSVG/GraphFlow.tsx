@@ -261,6 +261,23 @@ function distancesFrom(
   return dist;
 }
 
+// Default collapse state: keep the top 3 levels open and fold everything below
+// (relative to the shallowest node in the displayed graph), so the graph opens
+// compact and you expand to drill in.
+function defaultCollapsed(graph: GraphDataRendering): Set<string> {
+  const nodes = Object.values(graph);
+  if (nodes.length === 0) return new Set();
+  const minDepth = Math.min(...nodes.map((n) => n.depth));
+  const hasChildren = new Set(
+    nodes.map((n) => n.sentTreeVote).filter((p) => graph[p]),
+  );
+  const result = new Set<string>();
+  for (const n of nodes) {
+    if (n.depth >= minDepth + 2 && hasChildren.has(n.id)) result.add(n.id);
+  }
+  return result;
+}
+
 export const GraphFlow = (props: {
   graph: GraphDataRendering;
   clickedNode: string;
@@ -271,11 +288,14 @@ export const GraphFlow = (props: {
   ) => void;
   onNodeMouseLeave: () => void;
 }) => {
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(() =>
+    defaultCollapsed(props.graph),
+  );
 
-  // Reset collapse state when a different (sub)graph is loaded.
+  // Reset to the default (top-3-levels-open) collapse state when a different
+  // (sub)graph is loaded.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => setCollapsed(new Set()), [props.graph]);
+  useEffect(() => setCollapsed(defaultCollapsed(props.graph)), [props.graph]);
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed((prev) => {
