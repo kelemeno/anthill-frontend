@@ -341,21 +341,31 @@ export const GraphFlow = (props: {
     });
   }, []);
 
-  // Hover peeks a branch open: the hovered node (and the path to it) is opened
-  // temporarily; it closes again shortly after the cursor leaves.
+  // Hover peeks a branch open: the hovered node (and the path to it) opens.
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onHoverEnter = useCallback((id: string) => {
-    if (hoverTimer.current) {
-      clearTimeout(hoverTimer.current);
-      hoverTimer.current = null;
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = useCallback(() => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
     }
-    setHoveredId(id);
   }, []);
-  const onHoverLeave = useCallback(() => {
-    if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => setHoveredId(null), 350);
-  }, []);
+  // Entering a node sets the open path immediately.
+  const onHoverEnter = useCallback(
+    (id: string) => {
+      cancelClose();
+      setHoveredId(id);
+    },
+    [cancelClose],
+  );
+  // The opened branch stays open while the cursor is anywhere on the graph; it
+  // only closes once the cursor leaves the graph entirely. So moving down to a
+  // freshly-revealed child never snaps the branch shut mid-move, however far
+  // apart the nodes sit.
+  const scheduleClose = useCallback(() => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setHoveredId(null), 300);
+  }, [cancelClose]);
 
   // The graph is laid out ONCE; every node keeps a fixed position. Collapse,
   // hover and pin only toggle which nodes are shown — nothing ever moves, so
@@ -482,7 +492,14 @@ export const GraphFlow = (props: {
   ]);
 
   return (
-    <div className="Graph" style={{ width: "100%", height: "80vh" }}>
+    <div
+      className="Graph"
+      style={{ width: "100%", height: "80vh" }}
+      // Keep peeked branches open while the cursor is on the graph; close only
+      // when it leaves the graph entirely.
+      onMouseEnter={cancelClose}
+      onMouseLeave={scheduleClose}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -509,7 +526,8 @@ export const GraphFlow = (props: {
           );
         }}
         onNodeMouseLeave={() => {
-          onHoverLeave();
+          // Don't close the branch on node-leave — only the graph-container
+          // leave closes it (see the wrapper's onMouseLeave).
           props.onNodeMouseLeave();
         }}
       >
