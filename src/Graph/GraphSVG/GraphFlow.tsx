@@ -164,7 +164,10 @@ function layoutPositions(
     .layering(layeringLongestPath())
     .decross(decrossTwoLayer())
     .coord(coordCenter())
-    .nodeSize(() => [1.5 * 2 * NODE_RADIUS, 1.2 * 1.5 * 2 * NODE_RADIUS])(dag);
+    // Node footprint + extra gap between nodes; widened so larger graphs stay
+    // readable instead of cramming nodes together.
+    .nodeSize(() => [2 * 2 * NODE_RADIUS, 1.4 * 2 * NODE_RADIUS])
+    .gap([NODE_RADIUS, NODE_RADIUS * 1.2])(dag);
 
   for (const n of dag.nodes()) {
     pos.set(n.data.id, { x: n.x ?? 0, y: n.y ?? 0 });
@@ -192,6 +195,10 @@ export const GraphFlow = (props: {
         id: n.id,
         type: "anthill",
         position: { x: p.x - NODE_RADIUS, y: p.y - NODE_RADIUS },
+        // Explicit size so React Flow can cull off-screen nodes (virtualization)
+        // without needing to measure the DOM first.
+        width: NODE_RADIUS * 2,
+        height: NODE_RADIUS * 2,
         draggable: false,
         data: {
           node: n,
@@ -233,7 +240,11 @@ export const GraphFlow = (props: {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        minZoom={0.1}
+        minZoom={0.05}
+        // Virtualize only large graphs: mount just the on-screen nodes/edges so
+        // the DOM stays light at thousands of nodes. Small graphs render fully
+        // (avoids first-paint culling quirks with custom nodes).
+        onlyRenderVisibleElements={nodes.length > 300}
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable={false}
