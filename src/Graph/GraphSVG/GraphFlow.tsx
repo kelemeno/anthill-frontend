@@ -188,14 +188,30 @@ function AutoFitView({
   graph: GraphDataRendering;
   focus: string;
 }) {
-  const { fitView } = useReactFlow();
+  const { fitView, setCenter, getNode, getViewport } = useReactFlow();
+  const prevFocus = useRef<string | null>(null);
   // Re-fit only when the loaded graph or focus changes — NOT on hover/collapse,
   // so peeking a branch open never moves the viewport out from under the cursor.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const id = requestAnimationFrame(() =>
-      fitView({ padding: 0.15, duration: 250 }),
-    );
+    const id = requestAnimationFrame(() => {
+      const node = getNode(focus);
+      // Same focus but a new layout (e.g. toggling tree <-> reputation): keep
+      // the focused node anchored at the current zoom instead of re-framing the
+      // whole view, so the switch isn't jumpy. Otherwise (navigation / first
+      // load) fit the new neighbourhood.
+      if (prevFocus.current === focus && node) {
+        const w = node.width ?? 0;
+        const h = node.height ?? 0;
+        setCenter(node.position.x + w / 2, node.position.y + h / 2, {
+          zoom: getViewport().zoom,
+          duration: 300,
+        });
+      } else {
+        fitView({ padding: 0.15, duration: 300 });
+      }
+      prevFocus.current = focus;
+    });
     return () => cancelAnimationFrame(id);
   }, [graph, focus]);
   return null;
