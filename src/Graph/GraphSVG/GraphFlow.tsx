@@ -16,6 +16,7 @@ import {
   type NodeProps,
   Position,
   ReactFlow,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { interpolateRainbow } from "d3";
@@ -75,13 +76,23 @@ type GradientEdge = Edge<GradientEdgeData, "gradient">;
 function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
   const [hovered, setHovered] = useState(false);
   const d = data.radius * 2;
-  // Scale small nodes up on hover so the label/details become readable.
-  const hoverScale = Math.min(5, Math.max(1, (BASE_RADIUS * 1.2) / data.radius));
+  // Scale the whole node (circle + collapse button) up on hover, so the label
+  // becomes readable AND the collapse button becomes a big, easy target. The
+  // button lives inside the hover region so reaching it keeps the node enlarged.
+  const hoverScale = Math.min(3, Math.max(1, (BASE_RADIUS * 1.1) / data.radius));
   const fontSize = Math.max(7, data.radius * 0.5);
 
   return (
     <div
-      style={{ position: "relative", width: d, height: d }}
+      style={{
+        position: "relative",
+        width: d,
+        height: d,
+        transform: hovered ? `scale(${hoverScale})` : "scale(1)",
+        transformOrigin: "center",
+        transition: "transform 0.12s ease",
+        zIndex: hovered ? 1000 : 1,
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -110,11 +121,6 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           textShadow: "0 1px 2px rgba(0,0,0,0.65)",
           userSelect: "none",
           cursor: "pointer",
-          transform: hovered ? `scale(${hoverScale})` : "scale(1)",
-          transformOrigin: "center",
-          transition: "transform 0.12s ease",
-          zIndex: hovered ? 1000 : 1,
-          position: "relative",
         }}
       >
         {data.label}
@@ -129,18 +135,19 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           title={data.collapsed ? "Expand subtree" : "Collapse subtree"}
           style={{
             position: "absolute",
-            bottom: -8,
+            // Kept inside the node box so hovering it keeps the node enlarged.
+            bottom: 0,
             left: "50%",
             transform: "translateX(-50%)",
             minWidth: 16,
-            height: 16,
+            height: 14,
             padding: "0 4px",
-            borderRadius: 8,
+            borderRadius: 7,
             border: "1px solid #888",
             background: "#fff",
             color: "#333",
-            fontSize: 10,
-            lineHeight: "14px",
+            fontSize: 9,
+            lineHeight: "12px",
             cursor: "pointer",
             zIndex: 2,
           }}
@@ -156,6 +163,20 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
       />
     </div>
   );
+}
+
+// Re-fits the view whenever the displayed graph / focus changes, so a reload or
+// navigation always opens centered instead of scrolled off somewhere.
+function AutoFitView({ signature }: { signature: string }) {
+  const { fitView } = useReactFlow();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const id = requestAnimationFrame(() =>
+      fitView({ padding: 0.15, duration: 250 }),
+    );
+    return () => cancelAnimationFrame(id);
+  }, [signature]);
+  return null;
 }
 
 function GradientEdgeView({
@@ -407,6 +428,7 @@ export const GraphFlow = (props: {
         }
         onNodeMouseLeave={() => props.onNodeMouseLeave()}
       >
+        <AutoFitView signature={`${props.clickedNode}|${nodes.length}`} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>
