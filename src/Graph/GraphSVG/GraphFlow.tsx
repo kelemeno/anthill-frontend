@@ -331,9 +331,18 @@ export const GraphFlow = (props: {
     node: NodeDataRendering,
   ) => void;
   onNodeMouseLeave: () => void;
-  // When true, start fully expanded (no default top-3 collapse) — used by the
-  // history view so the whole graph at each step is visible.
+  // When true, start fully expanded (no default top-3 collapse).
   expandAll?: boolean;
+  // Controlled collapse for history playback: render exactly these nodes
+  // collapsed (no internal collapse/hover/select), so playback mirrors the
+  // live view's opened/collapsed structure.
+  forcedCollapsed?: Set<string>;
+  // Reports the live view (rendered nodes + collapsed-branch roots & their
+  // hidden descendants) so the history scrubber can scope to it.
+  onViewChange?: (view: {
+    visibleIds: string[];
+    collapseRoots: { id: string; descendants: string[] }[];
+  }) => void;
 }) => {
   const [collapsed, setCollapsed] = useState<Set<string>>(() =>
     props.expandAll ? new Set() : defaultCollapsed(props.graph),
@@ -412,8 +421,9 @@ export const GraphFlow = (props: {
 
     // Effective collapse = persistent set, minus the hovered node + its
     // ancestors (so hovering peeks that branch open without a click).
-    const effectiveCollapsed = new Set(collapsed);
-    if (hoveredId && graph[hoveredId]) {
+    const forced = props.forcedCollapsed;
+    const effectiveCollapsed = forced ? new Set(forced) : new Set(collapsed);
+    if (!forced && hoveredId && graph[hoveredId]) {
       let cur: string | undefined = hoveredId;
       let guard = 0;
       while (cur && graph[cur] && guard++ < 1000) {
@@ -466,8 +476,9 @@ export const GraphFlow = (props: {
       const r = radiusForDistance(distances.get(n.id) ?? Infinity);
       const p = positions.get(n.id) ?? { x: 0, y: 0 };
       const hasChildren = (children.get(n.id) ?? []).length > 0;
-      // Badge shows the persistent pin state (stays +N while hover-peeking).
-      const isCollapsed = collapsed.has(n.id);
+      // Badge shows the persistent pin state (stays +N while hover-peeking);
+      // during playback it reflects the forced (controlled) collapse.
+      const isCollapsed = (forced ?? collapsed).has(n.id);
       return {
         id: n.id,
         type: "anthill",
@@ -484,9 +495,11 @@ export const GraphFlow = (props: {
           hasChildren,
           collapsed: isCollapsed,
           hiddenCount: isCollapsed ? subtreeCount(n.id) : 0,
-          onToggle: toggleCollapse,
-          onSelect: () =>
-            props.onNodeClick(n.id, n.name, n.currentRep),
+          // Read-only during playback (forced collapse controls the view).
+          onToggle: forced ? () => {} : toggleCollapse,
+          onSelect: forced
+            ? () => {}
+            : () => props.onNodeClick(n.id, n.name, n.currentRep),
         },
       };
     });
@@ -523,7 +536,57 @@ export const GraphFlow = (props: {
     fullPositions,
     toggleCollapse,
     props.onNodeClick,
+    props.forcedCollapsed,
   ]);
+
+  // Report the live view (rendered nodes + collapsed-branch roots and their
+  // hidden descendants) so the history scrubber can scope to it. Skipped during
+  // playback (forcedCollapsed), and de-duped so it doesn't loop.
+  const onViewChangeRef = useRef(props.onViewChange);
+  onViewChangeRef.current = props.onViewChange;
+  const lastViewSig = useRef("");
+  useEffect(() => {
+    if (props.forcedCollapsed || !onViewChangeRef.current) return;
+    const graph = props.graph;
+    const childMap = new Map<string, string[]>();
+    for (const n of Object.values(graph)) {
+      if (graph[n.sentTreeVote]) {
+        const arr = childMap.get(n.sentTreeVote) ?? [];
+        arr.push(n.id);
+        childMap.set(n.sentTreeVote, arr);
+      }
+    }
+    const hidden = (id: string) => {
+      let cur = graph[id]?.sentTreeVote;
+      let g = 0;
+      while (cur && graph[cur] && g++ < 1000) {
+        if (collapsed.has(cur)) return true;
+        cur = graph[cur].sentTreeVote;
+      }
+      return false;
+    };
+    const visibleIds = Object.keys(graph).filter((id) => !hidden(id));
+    const descendantsOf = (root: string) => {
+      const out: string[] = [];
+      const stack = [...(childMap.get(root) ?? [])];
+      let g = 0;
+      while (stack.length && g++ < 100000) {
+        const c = stack.pop() as string;
+        out.push(c);
+        stack.push(...(childMap.get(c) ?? []));
+      }
+      return out;
+    };
+    const collapseRoots = visibleIds
+      .filter((id) => collapsed.has(id) && (childMap.get(id)?.length ?? 0) > 0)
+      .map((id) => ({ id, descendants: descendantsOf(id) }));
+    const sig = `${[...visibleIds].sort().join(",")}|${collapseRoots
+      .map((r) => `${r.id}:${r.descendants.length}`)
+      .join(",")}`;
+    if (sig === lastViewSig.current) return;
+    lastViewSig.current = sig;
+    onViewChangeRef.current({ visibleIds, collapseRoots });
+  }, [props.graph, collapsed, props.forcedCollapsed]);
 
   return (
     <div

@@ -32,6 +32,7 @@ import {
   buildViewSteps,
   describeStep,
   type HistoryStep,
+  type LiveView,
 } from "../history";
 import { GraphFlow } from "./GraphFlow";
 import {
@@ -105,21 +106,21 @@ export const GraphSVG = (props: {
     };
   }, [props.backendUrl]);
 
-  const displayedIds = useMemo(
-    () => Object.keys(props.graph),
-    [props.graph],
-  );
+  // The currently rendered view (opened nodes + collapsed-branch roots),
+  // reported by GraphFlow. The history is scoped to exactly this.
+  const [liveView, setLiveView] = useState<LiveView | null>(null);
+  const onViewChange = useCallback((v: LiveView) => setLiveView(v), []);
+
   const viewSteps = useMemo(
-    () => buildViewSteps(history, displayedIds, props.treeMode),
-    [history, displayedIds, props.treeMode],
+    () => (liveView ? buildViewSteps(history, liveView, props.treeMode) : []),
+    [history, liveView, props.treeMode],
   );
 
-  // Reset the scrubber to "live" whenever the displayed view or mode changes.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Reset the scrubber to "live" whenever the view or mode changes.
   useEffect(() => {
     setScrubIndex(null);
     setPlaying(false);
-  }, [displayedIds, props.treeMode]);
+  }, [liveView, props.treeMode]);
 
   // Play: advance one step at a time, stop at the end.
   useEffect(() => {
@@ -137,11 +138,13 @@ export const GraphSVG = (props: {
     return () => clearInterval(t);
   }, [playing, viewSteps.length]);
 
-  // Live view = props.graph; while scrubbing, show the historical sub-view.
-  const displayGraph =
-    scrubIndex == null
-      ? props.graph
-      : (viewSteps[scrubIndex]?.graph ?? props.graph);
+  // Live view = props.graph; while scrubbing, show the historical sub-view with
+  // the same branches collapsed (so it mirrors the live opened/closed state).
+  const scrubStep = scrubIndex == null ? null : viewSteps[scrubIndex];
+  const displayGraph = scrubStep?.graph ?? props.graph;
+  const forcedCollapsed = scrubStep
+    ? new Set(scrubStep.collapsedIds)
+    : undefined;
 
   // console.log("open", open, anchorEl, loaded)
 
@@ -187,6 +190,8 @@ export const GraphSVG = (props: {
       <GraphFlow
         graph={displayGraph}
         clickedNode={props.clickedNode}
+        forcedCollapsed={forcedCollapsed}
+        onViewChange={onViewChange}
         onNodeClick={handleClickConstructed}
         onNodeMouseEnter={(
           event: React.MouseEvent<HTMLElement>,

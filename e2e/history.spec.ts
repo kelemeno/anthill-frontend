@@ -32,6 +32,31 @@ test.describe("history scrubber", () => {
     expect(earliest).toBeGreaterThan(0);
   });
 
+  test("tree-mode playback shows no dag votes, just joins/aggregates", async ({
+    page,
+  }) => {
+    await page.goto(`/?id=0x0000000000000000000000000000000000000002`); // root, tree mode
+    await waitForGraph(page);
+    const slider = page.locator("input[type=range]");
+    const max = Number(await slider.getAttribute("max"));
+    const labels: string[] = [];
+    for (let i = 0; i <= max; i++) {
+      await slider.fill(String(i));
+      await page.waitForTimeout(80);
+      const d = await page
+        .locator("div span", { hasText: /joined|voted|grew|removed/ })
+        .last()
+        .textContent()
+        .catch(() => "");
+      if (d) labels.push(d.trim());
+    }
+    const uniq = [...new Set(labels)];
+    // Tree view: no reputation-vote steps...
+    expect(uniq.filter((l) => /voted for/.test(l)).length).toBe(0);
+    // ...and hidden children fold into an aggregate "grew" step.
+    expect(uniq.some((l) => /grew to/.test(l))).toBe(true);
+  });
+
   test("Live button returns to the current state", async ({ page }) => {
     await page.goto(`/?id=${NODE}`);
     await waitForGraph(page);
