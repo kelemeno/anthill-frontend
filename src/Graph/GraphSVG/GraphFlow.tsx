@@ -22,7 +22,7 @@ import "@xyflow/react/dist/style.css";
 import { interpolateRainbow } from "d3";
 import {
   coordCenter,
-  decrossTwoLayer,
+  decrossDfs,
   graphStratify,
   layeringLongestPath,
   sugiyama,
@@ -167,15 +167,23 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
 
 // Re-fits the view whenever the displayed graph / focus changes, so a reload or
 // navigation always opens centered instead of scrolled off somewhere.
-function AutoFitView({ signature }: { signature: string }) {
+function AutoFitView({
+  graph,
+  focus,
+}: {
+  graph: GraphDataRendering;
+  focus: string;
+}) {
   const { fitView } = useReactFlow();
+  // Re-fit only when the loaded graph or focus changes — NOT on hover/collapse,
+  // so peeking a branch open never moves the viewport out from under the cursor.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const id = requestAnimationFrame(() =>
       fitView({ padding: 0.15, duration: 250 }),
     );
     return () => cancelAnimationFrame(id);
-  }, [signature]);
+  }, [graph, focus]);
   return null;
 }
 
@@ -320,7 +328,7 @@ export const GraphFlow = (props: {
   }, []);
   const onHoverLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => setHoveredId(null), 150);
+    hoverTimer.current = setTimeout(() => setHoveredId(null), 250);
   }, []);
 
   const { nodes, edges } = useMemo(() => {
@@ -386,7 +394,9 @@ export const GraphFlow = (props: {
       const dag = graphStratify()(layoutInput);
       sugiyama()
         .layering(layeringLongestPath())
-        .decross(decrossTwoLayer())
+        // Deterministic DFS ordering: stable left-to-right order that doesn't
+        // re-shuffle when a branch opens, so nodes don't jump around on hover.
+        .decross(decrossDfs())
         .coord(coordCenter())
         .nodeSize(() => [2 * BASE_RADIUS, 1.4 * 2 * BASE_RADIUS])
         .gap([BASE_RADIUS, BASE_RADIUS * 1.2])(dag);
@@ -480,7 +490,7 @@ export const GraphFlow = (props: {
           props.onNodeMouseLeave();
         }}
       >
-        <AutoFitView signature={`${props.clickedNode}|${nodes.length}`} />
+        <AutoFitView graph={props.graph} focus={props.clickedNode} />
         <Controls showInteractive={false} />
       </ReactFlow>
     </div>
