@@ -110,9 +110,13 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         style={{ opacity: 0 }}
       />
       <div
-        // Select via a direct DOM pointerup (fires on touch tap, unlike React
-        // Flow's onNodeClick which the pan/zoom layer can swallow on mobile).
-        onPointerUp={() => data.onSelect()}
+        // pointerup fires on a real touch tap (unlike hover/onNodeClick, which
+        // the pan/zoom layer or touch hardware swallow). On touch we also drill
+        // the branch open here, since there's no hover to peek it open.
+        onPointerUp={() => {
+          data.onSelect();
+          if (IS_TOUCH && data.collapsed) data.onToggle(data.node.id);
+        }}
         style={{
           width: d,
           height: d,
@@ -348,11 +352,18 @@ export const GraphFlow = (props: {
     props.expandAll ? new Set() : defaultCollapsed(props.graph),
   );
 
-  // Reset collapse state when a different (sub)graph is loaded.
+  // Reset collapse state only when a genuinely different (sub)graph is loaded —
+  // keyed on the node SET, not object identity. Re-centering on a tapped node
+  // produces a new graph object with the same nodes; resetting then would wipe
+  // a branch the user just drilled open.
+  const graphNodeKey = useMemo(
+    () => Object.keys(props.graph).sort().join(","),
+    [props.graph],
+  );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(
     () => setCollapsed(props.expandAll ? new Set() : defaultCollapsed(props.graph)),
-    [props.graph, props.expandAll],
+    [graphNodeKey, props.expandAll],
   );
 
   // Click pins/unpins a branch. Opening pins the WHOLE path to the node (the

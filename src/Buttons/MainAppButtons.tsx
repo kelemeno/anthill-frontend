@@ -3,9 +3,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { address0 } from "../Graph/GraphBase";
-import image1 from "../logo192.png";
-import image2 from "../logo192.png";
-import image3 from "../logo192.png";
 
 import ".././App.css";
 import { getRandomLeaf } from "../ExternalConnections/BackendGetters";
@@ -148,48 +145,161 @@ export function TutorialButton(props: {
   );
 }
 
+const TUTORIAL_STEPS: { icon: string; title: string; body: React.ReactNode }[] =
+  [
+    {
+      icon: "🐜",
+      title: "Welcome to Anthill",
+      body: (
+        <>
+          Anthill is a <strong>liquid-democracy reputation system</strong>.
+          Everyone sits somewhere in a binary tree and has a reputation score.
+          The key idea: your <em>position</em> in the tree doesn&apos;t set your
+          reputation — <strong>votes do</strong>.
+        </>
+      ),
+    },
+    {
+      icon: "⭐",
+      title: "How reputation works",
+      body: (
+        <>
+          You earn reputation from <strong>value votes</strong>. You can vote
+          for people <em>above</em> you in the tree (within reach), and receive
+          votes from people <em>below</em> you. More votes — and votes from
+          higher-reputation people — mean a higher score.
+        </>
+      ),
+    },
+    {
+      icon: "🔀",
+      title: "Two ways to look",
+      body: (
+        <>
+          Use the toggle in the top-left.{" "}
+          <strong>Tree</strong> shows the binary-tree structure — who sits
+          where. <strong>Reputation</strong> shows the value votes — who
+          actually supports whom, which is what drives the scores.
+        </>
+      ),
+    },
+    {
+      icon: "🧭",
+      title: "Exploring the graph",
+      body: (
+        <>
+          The graph opens to the top three levels.{" "}
+          <strong>Tap or click a node</strong> to select and centre it. Tap a
+          node&apos;s <strong>−/+N badge</strong> to open or close a branch (on
+          a computer you can also just hover to peek). Drag to pan, scroll or
+          pinch to zoom.
+        </>
+      ),
+    },
+    {
+      icon: "⏱️",
+      title: "Replaying history",
+      body: (
+        <>
+          The bar at the bottom replays how the current view grew. Use{" "}
+          <strong>◀ ▶</strong> to step, <strong>▶</strong> to play, or drag the
+          slider. Hidden branches summarise as a single{" "}
+          <em>“grew to N”</em> step. Hit <strong>Live</strong> to jump back to
+          now.
+        </>
+      ),
+    },
+    {
+      icon: "🗳️",
+      title: "Taking part",
+      body: (
+        <>
+          <strong>Connect your wallet</strong> (top-right) to act: join the
+          tree, give or remove reputation votes, rename yourself, climb by
+          switching with your parent, move to an open spot, or leave. Tap any
+          node to see what you can do with it.
+        </>
+      ),
+    },
+  ];
+
 export const TutorialPopup = (props: {
   showTutorial: boolean;
   setShowTutorial: any;
 }) => {
-  const handleClosePopup = () => {
+  const [stepIndex, setStepIndex] = useState(0);
+
+  if (!props.showTutorial) return null;
+
+  const last = TUTORIAL_STEPS.length - 1;
+  const step = TUTORIAL_STEPS[stepIndex];
+  const close = () => {
     props.setShowTutorial(false);
-  };
-
-  const [currentImage, setCurrentImage] = useState(0);
-  const images = [image1, image2, image3];
-
-  const handleNext = () => {
-    const nextIndex = currentImage === images.length - 1 ? 0 : currentImage + 1;
-    setCurrentImage(nextIndex);
-  };
-
-  const handlePrevious = () => {
-    const previousIndex =
-      currentImage === 0 ? images.length - 1 : currentImage - 1;
-    setCurrentImage(previousIndex);
+    setStepIndex(0);
   };
 
   return (
-    <>
-      {props.showTutorial && (
-        <div className="tutorial-popup">
-          {/* <h2>Welcome to My Website</h2>
-          <p>Here's a quick tutorial on how to use my website:</p>
-          <ol>
-            <li>Step 1: Do this</li>
-            <li>Step 2: Do that</li>
-            <li>Step 3: Do this other thing</li>
-          </ol> */}
-          <img src={images[currentImage]} alt="Tutorial" />
-          <div>
-            <button onClick={handlePrevious}>Previous</button>
-            <button onClick={handleNext}>Next</button>
-          </div>
-          <button onClick={handleClosePopup}>Close</button>
+    <div
+      className="tutorial-backdrop"
+      onClick={close}
+      onKeyDown={(e) => e.key === "Escape" && close()}
+      role="presentation"
+    >
+      <div
+        className="tutorial-popup"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Anthill tutorial"
+      >
+        <button
+          type="button"
+          className="tutorial-close"
+          aria-label="Close tutorial"
+          onClick={close}
+        >
+          ×
+        </button>
+        <div className="tutorial-icon">{step.icon}</div>
+        <h2 className="tutorial-title">{step.title}</h2>
+        <p className="tutorial-body">{step.body}</p>
+
+        <div className="tutorial-dots">
+          {TUTORIAL_STEPS.map((s, i) => (
+            <button
+              type="button"
+              key={s.title}
+              aria-label={`Go to step ${i + 1}`}
+              className={`tutorial-dot${i === stepIndex ? " active" : ""}`}
+              onClick={() => setStepIndex(i)}
+            />
+          ))}
         </div>
-      )}
-    </>
+
+        <div className="tutorial-nav">
+          <button
+            type="button"
+            disabled={stepIndex === 0}
+            onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
+          >
+            Back
+          </button>
+          {stepIndex === last ? (
+            <button type="button" className="tutorial-primary" onClick={close}>
+              Got it
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="tutorial-primary"
+              onClick={() => setStepIndex((i) => Math.min(last, i + 1))}
+            >
+              Next
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

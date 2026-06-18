@@ -28,6 +28,26 @@ test.describe("mobile", () => {
     expect(other).not.toBe(before);
   });
 
+  test("tapping a node body drills it open and it stays open", async ({
+    page,
+  }) => {
+    // Real touch has no hover, so tapping a node must explicitly open its
+    // branch. Waiting past the 1500ms hover-peek timeout proves it stayed open
+    // via the real toggle, not a transient (emulation-only) hover peek.
+    await page.goto(`/?id=${ROOT}`);
+    await waitForGraph(page);
+    const before = await nodeCount(page);
+    const node = page
+      .locator(".react-flow__node", {
+        has: page.locator("button", { hasText: "+" }),
+      })
+      .first();
+    await node.locator("div").first().tap({ position: { x: 8, y: 8 } });
+    await page.mouse.move(2, 2);
+    await page.waitForTimeout(2600);
+    expect(await nodeCount(page)).toBeGreaterThan(before);
+  });
+
   test("tapping a collapse badge expands the branch", async ({ page }) => {
     await page.goto(`/?id=${ROOT}`);
     await waitForGraph(page);
