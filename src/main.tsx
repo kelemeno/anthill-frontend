@@ -20,6 +20,7 @@ import {
   WagmiProvider,
 } from "wagmi";
 
+import { GraphDemo } from "./Graph/GraphDemo";
 import { Graph } from "./Graph/GraphMain";
 import "./main.css";
 import TutorialPopup, {
@@ -280,12 +281,16 @@ function Header(props: {
   );
 }
 
+// /demo renders a synthetic large graph for stress-testing the renderer,
+// bypassing the wallet/backend app flow.
+const isDemo = window.location.pathname.startsWith("/demo");
+
 root.render(
   <React.StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
-          <App />
+          {isDemo ? <GraphDemo /> : <App />}
         </WagmiProvider>
       </QueryClientProvider>
     </BrowserRouter>

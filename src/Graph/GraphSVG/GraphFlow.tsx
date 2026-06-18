@@ -19,9 +19,9 @@ import "@xyflow/react/dist/style.css";
 import { interpolateRainbow } from "d3";
 import {
   coordCenter,
-  decrossOpt,
+  decrossTwoLayer,
   graphStratify,
-  layeringSimplex,
+  layeringLongestPath,
   sugiyama,
 } from "d3-dag";
 import { useMemo } from "react";
@@ -157,9 +157,12 @@ function layoutPositions(
   if (data.length === 0) return pos;
 
   const dag = graphStratify()(data);
+  // Scalable heuristics: longest-path layering + two-layer decrossing run in
+  // (roughly) linear/near-linear time, unlike the exponential optimal variants,
+  // so the layout stays responsive on large graphs.
   sugiyama()
-    .layering(layeringSimplex())
-    .decross(decrossOpt())
+    .layering(layeringLongestPath())
+    .decross(decrossTwoLayer())
     .coord(coordCenter())
     .nodeSize(() => [1.5 * 2 * NODE_RADIUS, 1.2 * 1.5 * 2 * NODE_RADIUS])(dag);
 
