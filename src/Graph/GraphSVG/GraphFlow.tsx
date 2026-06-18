@@ -113,10 +113,7 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         // pointerup fires on a real touch tap (unlike hover/onNodeClick, which
         // the pan/zoom layer or touch hardware swallow). On touch we also drill
         // the branch open here, since there's no hover to peek it open.
-        onPointerUp={() => {
-          data.onSelect();
-          if (IS_TOUCH && data.collapsed) data.onToggle(data.node.id);
-        }}
+        onPointerUp={() => data.onSelect()}
         style={{
           width: d,
           height: d,
@@ -588,16 +585,21 @@ export const GraphFlow = (props: {
         props.clickedNode);
     const distances = distancesFrom(graph, focusId);
 
-    // Effective collapse = persistent set, minus the hovered node + its
-    // ancestors (so hovering peeks that branch open without a click).
+    // Effective collapse = persistent set, with two paths always opened:
+    //  - the hovered node's path (so hovering peeks a branch open), and
+    //  - the focused/selected node's path, so the node you clicked stays
+    //    visible after the hover that revealed it ends. Deriving this from
+    //    clickedNode each render makes it survive any collapse reset.
     const forced = props.forcedCollapsed;
     const effectiveCollapsed = forced ? new Set(forced) : new Set(collapsed);
-    if (!forced && hoveredId && graph[hoveredId]) {
-      let cur: string | undefined = hoveredId;
-      let guard = 0;
-      while (cur && graph[cur] && guard++ < 1000) {
-        effectiveCollapsed.delete(cur);
-        cur = graph[cur].sentTreeVote;
+    if (!forced) {
+      for (const anchor of [hoveredId, props.clickedNode]) {
+        let cur: string | undefined = anchor ?? undefined;
+        let guard = 0;
+        while (cur && graph[cur] && guard++ < 1000) {
+          effectiveCollapsed.delete(cur);
+          cur = graph[cur].sentTreeVote;
+        }
       }
     }
 
@@ -666,6 +668,8 @@ export const GraphFlow = (props: {
           hiddenCount: isCollapsed ? subtreeCount(n.id) : 0,
           // Read-only during playback (forced collapse controls the view).
           onToggle: forced ? () => {} : toggleCollapse,
+          // Selecting makes this the focus; effectiveCollapsed keeps the focus
+          // path open, so the clicked node stays visible after the hover ends.
           onSelect: forced
             ? () => {}
             : () => props.onNodeClick(n.id, n.name, n.currentRep),

@@ -62,6 +62,44 @@ test.describe("graph interactions", () => {
     expect(after).toBe(other);
   });
 
+  test("a node drilled-to via hover stays visible after you click it", async ({
+    page,
+  }) => {
+    await page.goto(`/?id=${ROOT}`);
+    await waitForGraph(page);
+    // hover a collapsed branch open, then click a node it reveals
+    const parent = page
+      .locator(".react-flow__node", {
+        has: page.locator("button", { hasText: "+" }),
+      })
+      .first();
+    const pid = await parent.getAttribute("data-id");
+    await parent.hover();
+    await page.waitForTimeout(700);
+    const child = await page.evaluate((pid) => {
+      const top3 = [
+        "0x0000000000000000000000000000000000000002",
+        "0x0000000000000000000000000000000000000004",
+        "0x0000000000000000000000000000000000000005",
+      ];
+      return (
+        Array.from(document.querySelectorAll(".react-flow__node"))
+          .map((n) => n.getAttribute("data-id"))
+          .find((id) => id && id !== pid && !top3.includes(id)) ?? null
+      );
+    }, pid);
+    await page
+      .locator(`.react-flow__node[data-id="${child}"]`)
+      .click({ position: { x: 5, y: 5 } });
+    await page.waitForTimeout(400);
+    // move away and wait past the 1500ms hover-peek close — it must NOT vanish
+    await page.mouse.move(3, 3);
+    await page.waitForTimeout(2200);
+    expect(
+      await page.locator(`.react-flow__node[data-id="${child}"]`).count(),
+    ).toBe(1);
+  });
+
   test("layout stays put when expanding (no viewport jump)", async ({
     page,
   }) => {
