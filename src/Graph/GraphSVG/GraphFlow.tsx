@@ -1,8 +1,10 @@
-// React Flow rendering of the Anthill graph. d3-dag is used purely as a layout
-// calculator (Sugiyama, top-down layered) — the same layout as the old d3 SVG
-// renderer — and React Flow draws colored circle nodes + gradient edges, so the
-// look/feel is preserved while node/edge rendering and interactions become
-// idiomatic React components.
+// React Flow rendering of the Anthill graph with focus+context navigation:
+//   - focus-distance sizing: nodes shrink the farther they are (by graph hops)
+//     from the focused/clicked node, so the local area stays prominent.
+//   - collapse/expand: a node's tree-subtree can be folded into a "+N" badge,
+//     so you only render what you've opened.
+//   - hover-enlarge: hovering a (small) node scales it up to reveal its label.
+// d3-dag stays a pure layout calculator (Sugiyama, scalable heuristics).
 import {
   BaseEdge,
   Controls,
@@ -24,7 +26,7 @@ import {
   layeringLongestPath,
   sugiyama,
 } from "d3-dag";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   type GraphDataRendering,
@@ -32,7 +34,14 @@ import {
   type NodeDataRendering,
 } from "../GraphBase";
 
-const NODE_RADIUS = 30;
+const BASE_RADIUS = 30;
+const MIN_RADIUS = 8;
+const SHRINK = 0.8; // radius multiplier per hop away from focus
+
+function radiusForDistance(distance: number): number {
+  if (!Number.isFinite(distance)) return MIN_RADIUS;
+  return Math.max(MIN_RADIUS, BASE_RADIUS * SHRINK ** distance);
+}
 
 // Same per-id rainbow hash the old renderer used, so colours are identical.
 function colorOf(id: string): string {
@@ -47,7 +56,12 @@ type AnthillNodeData = {
   node: NodeDataRendering;
   label: string;
   color: string;
+  radius: number;
   ring: boolean;
+  hasChildren: boolean;
+  collapsed: boolean;
+  hiddenCount: number;
+  onToggle: (id: string) => void;
 };
 type AnthillNode = Node<AnthillNodeData, "anthill">;
 
@@ -59,9 +73,18 @@ type GradientEdgeData = {
 type GradientEdge = Edge<GradientEdgeData, "gradient">;
 
 function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
-  const d = NODE_RADIUS * 2;
+  const [hovered, setHovered] = useState(false);
+  const d = data.radius * 2;
+  // Scale small nodes up on hover so the label/details become readable.
+  const hoverScale = Math.min(5, Math.max(1, (BASE_RADIUS * 1.2) / data.radius));
+  const fontSize = Math.max(7, data.radius * 0.5);
+
   return (
-    <div style={{ position: "relative", width: d, height: d }}>
+    <div
+      style={{ position: "relative", width: d, height: d }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       <Handle
         type="target"
         position={Position.Top}
@@ -81,16 +104,50 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           color: "#fff",
           fontWeight: "bold",
           fontFamily: "sans-serif",
-          fontSize: 14,
+          fontSize,
           textAlign: "center",
           lineHeight: 1.1,
           textShadow: "0 1px 2px rgba(0,0,0,0.65)",
           userSelect: "none",
           cursor: "pointer",
+          transform: hovered ? `scale(${hoverScale})` : "scale(1)",
+          transformOrigin: "center",
+          transition: "transform 0.12s ease",
+          zIndex: hovered ? 1000 : 1,
+          position: "relative",
         }}
       >
         {data.label}
       </div>
+      {data.hasChildren && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onToggle(data.node.id);
+          }}
+          title={data.collapsed ? "Expand subtree" : "Collapse subtree"}
+          style={{
+            position: "absolute",
+            bottom: -8,
+            left: "50%",
+            transform: "translateX(-50%)",
+            minWidth: 16,
+            height: 16,
+            padding: "0 4px",
+            borderRadius: 8,
+            border: "1px solid #888",
+            background: "#fff",
+            color: "#333",
+            fontSize: 10,
+            lineHeight: "14px",
+            cursor: "pointer",
+            zIndex: 2,
+          }}
+        >
+          {data.collapsed ? `+${data.hiddenCount}` : "−"}
+        </button>
+      )}
       <Handle
         type="source"
         position={Position.Bottom}
@@ -109,7 +166,6 @@ function GradientEdgeView({
   targetY,
   sourcePosition,
   targetPosition,
-  markerEnd,
   data,
 }: EdgeProps<GradientEdge>) {
   const [path] = getBezierPath({
@@ -139,7 +195,6 @@ function GradientEdgeView({
       <BaseEdge
         id={id}
         path={path}
-        markerEnd={markerEnd}
         style={{ stroke: `url(#${gid})`, strokeWidth: data?.width ?? 2 }}
       />
     </>
@@ -149,30 +204,40 @@ function GradientEdgeView({
 const nodeTypes = { anthill: AnthillNodeView };
 const edgeTypes = { gradient: GradientEdgeView };
 
-function layoutPositions(
+// Undirected BFS hop-distance from the focus node to every node.
+function distancesFrom(
   graph: GraphDataRendering,
-): Map<string, { x: number; y: number }> {
-  const pos = new Map<string, { x: number; y: number }>();
-  const data = Object.values(graph);
-  if (data.length === 0) return pos;
-
-  const dag = graphStratify()(data);
-  // Scalable heuristics: longest-path layering + two-layer decrossing run in
-  // (roughly) linear/near-linear time, unlike the exponential optimal variants,
-  // so the layout stays responsive on large graphs.
-  sugiyama()
-    .layering(layeringLongestPath())
-    .decross(decrossTwoLayer())
-    .coord(coordCenter())
-    // Node footprint + extra gap between nodes; widened so larger graphs stay
-    // readable instead of cramming nodes together.
-    .nodeSize(() => [2 * 2 * NODE_RADIUS, 1.4 * 2 * NODE_RADIUS])
-    .gap([NODE_RADIUS, NODE_RADIUS * 1.2])(dag);
-
-  for (const n of dag.nodes()) {
-    pos.set(n.data.id, { x: n.x ?? 0, y: n.y ?? 0 });
+  focus: string,
+): Map<string, number> {
+  const adj = new Map<string, string[]>();
+  const add = (a: string, b: string) => {
+    if (!adj.has(a)) adj.set(a, []);
+    adj.get(a)?.push(b);
+  };
+  for (const n of Object.values(graph)) {
+    for (const p of n.parentIds) {
+      if (graph[p]) {
+        add(n.id, p);
+        add(p, n.id);
+      }
+    }
   }
-  return pos;
+  const dist = new Map<string, number>();
+  const start = graph[focus] ? focus : Object.keys(graph)[0];
+  if (!start) return dist;
+  const queue = [start];
+  dist.set(start, 0);
+  for (let i = 0; i < queue.length; i++) {
+    const cur = queue[i];
+    const dcur = dist.get(cur) ?? 0;
+    for (const nb of adj.get(cur) ?? []) {
+      if (!dist.has(nb)) {
+        dist.set(nb, dcur + 1);
+        queue.push(nb);
+      }
+    }
+  }
+  return dist;
 }
 
 export const GraphFlow = (props: {
@@ -185,36 +250,116 @@ export const GraphFlow = (props: {
   ) => void;
   onNodeMouseLeave: () => void;
 }) => {
-  const { nodes, edges } = useMemo(() => {
-    const positions = layoutPositions(props.graph);
-    const entries = Object.values(props.graph);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
-    const nodes: AnthillNode[] = entries.map((n) => {
+  // Reset collapse state when a different (sub)graph is loaded.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => setCollapsed(new Set()), [props.graph]);
+
+  const toggleCollapse = useCallback((id: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const { nodes, edges } = useMemo(() => {
+    const graph = props.graph;
+    const distances = distancesFrom(graph, props.clickedNode);
+
+    // Tree children (a node's tree parent is its sentTreeVote).
+    const children = new Map<string, string[]>();
+    for (const n of Object.values(graph)) {
+      const parent = n.sentTreeVote;
+      if (graph[parent]) {
+        if (!children.has(parent)) children.set(parent, []);
+        children.get(parent)?.push(n.id);
+      }
+    }
+
+    // A node is hidden if any tree-ancestor is collapsed.
+    const isHidden = (id: string): boolean => {
+      let cur = graph[id]?.sentTreeVote;
+      let guard = 0;
+      while (cur && graph[cur] && guard++ < 1000) {
+        if (collapsed.has(cur)) return true;
+        cur = graph[cur].sentTreeVote;
+      }
+      return false;
+    };
+
+    // Count of hidden descendants for a collapsed node's badge.
+    const subtreeCount = (id: string): number => {
+      let total = 0;
+      const stack = [...(children.get(id) ?? [])];
+      let guard = 0;
+      while (stack.length && guard++ < 100000) {
+        const c = stack.pop() as string;
+        total++;
+        stack.push(...(children.get(c) ?? []));
+      }
+      return total;
+    };
+
+    const visible = Object.values(graph).filter((n) => !isHidden(n.id));
+    const visibleIds = new Set(visible.map((n) => n.id));
+
+    // Layout the visible nodes, sizing each layout cell by its (distance) radius.
+    const positions = new Map<string, { x: number; y: number }>();
+    if (visible.length > 0) {
+      const layoutInput = visible.map((n) => ({
+        id: n.id,
+        parentIds: n.parentIds.filter((p) => visibleIds.has(p)),
+      }));
+      const dag = graphStratify()(layoutInput);
+      sugiyama()
+        .layering(layeringLongestPath())
+        .decross(decrossTwoLayer())
+        .coord(coordCenter())
+        .nodeSize(() => [2 * BASE_RADIUS, 1.4 * 2 * BASE_RADIUS])
+        .gap([BASE_RADIUS, BASE_RADIUS * 1.2])(dag);
+      for (const node of dag.nodes()) {
+        positions.set(node.data.id, { x: node.x ?? 0, y: node.y ?? 0 });
+      }
+    }
+
+    const nodes: AnthillNode[] = visible.map((n) => {
+      const r = radiusForDistance(distances.get(n.id) ?? Infinity);
       const p = positions.get(n.id) ?? { x: 0, y: 0 };
+      const hasChildren = (children.get(n.id) ?? []).length > 0;
+      const isCollapsed = collapsed.has(n.id);
       return {
         id: n.id,
         type: "anthill",
-        position: { x: p.x - NODE_RADIUS, y: p.y - NODE_RADIUS },
-        // Explicit size so React Flow can cull off-screen nodes (virtualization)
-        // without needing to measure the DOM first.
-        width: NODE_RADIUS * 2,
-        height: NODE_RADIUS * 2,
+        position: { x: p.x - r, y: p.y - r },
+        width: 2 * r,
+        height: 2 * r,
         draggable: false,
         data: {
           node: n,
           label: nameShortener(n.name),
           color: colorOf(n.id),
+          radius: r,
           ring: n.id === props.clickedNode,
+          hasChildren,
+          collapsed: isCollapsed,
+          hiddenCount: isCollapsed ? subtreeCount(n.id) : 0,
+          onToggle: toggleCollapse,
         },
       };
     });
 
     const edges: GradientEdge[] = [];
-    for (const n of entries) {
+    for (const n of visible) {
       for (const parentId of n.parentIds) {
-        if (!props.graph[parentId]) continue;
-        // The tree-vote edge is drawn thick, like the old renderer.
+        if (!visibleIds.has(parentId)) continue;
         const isTreeEdge = n.sentTreeVote === parentId;
+        const rFactor = Math.min(
+          1,
+          radiusForDistance(distances.get(n.id) ?? Infinity) / BASE_RADIUS,
+        );
         edges.push({
           id: `${parentId}->${n.id}`,
           source: parentId,
@@ -223,14 +368,14 @@ export const GraphFlow = (props: {
           data: {
             sourceColor: colorOf(parentId),
             targetColor: colorOf(n.id),
-            width: isTreeEdge ? 6 : 2,
+            width: Math.max(0.75, (isTreeEdge ? 6 : 2) * rFactor),
           },
         });
       }
     }
 
     return { nodes, edges };
-  }, [props.graph, props.clickedNode]);
+  }, [props.graph, props.clickedNode, collapsed, toggleCollapse]);
 
   return (
     <div className="Graph" style={{ width: "100%", height: "80vh" }}>
@@ -241,9 +386,6 @@ export const GraphFlow = (props: {
         edgeTypes={edgeTypes}
         fitView
         minZoom={0.05}
-        // Virtualize only large graphs: mount just the on-screen nodes/edges so
-        // the DOM stays light at thousands of nodes. Small graphs render fully
-        // (avoids first-paint culling quirks with custom nodes).
         onlyRenderVisibleElements={nodes.length > 300}
         nodesDraggable={false}
         nodesConnectable={false}
