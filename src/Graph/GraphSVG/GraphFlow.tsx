@@ -354,35 +354,16 @@ export const GraphFlow = (props: {
   }, []);
   const onHoverLeave = useCallback(() => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
-    hoverTimer.current = setTimeout(() => setHoveredId(null), 250);
+    hoverTimer.current = setTimeout(() => setHoveredId(null), 350);
   }, []);
 
-  // Stable layout of the full graph (positions never change) — used to fan
-  // hover-revealed children off their parent without disturbing anything.
+  // The graph is laid out ONCE; every node keeps a fixed position. Collapse,
+  // hover and pin only toggle which nodes are shown — nothing ever moves, so
+  // the relative layout stays locked on click and hover alike.
   const fullPositions = useMemo(
     () => layoutPositions(Object.values(props.graph)),
     [props.graph],
   );
-
-  // Layout of the persistently-pinned state — recomputed only on pin/unpin,
-  // NOT on hover, so hovering never moves on-screen nodes.
-  const persistent = useMemo(() => {
-    const graph = props.graph;
-    const hiddenByPins = (id: string) => {
-      let cur = graph[id]?.sentTreeVote;
-      let guard = 0;
-      while (cur && graph[cur] && guard++ < 1000) {
-        if (collapsed.has(cur)) return true;
-        cur = graph[cur].sentTreeVote;
-      }
-      return false;
-    };
-    const visible = Object.values(graph).filter((n) => !hiddenByPins(n.id));
-    return {
-      ids: new Set(visible.map((n) => n.id)),
-      positions: layoutPositions(visible),
-    };
-  }, [props.graph, collapsed]);
 
   const { nodes, edges } = useMemo(() => {
     const graph = props.graph;
@@ -437,26 +418,8 @@ export const GraphFlow = (props: {
     const visible = Object.values(graph).filter((n) => !isHidden(n.id));
     const visibleIds = new Set(visible.map((n) => n.id));
 
-    // Positions: persistently-visible nodes keep their stable (pinned-layout)
-    // position; hover-revealed nodes fan off their parent using the full-layout
-    // geometry — so nothing already on screen moves when you peek a branch.
-    const positions = new Map(persistent.positions);
-    const revealed = visible
-      .filter((n) => !persistent.ids.has(n.id))
-      .sort((a, b) => a.depth - b.depth);
-    for (const n of revealed) {
-      const parentPos = positions.get(n.sentTreeVote);
-      const childFull = fullPositions.get(n.id);
-      const parentFull = fullPositions.get(n.sentTreeVote);
-      if (parentPos && childFull && parentFull) {
-        positions.set(n.id, {
-          x: parentPos.x + (childFull.x - parentFull.x),
-          y: parentPos.y + (childFull.y - parentFull.y),
-        });
-      } else {
-        positions.set(n.id, parentPos ?? { x: 0, y: 0 });
-      }
-    }
+    // Every node sits at its fixed full-layout position (locked layout).
+    const positions = fullPositions;
 
     const nodes: AnthillNode[] = visible.map((n) => {
       const r = radiusForDistance(distances.get(n.id) ?? Infinity);
@@ -514,7 +477,6 @@ export const GraphFlow = (props: {
     props.clickedNode,
     collapsed,
     hoveredId,
-    persistent,
     fullPositions,
     toggleCollapse,
   ]);
