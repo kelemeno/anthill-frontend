@@ -247,6 +247,110 @@ function GradientEdgeView({
 const nodeTypes = { anthill: AnthillNodeView };
 const edgeTypes = { gradient: GradientEdgeView };
 
+// --- Reputation (dag-vote) view ---------------------------------------------
+// A focused 3-row layout: the selected person in the middle, everyone they vote
+// for above (outgoing reputation), everyone who votes for them below (incoming).
+// Edges go only to/from the centre, coloured by direction and thickened by vote
+// weight. No tree-collapse — this is a flat 1-hop neighbourhood.
+const DAG_ROW_GAP = 240;
+const DAG_COL_GAP = 130;
+const DAG_OUT_COLOR = "#2f855a"; // green — people the focus votes for
+const DAG_IN_COLOR = "#2b6cb0"; // blue — people who vote for the focus
+
+function dagLayout(
+  graph: GraphDataRendering,
+  clickedNode: string,
+  onNodeClick: (id: string, name: string, rep: number) => void,
+): { nodes: AnthillNode[]; edges: GradientEdge[] } {
+  const focusId = graph[clickedNode]
+    ? clickedNode
+    : (Object.values(graph).sort((a, b) => a.depth - b.depth)[0]?.id ?? "");
+  const focus = graph[focusId];
+  if (!focus) return { nodes: [], edges: [] };
+
+  // outgoing = focus votes for these (its parentIds); incoming = these vote for focus.
+  const outgoing = focus.parentIds.filter((id) => graph[id] && id !== focusId);
+  const outSet = new Set(outgoing);
+  const incoming = Object.values(graph)
+    .filter(
+      (n) =>
+        n.id !== focusId && !outSet.has(n.id) && n.parentIds.includes(focusId),
+    )
+    .map((n) => n.id);
+
+  const weight = new Map<string, number>();
+  for (const e of focus.dagEdges ?? []) weight.set(e.to, e.weight);
+  const maxW = Math.max(1, ...weight.values());
+  const widthFor = (id: string) => 1.5 + 5 * ((weight.get(id) ?? maxW) / maxW);
+
+  const pos = new Map<string, { x: number; y: number }>();
+  pos.set(focusId, { x: 0, y: 0 });
+  const place = (ids: string[], y: number) => {
+    ids.forEach((id, i) => {
+      pos.set(id, { x: (i - (ids.length - 1) / 2) * DAG_COL_GAP, y });
+    });
+  };
+  place(outgoing, -DAG_ROW_GAP);
+  place(incoming, DAG_ROW_GAP);
+
+  const nodes: AnthillNode[] = [focusId, ...outgoing, ...incoming].map((id) => {
+    const n = graph[id];
+    const r = id === focusId ? BASE_RADIUS : BASE_RADIUS * SHRINK;
+    const p = pos.get(id) ?? { x: 0, y: 0 };
+    return {
+      id,
+      type: "anthill",
+      position: { x: p.x - r, y: p.y - r },
+      width: 2 * r,
+      height: 2 * r,
+      draggable: false,
+      data: {
+        node: n,
+        label: nameShortener(n.name),
+        color: colorOf(id),
+        radius: r,
+        ring: id === clickedNode,
+        hasChildren: false,
+        collapsed: false,
+        hiddenCount: 0,
+        onToggle: () => {},
+        onSelect: () => onNodeClick(n.id, n.name, n.currentRep),
+      },
+    };
+  });
+
+  const edges: GradientEdge[] = [];
+  // recipients sit above → their bottom handle connects to the focus' top.
+  for (const id of outgoing) {
+    edges.push({
+      id: `out-${focusId}-${id}`,
+      source: id,
+      target: focusId,
+      type: "gradient",
+      data: {
+        sourceColor: DAG_OUT_COLOR,
+        targetColor: DAG_OUT_COLOR,
+        width: widthFor(id),
+      },
+    });
+  }
+  // voters sit below → focus' bottom handle connects to their top.
+  for (const id of incoming) {
+    edges.push({
+      id: `in-${focusId}-${id}`,
+      source: focusId,
+      target: id,
+      type: "gradient",
+      data: {
+        sourceColor: DAG_IN_COLOR,
+        targetColor: DAG_IN_COLOR,
+        width: widthFor(id),
+      },
+    });
+  }
+  return { nodes, edges };
+}
+
 // Undirected BFS hop-distance from the focus node to every node.
 function distancesFrom(
   graph: GraphDataRendering,
@@ -329,6 +433,9 @@ function defaultCollapsed(graph: GraphDataRendering): Set<string> {
 export const GraphFlow = (props: {
   graph: GraphDataRendering;
   clickedNode: string;
+  // Tree mode = hierarchy with collapse/drill. Reputation (dag) mode = flat
+  // 3-row vote view (no collapse).
+  treeMode: boolean;
   onNodeClick: (id: string, name: string, rep: number) => void;
   onNodeMouseEnter: (
     event: React.MouseEvent<HTMLElement>,
@@ -353,8 +460,11 @@ export const GraphFlow = (props: {
     collapseRoots: { id: string; descendants: string[] }[];
   }) => void;
 }) => {
+  // No tree-collapse in reputation (dag) mode — the dag view is a flat 3-row
+  // neighbourhood.
+  const noCollapse = props.expandAll || !props.treeMode;
   const [collapsed, setCollapsed] = useState<Set<string>>(() =>
-    props.expandAll ? new Set() : defaultCollapsed(props.graph),
+    noCollapse ? new Set() : defaultCollapsed(props.graph),
   );
 
   // Reset collapse state only when a genuinely different (sub)graph is loaded —
@@ -367,8 +477,8 @@ export const GraphFlow = (props: {
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(
-    () => setCollapsed(props.expandAll ? new Set() : defaultCollapsed(props.graph)),
-    [graphNodeKey, props.expandAll],
+    () => setCollapsed(noCollapse ? new Set() : defaultCollapsed(props.graph)),
+    [graphNodeKey, noCollapse],
   );
 
   // Click pins/unpins a branch. Opening pins the WHOLE path to the node (the
@@ -429,12 +539,19 @@ export const GraphFlow = (props: {
   // the layout comes from the stable full view, not the per-step subset.
   const layoutSource = props.layoutGraph ?? props.graph;
   const fullPositions = useMemo(
-    () => layoutPositions(Object.values(layoutSource)),
-    [layoutSource],
+    () =>
+      props.treeMode
+        ? layoutPositions(Object.values(layoutSource))
+        : new Map<string, { x: number; y: number }>(),
+    [layoutSource, props.treeMode],
   );
 
   const { nodes, edges } = useMemo(() => {
     const graph = props.graph;
+    // Reputation (dag) mode: flat 3-row vote view, no collapse.
+    if (!props.treeMode) {
+      return dagLayout(graph, props.clickedNode, props.onNodeClick);
+    }
     // Size nodes by distance from the focus. During playback the focus may not
     // exist yet at this step — fall back to the shallowest present node so the
     // whole view doesn't collapse to minimum-size dots.
@@ -562,6 +679,7 @@ export const GraphFlow = (props: {
     toggleCollapse,
     props.onNodeClick,
     props.forcedCollapsed,
+    props.treeMode,
   ]);
 
   // Report the live view (rendered nodes + collapsed-branch roots and their

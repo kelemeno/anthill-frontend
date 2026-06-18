@@ -358,5 +358,17 @@ export function SelectSentRecDagVotes(
     });
   }
 
+  // Weighted, directional edges for the reputation view (on the focus node).
+  neighbourhood[id].dagEdges = [
+    ...node.sentDagVotes.map((v) => ({
+      to: v.id,
+      weight: v.weight,
+      outgoing: true,
+    })),
+    ...node.recDagVotes
+      .filter((v) => anthillGraphBare[v.id] !== undefined)
+      .map((v) => ({ to: v.id, weight: v.weight, outgoing: false })),
+  ];
+
   return neighbourhood;
 }

@@ -43,6 +43,9 @@ export type NodeDataRendering = {
   isVotable: boolean;
   isSwitchable: boolean;
   isDagVote: boolean;
+  // Reputation view: the focus node's dag votes with weights + direction
+  // (outgoing = it votes for `to`; incoming = `to` votes for it).
+  dagEdges?: { to: string; weight: number; outgoing: boolean }[];
 };
 
 export type GraphData = { [id: string]: NodeData };

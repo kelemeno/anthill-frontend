@@ -195,6 +195,7 @@ export const GraphSVG = (props: {
         graph={displayGraph}
         layoutGraph={props.graph}
         clickedNode={props.clickedNode}
+        treeMode={props.treeMode}
         forcedCollapsed={forcedCollapsed}
         onViewChange={onViewChange}
         onNodeClick={handleClickConstructed}

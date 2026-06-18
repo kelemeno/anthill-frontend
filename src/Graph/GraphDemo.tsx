@@ -84,6 +84,7 @@ export const GraphDemo = () => {
       <GraphFlow
         graph={graph}
         clickedNode={idOf(0)}
+        treeMode={true}
         onNodeClick={() => {}}
         onNodeMouseEnter={() => {}}
         onNodeMouseLeave={() => {}}
