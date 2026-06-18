@@ -358,13 +358,12 @@ export const GraphFlow = (props: {
     },
     [cancelClose],
   );
-  // The opened branch stays open while the cursor is anywhere on the graph; it
-  // only closes once the cursor leaves the graph entirely. So moving down to a
-  // freshly-revealed child never snaps the branch shut mid-move, however far
-  // apart the nodes sit.
+  // Leaving a node schedules a close after a generous idle delay — long enough
+  // to cross the gap to a (far) child while drilling, but it closes if you stop
+  // hovering nodes for a second or two. Entering another node cancels it.
   const scheduleClose = useCallback(() => {
     cancelClose();
-    closeTimer.current = setTimeout(() => setHoveredId(null), 300);
+    closeTimer.current = setTimeout(() => setHoveredId(null), 1500);
   }, [cancelClose]);
 
   // The graph is laid out ONCE; every node keeps a fixed position. Collapse,
@@ -526,8 +525,8 @@ export const GraphFlow = (props: {
           );
         }}
         onNodeMouseLeave={() => {
-          // Don't close the branch on node-leave — only the graph-container
-          // leave closes it (see the wrapper's onMouseLeave).
+          // Schedule a close on idle; re-entering any node cancels it.
+          scheduleClose();
           props.onNodeMouseLeave();
         }}
       >
