@@ -188,29 +188,40 @@ function AutoFitView({
   graph: GraphDataRendering;
   focus: string;
 }) {
-  const { fitView, setCenter, getNode, getViewport } = useReactFlow();
+  const { fitView, setViewport, getNode, getViewport } = useReactFlow();
   const prevFocus = useRef<string | null>(null);
+  const prevWorld = useRef<{ x: number; y: number } | null>(null);
+  const centerOf = (node: ReturnType<typeof getNode>) =>
+    node
+      ? {
+          x: node.position.x + (node.width ?? 0) / 2,
+          y: node.position.y + (node.height ?? 0) / 2,
+        }
+      : null;
   // Re-fit only when the loaded graph or focus changes — NOT on hover/collapse,
   // so peeking a branch open never moves the viewport out from under the cursor.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       const node = getNode(focus);
+      const world = centerOf(node);
       // Same focus but a new layout (e.g. toggling tree <-> reputation): keep
-      // the focused node anchored at the current zoom instead of re-framing the
-      // whole view, so the switch isn't jumpy. Otherwise (navigation / first
-      // load) fit the new neighbourhood.
-      if (prevFocus.current === focus && node) {
-        const w = node.width ?? 0;
-        const h = node.height ?? 0;
-        setCenter(node.position.x + w / 2, node.position.y + h / 2, {
-          zoom: getViewport().zoom,
-          duration: 300,
+      // the focused node pinned at the EXACT same screen position by shifting
+      // the viewport to cancel its world-position change — so it doesn't move
+      // at all and only the surrounding nodes rearrange. Otherwise (navigation
+      // / first load) fit the new neighbourhood.
+      if (prevFocus.current === focus && world && prevWorld.current) {
+        const vp = getViewport();
+        setViewport({
+          x: vp.x + (prevWorld.current.x - world.x) * vp.zoom,
+          y: vp.y + (prevWorld.current.y - world.y) * vp.zoom,
+          zoom: vp.zoom,
         });
       } else {
         fitView({ padding: 0.15, duration: 300 });
       }
       prevFocus.current = focus;
+      prevWorld.current = world;
     });
     return () => cancelAnimationFrame(id);
   }, [graph, focus]);
