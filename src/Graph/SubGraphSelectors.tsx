@@ -39,6 +39,22 @@ function renderingNodeData(
 
   nodeRendering.parentIds = [];
 
+  // Carry this node's dag votes (with weights) so the tree view can overlay the
+  // focused node's outgoing reputation votes, and the reputation view can size
+  // its edges.
+  nodeRendering.dagEdges = [
+    ...node.sentDagVotes.map((v) => ({
+      to: v.id,
+      weight: v.weight,
+      outgoing: true,
+    })),
+    ...node.recDagVotes.map((v) => ({
+      to: v.id,
+      weight: v.weight,
+      outgoing: false,
+    })),
+  ];
+
   // we will eventually want these last three fields to be part of nodeDataBare, and to be calculated when loading, not when selecting.
   nodeRendering.isVotable = false;
   nodeRendering.isDagVote = false;

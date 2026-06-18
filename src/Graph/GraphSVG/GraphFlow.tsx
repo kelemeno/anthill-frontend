@@ -593,7 +593,14 @@ export const GraphFlow = (props: {
     const forced = props.forcedCollapsed;
     const effectiveCollapsed = forced ? new Set(forced) : new Set(collapsed);
     if (!forced) {
-      for (const anchor of [hoveredId, props.clickedNode]) {
+      const anchors: (string | null | undefined)[] = [hoveredId, props.clickedNode];
+      // Also reveal the focused node's outgoing-vote recipients, so the overlay
+      // edges have something to point at.
+      const fn = graph[props.clickedNode];
+      if (fn?.dagEdges) {
+        for (const e of fn.dagEdges) if (e.outgoing) anchors.push(e.to);
+      }
+      for (const anchor of anchors) {
         let cur: string | undefined = anchor ?? undefined;
         let guard = 0;
         while (cur && graph[cur] && guard++ < 1000) {
@@ -695,6 +702,31 @@ export const GraphFlow = (props: {
             sourceColor: colorOf(parentId),
             targetColor: colorOf(n.id),
             width: Math.max(0.75, (isTreeEdge ? 6 : 2) * rFactor),
+          },
+        });
+      }
+    }
+
+    // Overlay the FOCUSED node's outgoing reputation votes on the tree (green,
+    // thickness = weight). Votes always point up the tree, so these ride the
+    // existing layout. Recipients are above → drawn as recipient→focus (like a
+    // tree edge) but green to read as "reputation", not "structure".
+    const focusNode = graph[props.clickedNode];
+    const outVotes = (focusNode?.dagEdges ?? []).filter(
+      (e) => e.outgoing && visibleIds.has(e.to),
+    );
+    if (outVotes.length > 0) {
+      const maxW = Math.max(1, ...outVotes.map((e) => e.weight));
+      for (const e of outVotes) {
+        edges.push({
+          id: `vote-${props.clickedNode}-${e.to}`,
+          source: e.to,
+          target: props.clickedNode,
+          type: "gradient",
+          data: {
+            sourceColor: DAG_OUT_COLOR,
+            targetColor: DAG_OUT_COLOR,
+            width: 1.5 + 4 * (e.weight / maxW),
           },
         });
       }
