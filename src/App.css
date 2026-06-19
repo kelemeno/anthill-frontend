@@ -1,7 +1,8 @@
 .Graph {
   text-align: center;
-
-  min-height: 100vh;
+  /* Height comes from the inline 80vh (also used by /demo). Note: no
+     min-height:100vh — that overflowed the viewport below the header/buttons and
+     pushed the fitted graph down + off the bottom. */
   display: flex;
   align-items: center;
   justify-content: center;
