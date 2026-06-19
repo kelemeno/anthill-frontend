@@ -110,10 +110,12 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         style={{ opacity: 0 }}
       />
       <div
+        // `nopan` stops React Flow panning the canvas when you grab a node.
+        className="nopan"
         onPointerDown={(e) => {
           startRef.current = { x: e.clientX, y: e.clientY };
           movedRef.current = false;
-          // capture so the wiggle follows the pointer instead of the pane panning
+          // capture so the drag follows the pointer
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         }}
         onPointerMove={(e) => {
@@ -290,41 +292,73 @@ function GradientEdgeView({
   targetPosition,
   data,
 }: EdgeProps<GradientEdge>) {
+  // The top/bottom handles sit a few px outside the circle, so a bezier to them
+  // leaves a visible gap. Push each end a little INTO its node (along the handle
+  // normal); the node is drawn on top, so the overlap is hidden and the curve
+  // meets the circle flush.
+  const OVERLAP = 7;
+  const into = (
+    x: number,
+    y: number,
+    pos: Position,
+  ): [number, number] => {
+    if (pos === Position.Top) return [x, y + OVERLAP];
+    if (pos === Position.Bottom) return [x, y - OVERLAP];
+    if (pos === Position.Left) return [x + OVERLAP, y];
+    if (pos === Position.Right) return [x - OVERLAP, y];
+    return [x, y];
+  };
+  const [sx, sy] = into(sourceX, sourceY, sourcePosition);
+  const [tx, ty] = into(targetX, targetY, targetPosition);
   const [path] = getBezierPath({
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
+    sourceX: sx,
+    sourceY: sy,
+    targetX: tx,
+    targetY: ty,
     sourcePosition,
     targetPosition,
   });
-  const gid = `grad-${id}`;
+  // The gradient itself lives in a stable <defs> (EdgeGradients) so it isn't
+  // re-created every frame while a node drags — that re-creation made the
+  // url(#…) reference blink and the curve flicker.
   return (
-    <>
+    <BaseEdge
+      id={id}
+      path={path}
+      style={{
+        stroke: `url(#${gradientId(id)})`,
+        strokeWidth: data?.width ?? 2,
+        // matches the node hover-zoom easing, so curves thicken in sync
+        transition: "stroke-width 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
+      }}
+    />
+  );
+}
+
+// Stable, document-wide gradient id (no "->" etc., which can trip url() refs).
+function gradientId(edgeId: string): string {
+  return `grad-${edgeId.replace(/[^a-zA-Z0-9]/g, "_")}`;
+}
+
+// All edge gradients, rendered ONCE in a hidden <defs>. objectBoundingBox units
+// (top→bottom) mean they need no per-edge coordinates, so this only re-renders
+// when the edge set/colours change — never during a drag — so no flicker.
+function EdgeGradients({ edges }: { edges: GradientEdge[] }) {
+  return (
+    <svg
+      aria-hidden="true"
+      style={{ position: "absolute", width: 0, height: 0 }}
+    >
+      <title>edge gradients</title>
       <defs>
-        <linearGradient
-          id={gid}
-          gradientUnits="userSpaceOnUse"
-          x1={sourceX}
-          y1={sourceY}
-          x2={targetX}
-          y2={targetY}
-        >
-          <stop offset="0%" stopColor={data?.sourceColor} />
-          <stop offset="100%" stopColor={data?.targetColor} />
-        </linearGradient>
+        {edges.map((e) => (
+          <linearGradient key={e.id} id={gradientId(e.id)} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={e.data?.sourceColor} />
+            <stop offset="100%" stopColor={e.data?.targetColor} />
+          </linearGradient>
+        ))}
       </defs>
-      <BaseEdge
-        id={id}
-        path={path}
-        style={{
-          stroke: `url(#${gid})`,
-          strokeWidth: data?.width ?? 2,
-          // matches the node hover-zoom easing, so curves thicken in sync
-          transition: "stroke-width 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
-        }}
-      />
-    </>
+    </svg>
   );
 }
 
@@ -795,6 +829,9 @@ export const GraphFlow = (props: {
         width: 2 * r,
         height: 2 * r,
         draggable: false,
+        // `nopan` so grabbing a node drags only the node, not the canvas. Baked
+        // in here (stable) so renderNodes doesn't churn every node each frame.
+        className: "nopan",
         data: {
           node: n,
           label: nameShortener(n.name),
@@ -907,6 +944,7 @@ export const GraphFlow = (props: {
   // whole layout. The dragged node moves by a world delta (its curves follow);
   // on release it gets `anthill-spring` so its transform eases back.
   const renderNodes = useMemo(() => {
+    // Idle: hand React Flow the exact same node objects so it doesn't reconcile.
     if (!drag && !springId) return nodes;
     return nodes.map((n) => {
       if (drag && n.id === drag.id) {
@@ -915,8 +953,10 @@ export const GraphFlow = (props: {
           position: { x: n.position.x + drag.dx, y: n.position.y + drag.dy },
         };
       }
-      if (!drag && springId === n.id) return { ...n, className: "anthill-spring" };
-      return n;
+      if (!drag && springId === n.id) {
+        return { ...n, className: `${n.className ?? ""} anthill-spring` };
+      }
+      return n; // unchanged → same ref → no re-render
     });
   }, [nodes, drag, springId]);
 
@@ -1024,6 +1064,7 @@ export const GraphFlow = (props: {
       onMouseEnter={cancelClose}
       onMouseLeave={scheduleClose}
     >
+      <EdgeGradients edges={edges} />
       <ReactFlow
         nodes={renderNodes}
         edges={edges}
