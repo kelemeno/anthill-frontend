@@ -6,7 +6,6 @@ import {
   nodeCount,
   ringedId,
   ROOT,
-  viewportTransform,
   waitForGraph,
 } from "./util";
 
@@ -117,18 +116,25 @@ test.describe("graph interactions", () => {
     ).toBeGreaterThan(0);
   });
 
-  test("layout stays put when expanding (no viewport jump)", async ({
+  test("expanding keeps existing nodes in place (locked layout)", async ({
     page,
   }) => {
     await page.goto(`/?id=${ROOT}`);
     await waitForGraph(page);
     const beforeNodes = await nodeCount(page);
-    const beforeTransform = await viewportTransform(page);
+    // world position (React Flow node transform) of a stable, always-present
+    // node — unaffected by the hover view-zoom (that changes the viewport, not
+    // node positions).
+    const rootTransform = () =>
+      page
+        .locator(`.react-flow__node[data-id="${ROOT}"]`)
+        .evaluate((el) => (el as HTMLElement).style.transform);
+    const before = await rootTransform();
     await collapseBadges(page).first().click();
     await page.waitForTimeout(700);
     // the expand actually happened...
     expect(await nodeCount(page)).toBeGreaterThan(beforeNodes);
-    // ...and the viewport did not jump.
-    expect(await viewportTransform(page)).toBe(beforeTransform);
+    // ...and the already-visible nodes did not move (locked layout).
+    expect(await rootTransform()).toBe(before);
   });
 });

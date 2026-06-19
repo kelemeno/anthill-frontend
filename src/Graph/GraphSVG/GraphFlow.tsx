@@ -84,28 +84,17 @@ type GradientEdgeData = {
 type GradientEdge = Edge<GradientEdgeData, "gradient">;
 
 function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
-  const [hovered, setHovered] = useState(false);
   const d = data.radius * 2;
-  // Scale the whole node (circle + collapse button) up on hover, so the label
-  // becomes readable AND the collapse button becomes a big, easy target. The
-  // button lives inside the hover region so reaching it keeps the node enlarged.
-  const hoverScale = Math.min(3, Math.max(1, (BASE_RADIUS * 1.1) / data.radius));
   const fontSize = Math.max(7, data.radius * 0.5);
-
+  // No per-node scale: hovering zooms the whole VIEW toward this node (see
+  // HoverZoom), so the node, its curves and its neighbours magnify as one unit.
   return (
     <div
       style={{
         position: "relative",
         width: d,
         height: d,
-        transform: hovered ? `scale(${hoverScale})` : "scale(1)",
-        transformOrigin: "center",
-        // Soft ease-out so the hover-zoom glides instead of snapping.
-        transition: "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
-        zIndex: hovered ? 1000 : 1,
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       <Handle
         type="target"
@@ -234,6 +223,45 @@ function AutoFitView({
     });
     return () => cancelAnimationFrame(id);
   }, [graph, focus]);
+  return null;
+}
+
+// Unified hover zoom: hovering a node smoothly zooms the whole view in toward
+// it (node + curves + neighbours all magnify together), and eases back to the
+// pre-hover view when the hover ends. Smaller (further) nodes zoom in more, so
+// they become readable.
+function HoverZoom({
+  hoveredId,
+  graph,
+}: {
+  hoveredId: string | null;
+  graph: GraphDataRendering;
+}) {
+  const { getNode, getViewport, setViewport, setCenter } = useReactFlow();
+  const base = useRef<{ x: number; y: number; zoom: number } | null>(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (hoveredId && graph[hoveredId]) {
+      // Remember the view we zoomed FROM (only on the first hover of a run).
+      if (!base.current) base.current = getViewport();
+      const node = getNode(hoveredId);
+      if (node) {
+        const w = node.width ?? 2 * BASE_RADIUS;
+        const cx = node.position.x + w / 2;
+        const cy = node.position.y + (node.height ?? w) / 2;
+        // zoom so the node reaches a comfortable size, but at least a gentle
+        // step in from the base view; capped so it never lurches too far.
+        const zoom = Math.min(
+          2.8,
+          Math.max(base.current.zoom * 1.4, 70 / w),
+        );
+        setCenter(cx, cy, { zoom, duration: 260 });
+      }
+    } else if (base.current) {
+      setViewport(base.current, { duration: 260 });
+      base.current = null;
+    }
+  }, [hoveredId]);
   return null;
 }
 
@@ -735,18 +763,8 @@ export const GraphFlow = (props: {
       };
     });
 
-    // When a node hover-zooms, its connecting curves should zoom too — scale the
-    // width of edges touching the hovered node by the same factor the node uses.
-    const hoveredR =
-      hoveredId && graph[hoveredId]
-        ? radiusForDistance(distances.get(hoveredId) ?? Infinity)
-        : 0;
-    const hoverEdgeScale = hoveredR
-      ? Math.min(3, Math.max(1, (BASE_RADIUS * 1.1) / hoveredR))
-      : 1;
-    const hoverMult = (a: string, b: string) =>
-      hoveredId && (a === hoveredId || b === hoveredId) ? hoverEdgeScale : 1;
-
+    // Curves scale with the unified hover zoom (the whole view magnifies), so no
+    // per-edge hover thickening is needed here.
     const edges: GradientEdge[] = [];
     for (const n of visible) {
       for (const parentId of n.parentIds) {
@@ -764,9 +782,7 @@ export const GraphFlow = (props: {
           data: {
             sourceColor: colorOf(parentId),
             targetColor: colorOf(n.id),
-            width:
-              Math.max(0.75, (isTreeEdge ? 6 : 2) * rFactor) *
-              hoverMult(parentId, n.id),
+            width: Math.max(0.75, (isTreeEdge ? 6 : 2) * rFactor),
           },
         });
       }
@@ -800,7 +816,7 @@ export const GraphFlow = (props: {
           data: {
             sourceColor: color,
             targetColor: color,
-            width: (1.5 + 4 * (e.weight / maxW)) * hoverMult(src, tgt),
+            width: 1.5 + 4 * (e.weight / maxW),
           },
         });
       }
@@ -961,6 +977,7 @@ export const GraphFlow = (props: {
         onPaneClick={() => props.onNodeMouseLeave()}
       >
         <AutoFitView graph={layoutSource} focus={props.clickedNode} />
+        <HoverZoom hoveredId={hoveredId} graph={props.graph} />
         <Controls showInteractive={false} position="top-left" />
       </ReactFlow>
     </div>
