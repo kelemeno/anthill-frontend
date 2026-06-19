@@ -157,7 +157,9 @@ const TUTORIAL_STEPS: { icon: string; title: string; body: React.ReactNode }[] =
           You earn reputation from <strong>value votes</strong>. You can vote
           for people <em>above</em> you in the tree (within reach), and receive
           votes from people <em>below</em> you. More votes — and votes from
-          higher-reputation people — mean a higher score.
+          higher-reputation people — mean a higher score.{" "}
+          <strong>Climbing:</strong> if your reputation is higher than your
+          parent's, you can switch positions with them and move up the tree.
         </>
       ),
     },
@@ -205,9 +207,9 @@ const TUTORIAL_STEPS: { icon: string; title: string; body: React.ReactNode }[] =
       body: (
         <>
           <strong>Connect your wallet</strong> (top-right) to act: join the
-          tree, give or remove reputation votes, rename yourself, climb by
-          switching with your parent, move to an open spot, or leave. Tap any
-          node to see what you can do with it.
+          tree, give or remove reputation votes, rename yourself, switch up with
+          your parent, move to an open spot, or leave. Tap any node to see what
+          you can do with it.
         </>
       ),
     },

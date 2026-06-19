@@ -70,9 +70,8 @@ type AnthillNodeData = {
   // Touch only: open the node's popover (info + actions) anchored to the tapped
   // element — the popover is otherwise hover-driven and unreachable on a phone.
   onInfo: (el: HTMLElement) => void;
-  // Drag-wiggle: move this node's real position by a world-space delta (so its
-  // curves follow), then snap it back.
-  onDrag: (dx: number, dy: number) => void;
+  // Drag-wiggle ended (mouse): flag it so onNodeClick doesn't select. The drag
+  // motion itself is done imperatively in the node via setNodes.
   onDragEnd: () => void;
 };
 type AnthillNode = Node<AnthillNodeData, "anthill">;
@@ -94,11 +93,16 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
   const d = data.radius * 2;
   const fontSize = Math.max(7, data.radius * 0.5);
   // Drag-wiggle: grabbing a node tugs it a little (damped + capped) by moving
-  // its REAL position — so its curves follow — then it springs back on release.
-  // A real tap/click (no movement) still selects / opens the popover.
-  const { getZoom } = useReactFlow();
-  const startRef = useRef<{ x: number; y: number } | null>(null);
+  // its REAL position directly in React Flow's store — so the curves follow and
+  // ONLY the dragged node + its edges re-render (no parent re-render → no
+  // flicker) — then it springs back on release. A real tap/click (no movement)
+  // still selects / opens the popover.
+  const { getZoom, getNode, setNodes } = useReactFlow();
+  const id = data.node.id;
+  const ptrStart = useRef<{ x: number; y: number } | null>(null);
+  const nodeStart = useRef<{ x: number; y: number } | null>(null);
   const movedRef = useRef(false);
+  const springTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Plain node: no on-node controls. Hover (desktop) / tap (touch) opens the
   // popover, which carries the info, actions and Show/Hide-children control.
   return (
@@ -119,15 +123,16 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         // `nopan` stops React Flow panning the canvas when you grab a node.
         className="nopan"
         onPointerDown={(e) => {
-          startRef.current = { x: e.clientX, y: e.clientY };
+          ptrStart.current = { x: e.clientX, y: e.clientY };
+          nodeStart.current = getNode(id)?.position ?? null;
           movedRef.current = false;
           // capture so the drag follows the pointer
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         }}
         onPointerMove={(e) => {
-          if (!startRef.current) return;
-          const dx = e.clientX - startRef.current.x;
-          const dy = e.clientY - startRef.current.y;
+          if (!ptrStart.current || !nodeStart.current) return;
+          const dx = e.clientX - ptrStart.current.x;
+          const dy = e.clientY - ptrStart.current.y;
           if (Math.hypot(dx, dy) > 4) movedRef.current = true;
           if (!movedRef.current) return;
           // damped + capped in screen px (a little give), then to world units
@@ -135,7 +140,17 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           const cap = 26;
           const clamp = (v: number) => Math.max(-cap, Math.min(cap, v * 0.6));
           const z = getZoom() || 1;
-          data.onDrag(clamp(dx) / z, clamp(dy) / z);
+          const s = nodeStart.current;
+          setNodes((ns) =>
+            ns.map((n) =>
+              n.id === id
+                ? {
+                    ...n,
+                    position: { x: s.x + clamp(dx) / z, y: s.y + clamp(dy) / z },
+                  }
+                : n,
+            ),
+          );
         }}
         // pointerup fires on a real touch tap (unlike hover/onNodeClick, which
         // the pan/zoom layer or touch hardware swallow). Branch off the EVENT's
@@ -144,9 +159,26 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         // Touch/pen → open the popover (info + actions); mouse → select/focus.
         onPointerUp={(e) => {
           const dragged = movedRef.current;
-          startRef.current = null;
-          if (dragged) {
-            data.onDragEnd(); // springs back; also flags "just dragged"
+          const s = nodeStart.current;
+          ptrStart.current = null;
+          nodeStart.current = null;
+          if (dragged && s) {
+            // spring back to the start position (eased transition class, then
+            // drop it) — all via the store, no parent re-render.
+            setNodes((ns) =>
+              ns.map((n) =>
+                n.id === id
+                  ? { ...n, position: s, className: "nopan anthill-spring" }
+                  : n,
+              ),
+            );
+            if (springTimer.current) clearTimeout(springTimer.current);
+            springTimer.current = setTimeout(() => {
+              setNodes((ns) =>
+                ns.map((n) => (n.id === id ? { ...n, className: "nopan" } : n)),
+              );
+            }, 460);
+            data.onDragEnd(); // flag "just dragged" so onNodeClick won't select
             return; // a drag, not a tap — don't select/open
           }
           // Touch/pen: open the popover (React Flow's onNodeClick is swallowed on
@@ -286,6 +318,27 @@ function HoverZoom({
       base.current = null;
     }
   }, [hoveredId]);
+  return null;
+}
+
+// Pushes the computed layout into React Flow's OWN node/edge store (the graph is
+// otherwise uncontrolled). This lets the node drag mutate positions imperatively
+// via setNodes without a parent re-render — and those changes stick, because we
+// only re-push when the computed layout itself changes (not during a drag).
+function NodeSync({
+  nodes,
+  edges,
+}: {
+  nodes: AnthillNode[];
+  edges: GradientEdge[];
+}) {
+  const { setNodes, setEdges } = useReactFlow();
+  useEffect(() => {
+    setNodes(nodes);
+  }, [nodes, setNodes]);
+  useEffect(() => {
+    setEdges(edges);
+  }, [edges, setEdges]);
   return null;
 }
 
@@ -447,7 +500,6 @@ function dagLayout(
         onToggle: () => {},
         onSelect: () => onNodeClick(n.id, n.name, n.currentRep),
         onInfo: () => {},
-        onDrag: () => {},
         onDragEnd: () => {},
       },
     };
@@ -624,14 +676,18 @@ export const GraphFlow = (props: {
   // Reset collapse state only when a genuinely different (sub)graph is loaded —
   // keyed on the node SET, not object identity. Re-centering on a tapped node
   // produces a new graph object with the same nodes; resetting then would wipe
-  // a branch the user just drilled open.
+  // a branch the user just drilled open. Keyed on the LAYOUT graph (stable
+  // during history scrubbing) so scrubbing — which swaps in per-step subgraphs —
+  // doesn't reset collapse and briefly flash the whole tree at the live step.
+  const collapseSource = props.layoutGraph ?? props.graph;
   const graphNodeKey = useMemo(
-    () => Object.keys(props.graph).sort().join(","),
-    [props.graph],
+    () => Object.keys(collapseSource).sort().join(","),
+    [collapseSource],
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(
-    () => setCollapsed(noCollapse ? new Set() : defaultCollapsed(props.graph)),
+    () =>
+      setCollapsed(noCollapse ? new Set() : defaultCollapsed(collapseSource)),
     [graphNodeKey, noCollapse],
   );
 
@@ -664,34 +720,16 @@ export const GraphFlow = (props: {
 
   // Hover peeks a branch open: the hovered node (and the path to it) opens.
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  // Drag-wiggle: which node is being tugged + its world-space offset, and which
-  // node is currently springing back (so it gets the eased transition).
-  const [drag, setDrag] = useState<{ id: string; dx: number; dy: number } | null>(
-    null,
-  );
-  const [springId, setSpringId] = useState<string | null>(null);
-  const springTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // True briefly right after a drag, so React Flow's onNodeClick (which still
   // fires on pointerup after a drag) doesn't select the node we just wiggled.
+  // The drag itself is done imperatively in the node (setNodes), so it doesn't
+  // touch GraphFlow state — no re-render, no flicker.
   const justDragged = useRef(false);
-  const onNodeDrag = useCallback((id: string, dx: number, dy: number) => {
-    // Dragging shouldn't also trigger the hover-zoom (it animates the viewport
-    // and fights the drag); clearing the hover keeps the canvas steady.
-    setHoveredId(null);
-    setDrag({ id, dx, dy });
-  }, []);
-  const onNodeDragEnd = useCallback((id: string) => {
+  const onNodeDragEnd = useCallback(() => {
     justDragged.current = true;
     setTimeout(() => {
       justDragged.current = false;
     }, 120);
-    setDrag(null);
-    setSpringId(id); // ease back to its locked position, then drop the class
-    if (springTimer.current) clearTimeout(springTimer.current);
-    springTimer.current = setTimeout(
-      () => setSpringId((s) => (s === id ? null : s)),
-      460,
-    );
   }, []);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelClose = useCallback(() => {
@@ -860,8 +898,8 @@ export const GraphFlow = (props: {
         width: 2 * r,
         height: 2 * r,
         draggable: false,
-        // `nopan` so grabbing a node drags only the node, not the canvas. Baked
-        // in here (stable) so renderNodes doesn't churn every node each frame.
+        // `nopan` so grabbing a node drags only the node, not the canvas. The
+        // drag (and its spring-back) mutate className via setNodes from here.
         className: "nopan",
         data: {
           node: n,
@@ -892,8 +930,7 @@ export const GraphFlow = (props: {
                 },
               },
             ),
-          onDrag: (dx: number, dy: number) => onNodeDrag(n.id, dx, dy),
-          onDragEnd: () => onNodeDragEnd(n.id),
+          onDragEnd: () => onNodeDragEnd(),
         },
       };
     });
@@ -982,26 +1019,6 @@ export const GraphFlow = (props: {
     props.treeMode,
     props.viewMode,
   ]);
-
-  // Overlay the live drag offset + spring-back class without recomputing the
-  // whole layout. The dragged node moves by a world delta (its curves follow);
-  // on release it gets `anthill-spring` so its transform eases back.
-  const renderNodes = useMemo(() => {
-    // Idle: hand React Flow the exact same node objects so it doesn't reconcile.
-    if (!drag && !springId) return nodes;
-    return nodes.map((n) => {
-      if (drag && n.id === drag.id) {
-        return {
-          ...n,
-          position: { x: n.position.x + drag.dx, y: n.position.y + drag.dy },
-        };
-      }
-      if (!drag && springId === n.id) {
-        return { ...n, className: `${n.className ?? ""} anthill-spring` };
-      }
-      return n; // unchanged → same ref → no re-render
-    });
-  }, [nodes, drag, springId]);
 
   // Report the live view (rendered nodes + collapsed-branch roots and their
   // hidden descendants) so the history scrubber can scope to it. Skipped during
@@ -1109,8 +1126,8 @@ export const GraphFlow = (props: {
     >
       <EdgeGradients edges={edges} />
       <ReactFlow
-        nodes={renderNodes}
-        edges={edges}
+        defaultNodes={nodes}
+        defaultEdges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -1153,6 +1170,7 @@ export const GraphFlow = (props: {
         // close it on touch, where there's no mouse-leave).
         onPaneClick={() => props.onNodeMouseLeave()}
       >
+        <NodeSync nodes={nodes} edges={edges} />
         <AutoFitView graph={layoutSource} focus={props.clickedNode} />
         {!IS_MOBILE && <HoverZoom hoveredId={hoveredId} graph={props.graph} />}
         <Controls showInteractive={false} position="top-left" />
