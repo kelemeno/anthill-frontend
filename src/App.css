@@ -13,6 +13,11 @@
 .react-flow__node {
   animation: anthillNodeIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
+/* Drag-wiggle spring-back: applied only while a tugged node eases home, so it
+   follows the pointer 1:1 during the drag and springs (with overshoot) on release. */
+.react-flow__node.anthill-spring {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 @keyframes anthillNodeIn {
   from {
     opacity: 0;

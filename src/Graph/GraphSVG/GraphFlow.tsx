@@ -70,6 +70,10 @@ type AnthillNodeData = {
   // Touch only: open the node's popover (info + actions) anchored to the tapped
   // element — the popover is otherwise hover-driven and unreachable on a phone.
   onInfo: (el: HTMLElement) => void;
+  // Drag-wiggle: move this node's real position by a world-space delta (so its
+  // curves follow), then snap it back.
+  onDrag: (dx: number, dy: number) => void;
+  onDragEnd: () => void;
 };
 type AnthillNode = Node<AnthillNodeData, "anthill">;
 
@@ -83,10 +87,10 @@ type GradientEdge = Edge<GradientEdgeData, "gradient">;
 function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
   const d = data.radius * 2;
   const fontSize = Math.max(7, data.radius * 0.5);
-  // Drag-wiggle: grabbing a node lets you tug it a little (damped + capped, like
-  // a rubber band); it springs back when you let go. A real tap/click (no
-  // movement) still selects / opens the popover.
-  const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
+  // Drag-wiggle: grabbing a node tugs it a little (damped + capped) by moving
+  // its REAL position — so its curves follow — then it springs back on release.
+  // A real tap/click (no movement) still selects / opens the popover.
+  const { getZoom } = useReactFlow();
   const startRef = useRef<{ x: number; y: number } | null>(null);
   const movedRef = useRef(false);
   // Plain node: no on-node controls. Hover (desktop) / tap (touch) opens the
@@ -117,10 +121,13 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           const dx = e.clientX - startRef.current.x;
           const dy = e.clientY - startRef.current.y;
           if (Math.hypot(dx, dy) > 4) movedRef.current = true;
-          // damped + capped: a little give, not a free drag
-          const cap = 24;
-          const clamp = (v: number) => Math.max(-cap, Math.min(cap, v * 0.55));
-          setOffset({ x: clamp(dx), y: clamp(dy) });
+          if (!movedRef.current) return;
+          // damped + capped in screen px (a little give), then to world units
+          // (÷ zoom) so it moves by that screen amount at any zoom level.
+          const cap = 26;
+          const clamp = (v: number) => Math.max(-cap, Math.min(cap, v * 0.6));
+          const z = getZoom() || 1;
+          data.onDrag(clamp(dx) / z, clamp(dy) / z);
         }}
         // pointerup fires on a real touch tap (unlike hover/onNodeClick, which
         // the pan/zoom layer or touch hardware swallow). Branch off the EVENT's
@@ -130,8 +137,10 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         onPointerUp={(e) => {
           const dragged = movedRef.current;
           startRef.current = null;
-          setOffset(null); // springs back
-          if (dragged) return; // a drag, not a tap — don't select/open
+          if (dragged) {
+            data.onDragEnd(); // springs back
+            return; // a drag, not a tap — don't select/open
+          }
           if (e.pointerType === "touch" || e.pointerType === "pen") {
             data.onInfo(e.currentTarget as HTMLElement);
           } else {
@@ -143,7 +152,10 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           height: d,
           borderRadius: "50%",
           background: data.color,
-          boxShadow: data.ring ? "0 0 0 4px #2b2b2b" : "none",
+          // Selection ring: a soft black→transparent glow. A hard spread ring
+          // (0 0 0 Npx) leaves a 1px background hairline against the rounded
+          // edge that magnifies into a white ring when zoomed.
+          boxShadow: data.ring ? "0 0 9px 4px rgba(0, 0, 0, 0.55)" : "none",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -157,13 +169,6 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           userSelect: "none",
           cursor: "grab",
           touchAction: "none",
-          transform: offset
-            ? `translate(${offset.x}px, ${offset.y}px)`
-            : "translate(0, 0)",
-          // follow the pointer instantly while dragging; springy ease-back on let-go
-          transition: offset
-            ? "none"
-            : "transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       >
         {data.label}
@@ -395,6 +400,8 @@ function dagLayout(
         onToggle: () => {},
         onSelect: () => onNodeClick(n.id, n.name, n.currentRep),
         onInfo: () => {},
+        onDrag: () => {},
+        onDragEnd: () => {},
       },
     };
   });
@@ -602,6 +609,25 @@ export const GraphFlow = (props: {
 
   // Hover peeks a branch open: the hovered node (and the path to it) opens.
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  // Drag-wiggle: which node is being tugged + its world-space offset, and which
+  // node is currently springing back (so it gets the eased transition).
+  const [drag, setDrag] = useState<{ id: string; dx: number; dy: number } | null>(
+    null,
+  );
+  const [springId, setSpringId] = useState<string | null>(null);
+  const springTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onNodeDrag = useCallback((id: string, dx: number, dy: number) => {
+    setDrag({ id, dx, dy });
+  }, []);
+  const onNodeDragEnd = useCallback((id: string) => {
+    setDrag(null);
+    setSpringId(id); // ease back to its locked position, then drop the class
+    if (springTimer.current) clearTimeout(springTimer.current);
+    springTimer.current = setTimeout(
+      () => setSpringId((s) => (s === id ? null : s)),
+      460,
+    );
+  }, []);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelClose = useCallback(() => {
     if (closeTimer.current) {
@@ -798,6 +824,8 @@ export const GraphFlow = (props: {
                 },
               },
             ),
+          onDrag: (dx: number, dy: number) => onNodeDrag(n.id, dx, dy),
+          onDragEnd: () => onNodeDragEnd(n.id),
         },
       };
     });
@@ -874,6 +902,23 @@ export const GraphFlow = (props: {
     props.treeMode,
     props.viewMode,
   ]);
+
+  // Overlay the live drag offset + spring-back class without recomputing the
+  // whole layout. The dragged node moves by a world delta (its curves follow);
+  // on release it gets `anthill-spring` so its transform eases back.
+  const renderNodes = useMemo(() => {
+    if (!drag && !springId) return nodes;
+    return nodes.map((n) => {
+      if (drag && n.id === drag.id) {
+        return {
+          ...n,
+          position: { x: n.position.x + drag.dx, y: n.position.y + drag.dy },
+        };
+      }
+      if (!drag && springId === n.id) return { ...n, className: "anthill-spring" };
+      return n;
+    });
+  }, [nodes, drag, springId]);
 
   // Report the live view (rendered nodes + collapsed-branch roots and their
   // hidden descendants) so the history scrubber can scope to it. Skipped during
@@ -980,7 +1025,7 @@ export const GraphFlow = (props: {
       onMouseLeave={scheduleClose}
     >
       <ReactFlow
-        nodes={nodes}
+        nodes={renderNodes}
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
