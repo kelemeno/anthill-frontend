@@ -100,7 +100,8 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         height: d,
         transform: hovered ? `scale(${hoverScale})` : "scale(1)",
         transformOrigin: "center",
-        transition: "transform 0.12s ease",
+        // Soft ease-out so the hover-zoom glides instead of snapping.
+        transition: "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
         zIndex: hovered ? 1000 : 1,
       }}
       onMouseEnter={() => setHovered(true)}
@@ -276,8 +277,8 @@ function GradientEdgeView({
         style={{
           stroke: `url(#${gid})`,
           strokeWidth: data?.width ?? 2,
-          // matches the node hover-zoom's 0.12s ease, so curves thicken in sync
-          transition: "stroke-width 0.12s ease",
+          // matches the node hover-zoom easing, so curves thicken in sync
+          transition: "stroke-width 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
         }}
       />
     </>
