@@ -140,13 +140,14 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           const dragged = movedRef.current;
           startRef.current = null;
           if (dragged) {
-            data.onDragEnd(); // springs back
+            data.onDragEnd(); // springs back; also flags "just dragged"
             return; // a drag, not a tap — don't select/open
           }
+          // Touch/pen: open the popover (React Flow's onNodeClick is swallowed on
+          // touch). Mouse: selection is handled by onNodeClick (guarded so a drag
+          // doesn't select).
           if (e.pointerType === "touch" || e.pointerType === "pen") {
             data.onInfo(e.currentTarget as HTMLElement);
-          } else {
-            data.onSelect();
           }
         }}
         style={{
@@ -650,10 +651,20 @@ export const GraphFlow = (props: {
   );
   const [springId, setSpringId] = useState<string | null>(null);
   const springTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True briefly right after a drag, so React Flow's onNodeClick (which still
+  // fires on pointerup after a drag) doesn't select the node we just wiggled.
+  const justDragged = useRef(false);
   const onNodeDrag = useCallback((id: string, dx: number, dy: number) => {
+    // Dragging shouldn't also trigger the hover-zoom (it animates the viewport
+    // and fights the drag); clearing the hover keeps the canvas steady.
+    setHoveredId(null);
     setDrag({ id, dx, dy });
   }, []);
   const onNodeDragEnd = useCallback((id: string) => {
+    justDragged.current = true;
+    setTimeout(() => {
+      justDragged.current = false;
+    }, 120);
     setDrag(null);
     setSpringId(id); // ease back to its locked position, then drop the class
     if (springTimer.current) clearTimeout(springTimer.current);
@@ -1078,13 +1089,16 @@ export const GraphFlow = (props: {
         elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
         style={{ background: "#ffffff" }}
-        onNodeClick={(_event, node) =>
+        // Mouse select. Skipped right after a drag (onNodeClick still fires on
+        // pointerup post-drag, which would wrongly select the wiggled node).
+        onNodeClick={(_event, node) => {
+          if (justDragged.current) return;
           props.onNodeClick(
             node.data.node.id,
             node.data.node.name,
             node.data.node.currentRep,
-          )
-        }
+          );
+        }}
         onNodeMouseEnter={(event, node) => {
           onHoverEnter(node.data.node.id);
           props.onNodeMouseEnter(
