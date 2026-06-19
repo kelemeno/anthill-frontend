@@ -7,10 +7,17 @@
   justify-content: center;
 }
 
-/* Newly-mounted nodes animate growing out of their parent (handled per-node in
-   AnthillNodeView via the parentOffset transform), so no wrapper fade here. */
-/* Drag-wiggle spring-back: applied only while a tugged node eases home, so it
-   follows the pointer 1:1 during the drag and springs (with overshoot) on release. */
+/* Newly-mounted nodes grow in place (handled per-node in AnthillNodeView). */
+/* Base: ease node position changes so the centred-spine layout re-arranges
+   fluidly when you navigate (only navigation re-shifts; peeking doesn't). */
+.react-flow__node {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* While dragging: follow the pointer 1:1 (no ease). */
+.react-flow__node.anthill-dragging {
+  transition: none;
+}
+/* Drag-wiggle spring-back: a springier ease (with overshoot) on release. */
 .react-flow__node.anthill-spring {
   transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

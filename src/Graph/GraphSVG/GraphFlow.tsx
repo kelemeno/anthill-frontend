@@ -163,6 +163,9 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
               n.id === id
                 ? {
                     ...n,
+                    // `anthill-dragging` removes the layout transition so the
+                    // node follows the pointer 1:1 (not eased).
+                    className: "nopan anthill-dragging",
                     position: {
                       x: s.x + (dx * factor) / z,
                       y: s.y + (dy * factor) / z,
@@ -261,7 +264,7 @@ function AutoFitView({
   graph: GraphDataRendering;
   focus: string;
 }) {
-  const { fitView, getNode } = useReactFlow();
+  const { fitView, getNode, setCenter, getViewport } = useReactFlow();
   const prevFocus = useRef<string | null>(null);
   const prevWorld = useRef<{ x: number; y: number } | null>(null);
   // First fit (initial load) is instant — no animated shift on open. Later
@@ -292,10 +295,26 @@ function AutoFitView({
             )
           : Number.POSITIVE_INFINITY;
       if (moved >= 1) {
-        // First fit (initial load) snaps instantly — no shift on open; later
-        // re-fits (navigation) animate.
-        fitView({ padding: 0.15, duration: firstFit.current ? 0 : 300 });
-        firstFit.current = false;
+        const instant = firstFit.current;
+        if (instant) {
+          // Establish a sensible zoom that fits the view.
+          fitView({ padding: 0.15, duration: 0 });
+          firstFit.current = false;
+        }
+        // Centre on the focus, which the spine layout pins to the central
+        // vertical line (world x=0) — so the active path stays centred and
+        // drilling doesn't drag the view sideways. Chained rAF so this runs
+        // AFTER any fitView commit (otherwise fitView's bbox-centring wins and
+        // leaves the spine off to one side).
+        requestAnimationFrame(() => {
+          const w2 = centerOf(getNode(focus));
+          if (w2) {
+            setCenter(w2.x, w2.y, {
+              zoom: getViewport().zoom,
+              duration: instant ? 0 : 300,
+            });
+          }
+        });
       }
       prevFocus.current = focus;
       prevWorld.current = world;
@@ -902,11 +921,48 @@ export const GraphFlow = (props: {
     }
 
     // Every node sits at its fixed full-layout position (locked layout).
-    const positions = fullPositions;
+    // Lay out the VISIBLE set (not the full graph): sugiyama centres each parent
+    // over its visible children, so the focus's children sit symmetrically under
+    // it (not pushed to one side by full-tree offsets). The spine shift below
+    // then straightens the focus path to the central vertical line.
+    const positions = props.treeMode
+      ? layoutPositions(visible)
+      : fullPositions;
+
+    // Centered spine: shift each tree level horizontally so the focused node's
+    // ancestor path becomes a vertical line at the focus's column. Uses the
+    // FIXED full-graph x's (so peeking a branch never moves anything — only
+    // navigating to a new focus re-shifts, which we animate). Below the focus,
+    // everything shifts by the focus's amount so its subtree stays centred under
+    // it.
+    const spineFocus = graph[props.clickedNode];
+    const spineShift = new Map<number, number>(); // depth -> x to subtract
+    if (spineFocus) {
+      let cur: NodeDataRendering | undefined = spineFocus;
+      let g = 0;
+      while (cur && g++ < 1000) {
+        const cp = positions.get(cur.id);
+        if (cp) spineShift.set(cur.depth, cp.x);
+        const parent: NodeDataRendering | undefined = graph[cur.sentTreeVote];
+        if (!parent || parent.id === cur.id) break;
+        cur = parent;
+      }
+    }
+    const focusDepth = spineFocus?.depth ?? 0;
+    const focusShift = positions.get(props.clickedNode)?.x ?? 0;
+    const shiftAt = (depth: number) =>
+      spineShift.get(Math.min(depth, focusDepth)) ?? focusShift;
+    // Shifted positions for every visible node — used for both node placement
+    // and edge gradient endpoints (so the gradients stay aligned with the edges).
+    const spos = new Map<string, { x: number; y: number }>();
+    for (const n of visible) {
+      const base = positions.get(n.id) ?? { x: 0, y: 0 };
+      spos.set(n.id, { x: base.x - shiftAt(n.depth), y: base.y });
+    }
 
     const nodes: AnthillNode[] = visible.map((n) => {
       const r = radiusForDistance(distances.get(n.id) ?? Infinity);
-      const p = positions.get(n.id) ?? { x: 0, y: 0 };
+      const p = spos.get(n.id) ?? { x: 0, y: 0 };
       const hasChildren = (children.get(n.id) ?? []).length > 0;
       // Badge shows the persistent pin state (stays +N while hover-peeking);
       // during playback it reflects the forced (controlled) collapse.
@@ -962,8 +1018,8 @@ export const GraphFlow = (props: {
           1,
           radiusForDistance(distances.get(n.id) ?? Infinity) / BASE_RADIUS,
         );
-        const sp = positions.get(parentId) ?? { x: 0, y: 0 };
-        const tp = positions.get(n.id) ?? { x: 0, y: 0 };
+        const sp = spos.get(parentId) ?? { x: 0, y: 0 };
+        const tp = spos.get(n.id) ?? { x: 0, y: 0 };
         edges.push({
           id: `${parentId}->${n.id}`,
           source: parentId,
@@ -1001,8 +1057,8 @@ export const GraphFlow = (props: {
         const color = e.outgoing ? DAG_OUT_COLOR : DAG_IN_COLOR;
         const src = e.outgoing ? e.to : props.clickedNode;
         const tgt = e.outgoing ? props.clickedNode : e.to;
-        const sp = positions.get(src) ?? { x: 0, y: 0 };
-        const tp = positions.get(tgt) ?? { x: 0, y: 0 };
+        const sp = spos.get(src) ?? { x: 0, y: 0 };
+        const tp = spos.get(tgt) ?? { x: 0, y: 0 };
         edges.push({
           id: `vote-${e.outgoing ? "out" : "in"}-${props.clickedNode}-${e.to}`,
           // outgoing: recipient (above) → focus; incoming: focus → voter (below)
@@ -1146,7 +1202,9 @@ export const GraphFlow = (props: {
         defaultEdges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
+        // No `fitView` prop — it auto-recenters the bounding box (lopsided when
+        // the tree is asymmetric). AutoFitView does the initial fit + centres on
+        // the focus/spine instead.
         minZoom={0.05}
         onlyRenderVisibleElements={nodes.length > 300}
         nodesDraggable={false}
