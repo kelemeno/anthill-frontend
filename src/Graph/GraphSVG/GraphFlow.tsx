@@ -73,9 +73,6 @@ type AnthillNodeData = {
   // Drag-wiggle ended (mouse): flag it so onNodeClick doesn't select. The drag
   // motion itself is done imperatively in the node via setNodes.
   onDragEnd: () => void;
-  // Vector (flow units) from this node to its tree parent, so a freshly-appeared
-  // node can animate growing OUT of its parent. {0,0} = no parent (don't grow).
-  parentOffset: { x: number; y: number };
 };
 type AnthillNode = Node<AnthillNodeData, "anthill">;
 
@@ -106,15 +103,15 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
   const nodeStart = useRef<{ x: number; y: number } | null>(null);
   const movedRef = useRef(false);
   const springTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Appear animation: a freshly-mounted node grows OUT of its parent — starts
-  // small at the parent's position, then eases to its own. `entered` flips on the
-  // next frame so the initial (at-parent) state paints first and then transitions.
+  // Appear animation: a freshly-mounted node GROWS IN PLACE — scales up from
+  // nothing at its own spot (popping in to meet the curve coming down to it),
+  // like a new member joining. `entered` flips on the next frame so the initial
+  // (zero-size) state paints first and then transitions.
   const [entered, setEntered] = useState(false);
   useEffect(() => {
     const raf = requestAnimationFrame(() => setEntered(true));
     return () => cancelAnimationFrame(raf);
   }, []);
-  const po = data.parentOffset;
   // Plain node: no on-node controls. Hover (desktop) / tap (touch) opens the
   // popover, which carries the info, actions and Show/Hide-children control.
   return (
@@ -233,14 +230,13 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           userSelect: "none",
           cursor: "grab",
           touchAction: "none",
-          // grow out of the parent on first appearance
+          // grow in place on first appearance (scale up from nothing, slight
+          // overshoot so it "pops" in to meet its curve)
           transformOrigin: "center",
           opacity: entered ? 1 : 0,
-          transform: entered
-            ? "translate(0px, 0px) scale(1)"
-            : `translate(${po.x}px, ${po.y}px) scale(0.35)`,
+          transform: entered ? "scale(1)" : "scale(0)",
           transition:
-            "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease-out",
+            "transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease-out",
         }}
       >
         {data.label}
@@ -532,7 +528,6 @@ function dagLayout(
         onSelect: () => onNodeClick(n.id, n.name, n.currentRep),
         onInfo: () => {},
         onDragEnd: () => {},
-        parentOffset: { x: 0, y: 0 },
       },
     };
   });
@@ -912,12 +907,6 @@ export const GraphFlow = (props: {
     const nodes: AnthillNode[] = visible.map((n) => {
       const r = radiusForDistance(distances.get(n.id) ?? Infinity);
       const p = positions.get(n.id) ?? { x: 0, y: 0 };
-      // Vector to the tree parent (for the grow-out-of-parent appear animation).
-      const pp = positions.get(n.sentTreeVote);
-      const parentOffset =
-        pp && n.sentTreeVote !== n.id
-          ? { x: pp.x - p.x, y: pp.y - p.y }
-          : { x: 0, y: 0 };
       const hasChildren = (children.get(n.id) ?? []).length > 0;
       // Badge shows the persistent pin state (stays +N while hover-peeking);
       // during playback it reflects the forced (controlled) collapse.
@@ -958,7 +947,6 @@ export const GraphFlow = (props: {
             );
           },
           onDragEnd: () => onNodeDragEnd(),
-          parentOffset,
         },
       };
     });
