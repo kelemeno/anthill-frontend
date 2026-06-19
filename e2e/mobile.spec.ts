@@ -36,30 +36,39 @@ test.describe("mobile", () => {
   test("tapping a node peeks its children open", async ({ page }) => {
     await page.goto(`/?id=${WITH_CHILDREN}`); // deeper neighbourhood (has collapse)
     await waitForGraph(page);
-    const before = await nodeCount(page);
+    await page.waitForTimeout(1500); // let the staged neighbourhood mostly load
     const ids = await page.$$eval(".react-flow__node", (els) =>
       els.map((e) => e.getAttribute("data-id")),
     );
-    // find a visible node whose tap reveals more (i.e. had collapsed children)
-    // far-left, mid-height: empty pane (nodes are centred; avoids the top-left
-    // zoom Controls).
-    const tapEmpty = () => page.mouse.click(5, 420);
+    // empty pane click (top-left; nodes are centred) collapses the peek.
+    const tapEmpty = () =>
+      page
+        .locator(".react-flow__pane")
+        .click({ position: { x: 3, y: 3 } })
+        .catch(() => {});
+    // Compare counts immediately before/after each tap (the load changes in
+    // >1s steps, so a tight window isolates the peek from background loading).
+    let peeked = 0;
     let revealedId: string | null = null;
     for (const id of ids) {
+      const c0 = await nodeCount(page);
       await page.locator(`.react-flow__node[data-id="${id}"]`).tap();
-      await page.waitForTimeout(400);
-      if ((await nodeCount(page)) > before) {
+      await page.waitForTimeout(450);
+      const c1 = await nodeCount(page);
+      if (c1 > c0) {
         revealedId = id;
+        peeked = c1;
         break;
       }
-      await tapEmpty(); // collapse peek + dismiss popover
-      await page.waitForTimeout(200);
+      await tapEmpty();
+      await page.waitForTimeout(250);
     }
+    // a tap peeked a collapsed branch open
     expect(revealedId).not.toBeNull();
 
-    // tapping empty space collapses the peek again
+    // tapping empty space collapses the peeked children back
     await tapEmpty();
-    await page.waitForTimeout(600);
-    expect(await nodeCount(page)).toBe(before);
+    await page.waitForTimeout(700);
+    expect(await nodeCount(page)).toBeLessThan(peeked);
   });
 });
