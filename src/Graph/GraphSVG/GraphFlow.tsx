@@ -17,6 +17,7 @@ import {
   Position,
   ReactFlow,
   useReactFlow,
+  useStore,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { interpolateRainbow } from "d3";
@@ -487,6 +488,36 @@ function gradientId(edgeId: string): string {
 // (top→bottom) mean they need no per-edge coordinates, so this only re-renders
 // when the edge set/colours change — never during a drag — so no flicker.
 function EdgeGradients({ edges }: { edges: GradientEdge[] }) {
+  // Gradient endpoints follow the LIVE node centres (read from the store), so the
+  // gradient tracks the curve as nodes animate during a re-org. Pinning it to the
+  // resting spot (e.data.gx*) instead makes the gradient slide off the moved
+  // curve, and the colours pop/flicker once the move is big (a small drag never
+  // showed it). The <linearGradient> elements keep stable keys, so this only
+  // updates their attributes in place — no element re-creation, no url(#…) blink.
+  const centers = useStore(
+    (s) => {
+      const m: Record<string, { x: number; y: number }> = {};
+      s.nodeLookup.forEach((n, id) => {
+        m[id] = {
+          x: n.position.x + (n.measured?.width ?? 0) / 2,
+          y: n.position.y + (n.measured?.height ?? 0) / 2,
+        };
+      });
+      return m;
+    },
+    // Re-render only when a centre actually moves (the selector returns a fresh
+    // object each call, so without this useSyncExternalStore would loop).
+    (a, b) => {
+      const ka = Object.keys(a);
+      if (ka.length !== Object.keys(b).length) return false;
+      for (const k of ka) {
+        const av = a[k];
+        const bv = b[k];
+        if (!bv || av.x !== bv.x || av.y !== bv.y) return false;
+      }
+      return true;
+    },
+  );
   return (
     <svg
       aria-hidden="true"
@@ -494,20 +525,24 @@ function EdgeGradients({ edges }: { edges: GradientEdge[] }) {
     >
       <title>edge gradients</title>
       <defs>
-        {edges.map((e) => (
-          <linearGradient
-            key={e.id}
-            id={gradientId(e.id)}
-            gradientUnits="userSpaceOnUse"
-            x1={e.data?.gx1}
-            y1={e.data?.gy1}
-            x2={e.data?.gx2}
-            y2={e.data?.gy2}
-          >
-            <stop offset="0%" stopColor={e.data?.sourceColor} />
-            <stop offset="100%" stopColor={e.data?.targetColor} />
-          </linearGradient>
-        ))}
+        {edges.map((e) => {
+          const a = centers[e.source];
+          const b = centers[e.target];
+          return (
+            <linearGradient
+              key={e.id}
+              id={gradientId(e.id)}
+              gradientUnits="userSpaceOnUse"
+              x1={a?.x ?? e.data?.gx1}
+              y1={a?.y ?? e.data?.gy1}
+              x2={b?.x ?? e.data?.gx2}
+              y2={b?.y ?? e.data?.gy2}
+            >
+              <stop offset="0%" stopColor={e.data?.sourceColor} />
+              <stop offset="100%" stopColor={e.data?.targetColor} />
+            </linearGradient>
+          );
+        })}
       </defs>
     </svg>
   );
@@ -1234,7 +1269,6 @@ export const GraphFlow = (props: {
       onMouseEnter={cancelClose}
       onMouseLeave={scheduleClose}
     >
-      <EdgeGradients edges={edges} />
       <ReactFlow
         defaultNodes={nodes}
         defaultEdges={edges}
@@ -1280,6 +1314,7 @@ export const GraphFlow = (props: {
           props.onNodeMouseLeave();
         }}
       >
+        <EdgeGradients edges={edges} />
         <NodeSync nodes={nodes} edges={edges} />
         <AutoFitView
           graph={layoutSource}
