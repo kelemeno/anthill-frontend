@@ -399,20 +399,20 @@ function NodeSync({
           const cls = pn?.className ?? "";
           if (cls.includes("anthill-dragging") || cls.includes("anthill-spring"))
             return pn ?? n;
+          // Truly new (not in the store yet): mount at target, grow in.
+          if (!pn) return n;
+          // Always spread the LIVE node first so React Flow's measured dimensions
+          // are preserved — rebuilding a node from the memo (which has no measured
+          // size) makes RF re-measure it, and an edge to an unmeasured node isn't
+          // drawn for a frame, which flickers the curve (esp. as a move settles).
           const s = start.get(n.id);
-          // New node (not in the store yet): appears at target, grows in.
-          if (!pn || !s) return n;
-          // Spread the LIVE node first so React Flow's measured dimensions are
-          // preserved — rebuilding the node from the memo (which has no measured
-          // size) makes RF re-measure every frame, which flickers the edges.
-          return {
-            ...pn,
-            ...n,
-            position: {
-              x: s.x + (n.position.x - s.x) * e,
-              y: s.y + (n.position.y - s.y) * e,
-            },
-          };
+          const position = s
+            ? {
+                x: s.x + (n.position.x - s.x) * e,
+                y: s.y + (n.position.y - s.y) * e,
+              }
+            : n.position; // just-appeared node: hold at target (still keep measured)
+          return { ...pn, ...n, position };
         });
       });
       if (t < 1) rafRef.current = requestAnimationFrame(step);
