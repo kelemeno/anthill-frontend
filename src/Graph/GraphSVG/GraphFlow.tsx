@@ -81,6 +81,12 @@ type GradientEdgeData = {
   sourceColor: string;
   targetColor: string;
   width: number;
+  // Resting (layout) endpoints in flow space, for a spatially-fixed gradient
+  // that doesn't remap as the edge bbox changes while a node drags.
+  gx1: number;
+  gy1: number;
+  gx2: number;
+  gy2: number;
 };
 type GradientEdge = Edge<GradientEdgeData, "gradient">;
 
@@ -329,8 +335,6 @@ function GradientEdgeView({
       style={{
         stroke: `url(#${gradientId(id)})`,
         strokeWidth: data?.width ?? 2,
-        // matches the node hover-zoom easing, so curves thicken in sync
-        transition: "stroke-width 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
       }}
     />
   );
@@ -353,7 +357,15 @@ function EdgeGradients({ edges }: { edges: GradientEdge[] }) {
       <title>edge gradients</title>
       <defs>
         {edges.map((e) => (
-          <linearGradient key={e.id} id={gradientId(e.id)} x1="0" y1="0" x2="0" y2="1">
+          <linearGradient
+            key={e.id}
+            id={gradientId(e.id)}
+            gradientUnits="userSpaceOnUse"
+            x1={e.data?.gx1}
+            y1={e.data?.gy1}
+            x2={e.data?.gx2}
+            y2={e.data?.gy2}
+          >
             <stop offset="0%" stopColor={e.data?.sourceColor} />
             <stop offset="100%" stopColor={e.data?.targetColor} />
           </linearGradient>
@@ -453,6 +465,10 @@ function dagLayout(
         sourceColor: DAG_OUT_COLOR,
         targetColor: DAG_OUT_COLOR,
         width: widthFor(id),
+        gx1: 0,
+        gy1: 0,
+        gx2: 0,
+        gy2: 1,
       },
     });
   }
@@ -467,6 +483,10 @@ function dagLayout(
         sourceColor: DAG_IN_COLOR,
         targetColor: DAG_IN_COLOR,
         width: widthFor(id),
+        gx1: 0,
+        gy1: 0,
+        gx2: 0,
+        gy2: 1,
       },
     });
   }
@@ -889,6 +909,8 @@ export const GraphFlow = (props: {
           1,
           radiusForDistance(distances.get(n.id) ?? Infinity) / BASE_RADIUS,
         );
+        const sp = positions.get(parentId) ?? { x: 0, y: 0 };
+        const tp = positions.get(n.id) ?? { x: 0, y: 0 };
         edges.push({
           id: `${parentId}->${n.id}`,
           source: parentId,
@@ -898,6 +920,10 @@ export const GraphFlow = (props: {
             sourceColor: colorOf(parentId),
             targetColor: colorOf(n.id),
             width: Math.max(0.75, (isTreeEdge ? 6 : 2) * rFactor),
+            gx1: sp.x,
+            gy1: sp.y,
+            gx2: tp.x,
+            gy2: tp.y,
           },
         });
       }
@@ -922,6 +948,8 @@ export const GraphFlow = (props: {
         const color = e.outgoing ? DAG_OUT_COLOR : DAG_IN_COLOR;
         const src = e.outgoing ? e.to : props.clickedNode;
         const tgt = e.outgoing ? props.clickedNode : e.to;
+        const sp = positions.get(src) ?? { x: 0, y: 0 };
+        const tp = positions.get(tgt) ?? { x: 0, y: 0 };
         edges.push({
           id: `vote-${e.outgoing ? "out" : "in"}-${props.clickedNode}-${e.to}`,
           // outgoing: recipient (above) → focus; incoming: focus → voter (below)
@@ -932,6 +960,10 @@ export const GraphFlow = (props: {
             sourceColor: color,
             targetColor: color,
             width: 1.5 + 4 * (e.weight / maxW),
+            gx1: sp.x,
+            gy1: sp.y,
+            gx2: tp.x,
+            gy2: tp.y,
           },
         });
       }
