@@ -93,4 +93,55 @@ test.describe("graph interactions", () => {
     }
     expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(10);
   });
+
+  // The per-layer left-to-right order must be FIXED: peeking a branch open may
+  // re-space nodes but must never re-shuffle their order (re-ordering is what let
+  // a node jump under the cursor → the hover loop).
+  test("node order is preserved when a branch peeks open", async ({ page }) => {
+    await page.goto(`/?id=0x0000000000000000000000000000000000000008`);
+    await waitForGraph(page);
+    await page.waitForTimeout(2000);
+    const focus = "0x0000000000000000000000000000000000000008";
+    // ids left-to-right (grouped into rows by rounded y)
+    const order = () =>
+      page.$$eval(".react-flow__node", (els) => {
+        const ns = els.map((e) => {
+          const r = e.getBoundingClientRect();
+          return {
+            id: e.getAttribute("data-id") ?? "",
+            x: r.x + r.width / 2,
+            y: Math.round((r.y + r.height / 2) / 40),
+          };
+        });
+        const rows = new Map<number, typeof ns>();
+        for (const n of ns) (rows.get(n.y) ?? rows.set(n.y, []).get(n.y))!.push(n);
+        return [...rows.values()].flatMap((r) =>
+          r.sort((a, b) => a.x - b.x).map((n) => n.id),
+        );
+      });
+    const before = await order();
+    // peek a non-focus node open
+    const ids = (
+      await page.$$eval(".react-flow__node", (els) =>
+        els.map((e) => e.getAttribute("data-id")),
+      )
+    ).filter((i) => i !== focus);
+    for (const id of ids) {
+      const c0 = await nodeCount(page);
+      const b = await page
+        .locator(`.react-flow__node[data-id="${id}"]`)
+        .boundingBox();
+      if (!b) continue;
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+      await page.waitForTimeout(500);
+      if ((await nodeCount(page)) > c0) break;
+      await page.mouse.move(2, 2);
+      await page.waitForTimeout(1700);
+    }
+    const after = await order();
+    // common nodes must appear in the same relative order in both
+    const a = before.filter((id) => after.includes(id));
+    const b = after.filter((id) => before.includes(id));
+    expect(b).toEqual(a);
+  });
 });

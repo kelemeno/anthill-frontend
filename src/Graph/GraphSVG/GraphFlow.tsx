@@ -630,27 +630,41 @@ function distancesFrom(
 // Sugiyama layout for a set of nodes; returns center positions by id.
 function layoutPositions(
   visible: NodeDataRendering[],
-  // Optional stable ordering key (e.g. the full-graph x). When given, the input
-  // is pre-sorted by it so the deterministic DFS keeps a FIXED left-to-right
-  // order per layer even as the rendered set changes (nodes never cross/swap).
+  // Optional stable ordering key (e.g. the full-graph x). When given, EACH
+  // layer is ordered by it (replacing sugiyama's crossing-reduction reordering),
+  // so the left-to-right order per layer is FIXED and never re-shuffles as the
+  // rendered set changes — only the spacing compacts. Sugiyama still assigns the
+  // (regular/compact) coordinates within that fixed order.
   orderX?: (id: string) => number,
 ): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>();
   if (visible.length === 0) return positions;
-  const ordered = orderX
-    ? [...visible].sort((a, b) => orderX(a.id) - orderX(b.id))
-    : visible;
-  const visibleIds = new Set(ordered.map((n) => n.id));
-  const layoutInput = ordered.map((n) => ({
+  const visibleIds = new Set(visible.map((n) => n.id));
+  const layoutInput = visible.map((n) => ({
     id: n.id,
     parentIds: n.parentIds.filter((p) => visibleIds.has(p)),
   }));
   const dag = graphStratify()(layoutInput);
+  // Force a fixed per-layer order: sort each layer by the stable ordering key.
+  // (SugiNode shape for d3-dag v1: real nodes have data.role === "node" and the
+  // original id at data.node.data.id; link/dummy nodes keep their place.)
+  type SugiLayerNode = {
+    data?: { role?: string; node?: { data?: { id?: string } } };
+  };
+  const key = (n: SugiLayerNode) => {
+    const id = n.data?.role === "node" ? n.data.node?.data?.id : undefined;
+    return id && orderX ? orderX(id) : Number.POSITIVE_INFINITY;
+  };
+  const orderedDecross = (layers: SugiLayerNode[][]) => {
+    for (const layer of layers) layer.sort((a, b) => key(a) - key(b));
+  };
   sugiyama()
     .layering(layeringLongestPath())
-    // Deterministic DFS ordering: stable left-to-right order that doesn't
-    // re-shuffle when a branch opens.
-    .decross(decrossDfs())
+    .decross(
+      orderX
+        ? (orderedDecross as unknown as ReturnType<typeof decrossDfs>)
+        : decrossDfs(),
+    )
     .coord(coordCenter())
     .nodeSize(() => [2 * BASE_RADIUS, 1.4 * 2 * BASE_RADIUS])
     .gap([BASE_RADIUS, BASE_RADIUS * 1.2])(dag);
