@@ -57,12 +57,9 @@ test.describe("mobile", () => {
     expect(await nodeCount(page)).toBeGreaterThan(before);
   });
 
-  // KNOWN GAP: the node popover (info + join/vote actions) is driven by hover
-  // (mouseenter), which a REAL touch device never fires — so on a phone tapping
-  // a node doesn't open it. Playwright synthesizes mouseenter on a tap, but only
-  // unreliably, so this test is flaky and asserts behavior that doesn't hold on
-  // real hardware. Skipped until the popover is wired to open on a real tap.
-  test.skip("tapping a node opens the popover", async ({ page }) => {
+  // On touch a tap opens the popover via a real pointerup handler (not the
+  // hover path), so the info + join/vote actions are reachable on a phone.
+  test("tapping a node opens the popover", async ({ page }) => {
     await page.goto(`/?id=${ROOT}`);
     await waitForGraph(page);
     await page.locator(".react-flow__node").first().tap();

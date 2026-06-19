@@ -70,6 +70,9 @@ type AnthillNodeData = {
   hiddenCount: number;
   onToggle: (id: string) => void;
   onSelect: () => void;
+  // Touch only: open the node's popover (info + actions) anchored to the tapped
+  // element — the popover is otherwise hover-driven and unreachable on a phone.
+  onInfo: (el: HTMLElement) => void;
 };
 type AnthillNode = Node<AnthillNodeData, "anthill">;
 
@@ -111,9 +114,13 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
       />
       <div
         // pointerup fires on a real touch tap (unlike hover/onNodeClick, which
-        // the pan/zoom layer or touch hardware swallow). On touch we also drill
-        // the branch open here, since there's no hover to peek it open.
-        onPointerUp={() => data.onSelect()}
+        // the pan/zoom layer or touch hardware swallow). On a phone a tap opens
+        // the popover (info + actions) — there's no hover to trigger it — while
+        // on desktop it selects/focuses as before. Drilling stays on the badge.
+        onPointerUp={(e) => {
+          if (IS_TOUCH) data.onInfo(e.currentTarget as HTMLElement);
+          else data.onSelect();
+        }}
         style={{
           width: d,
           height: d,
@@ -339,6 +346,7 @@ function dagLayout(
         hiddenCount: 0,
         onToggle: () => {},
         onSelect: () => onNodeClick(n.id, n.name, n.currentRep),
+        onInfo: () => {},
       },
     };
   });
@@ -708,6 +716,11 @@ export const GraphFlow = (props: {
           onSelect: forced
             ? () => {}
             : () => props.onNodeClick(n.id, n.name, n.currentRep),
+          onInfo: (el: HTMLElement) =>
+            props.onNodeMouseEnter(
+              { currentTarget: el } as unknown as React.MouseEvent<HTMLElement>,
+              n,
+            ),
         },
       };
     });
@@ -917,6 +930,9 @@ export const GraphFlow = (props: {
           scheduleClose();
           props.onNodeMouseLeave();
         }}
+        // Tapping/clicking empty space dismisses the popover (the main way to
+        // close it on touch, where there's no mouse-leave).
+        onPaneClick={() => props.onNodeMouseLeave()}
       >
         <AutoFitView graph={layoutSource} focus={props.clickedNode} />
         <Controls showInteractive={false} position="top-left" />
