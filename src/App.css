@@ -22,31 +22,6 @@
   }
 }
 
-/* Idle "alive" wiggle on each node (it's an ant-hill). Subtle: a couple of px
-   of bob + a small tilt. Per-node duration/delay de-sync it (set inline). */
-@keyframes anthillWiggle {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  25% {
-    transform: translate(0.7px, -0.9px) rotate(1.3deg);
-  }
-  50% {
-    transform: translate(-0.6px, 0.7px) rotate(-1.1deg);
-  }
-  75% {
-    transform: translate(0.8px, 0.5px) rotate(0.9deg);
-  }
-}
-
-/* Respect reduced-motion: hold still for users who ask for it. */
-@media (prefers-reduced-motion: reduce) {
-  .react-flow__node [style*="anthillWiggle"] {
-    animation: none !important;
-  }
-}
-
 /* In-flow bottom control bar (the visual container): mobile view toggle +
    history scrubber. Sits at the bottom of the page flex column, so the graph
    fills the space above it (no overlap). */

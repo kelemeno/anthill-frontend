@@ -47,13 +47,6 @@ function radiusForDistance(distance: number): number {
   return Math.max(MIN_RADIUS, BASE_RADIUS * SHRINK ** distance);
 }
 
-// Small stable per-node hash → 0..1, for de-synchronising the idle wiggle.
-function nodeHash01(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return ((h % 1000) + 1000) / 1000 % 1;
-}
-
 // Same per-id rainbow hash the old renderer used, so colours are identical.
 function colorOf(id: string): string {
   const hash = [...id].reduce(
@@ -90,12 +83,12 @@ type GradientEdge = Edge<GradientEdgeData, "gradient">;
 function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
   const d = data.radius * 2;
   const fontSize = Math.max(7, data.radius * 0.5);
-  // Idle "wiggle" — a tiny living jitter (it's an ant-hill). De-sync per node
-  // via a stable hash so they don't all move in lockstep.
-  const h = nodeHash01(data.node.id);
-  const wiggle = `anthillWiggle ${(2.6 + h * 1.4).toFixed(2)}s ease-in-out ${(
-    -h * 4
-  ).toFixed(2)}s infinite`;
+  // Drag-wiggle: grabbing a node lets you tug it a little (damped + capped, like
+  // a rubber band); it springs back when you let go. A real tap/click (no
+  // movement) still selects / opens the popover.
+  const [offset, setOffset] = useState<{ x: number; y: number } | null>(null);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const movedRef = useRef(false);
   // Plain node: no on-node controls. Hover (desktop) / tap (touch) opens the
   // popover, which carries the info, actions and Show/Hide-children control.
   return (
@@ -113,12 +106,32 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
         style={{ opacity: 0 }}
       />
       <div
+        onPointerDown={(e) => {
+          startRef.current = { x: e.clientX, y: e.clientY };
+          movedRef.current = false;
+          // capture so the wiggle follows the pointer instead of the pane panning
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          if (!startRef.current) return;
+          const dx = e.clientX - startRef.current.x;
+          const dy = e.clientY - startRef.current.y;
+          if (Math.hypot(dx, dy) > 4) movedRef.current = true;
+          // damped + capped: a little give, not a free drag
+          const cap = 24;
+          const clamp = (v: number) => Math.max(-cap, Math.min(cap, v * 0.55));
+          setOffset({ x: clamp(dx), y: clamp(dy) });
+        }}
         // pointerup fires on a real touch tap (unlike hover/onNodeClick, which
         // the pan/zoom layer or touch hardware swallow). Branch off the EVENT's
         // pointer type — not a global matchMedia("(hover: none)") guess, which
         // some phones mis-report, leaving the popover unreachable on touch.
         // Touch/pen → open the popover (info + actions); mouse → select/focus.
         onPointerUp={(e) => {
+          const dragged = movedRef.current;
+          startRef.current = null;
+          setOffset(null); // springs back
+          if (dragged) return; // a drag, not a tap — don't select/open
           if (e.pointerType === "touch" || e.pointerType === "pen") {
             data.onInfo(e.currentTarget as HTMLElement);
           } else {
@@ -142,8 +155,15 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           lineHeight: 1.1,
           textShadow: "0 1px 2px rgba(0,0,0,0.65)",
           userSelect: "none",
-          cursor: "pointer",
-          animation: wiggle,
+          cursor: "grab",
+          touchAction: "none",
+          transform: offset
+            ? `translate(${offset.x}px, ${offset.y}px)`
+            : "translate(0, 0)",
+          // follow the pointer instantly while dragging; springy ease-back on let-go
+          transition: offset
+            ? "none"
+            : "transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}
       >
         {data.label}
