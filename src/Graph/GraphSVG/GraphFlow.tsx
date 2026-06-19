@@ -630,11 +630,18 @@ function distancesFrom(
 // Sugiyama layout for a set of nodes; returns center positions by id.
 function layoutPositions(
   visible: NodeDataRendering[],
+  // Optional stable ordering key (e.g. the full-graph x). When given, the input
+  // is pre-sorted by it so the deterministic DFS keeps a FIXED left-to-right
+  // order per layer even as the rendered set changes (nodes never cross/swap).
+  orderX?: (id: string) => number,
 ): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>();
   if (visible.length === 0) return positions;
-  const visibleIds = new Set(visible.map((n) => n.id));
-  const layoutInput = visible.map((n) => ({
+  const ordered = orderX
+    ? [...visible].sort((a, b) => orderX(a.id) - orderX(b.id))
+    : visible;
+  const visibleIds = new Set(ordered.map((n) => n.id));
+  const layoutInput = ordered.map((n) => ({
     id: n.id,
     parentIds: n.parentIds.filter((p) => visibleIds.has(p)),
   }));
@@ -651,71 +658,6 @@ function layoutPositions(
     positions.set(node.data.id, { x: node.x ?? 0, y: node.y ?? 0 });
   }
   return positions;
-}
-
-// Tidy tree layout of the VISIBLE set with a FIXED left-to-right order per layer
-// (taken from the stable full-graph layout). Top-down + subtree-width based, so:
-//  - the ORDER never changes when the rendered set changes (no crossings);
-//  - SPACING compacts around what's rendered (each subtree is as wide as its
-//    visible leaves), and every parent is centred over its children;
-//  - peeking a branch makes a node's subtree WIDER, which pushes its siblings
-//    symmetrically OUTWARD while the node itself stays put — so a hovered node
-//    never slides out from under the cursor (no peek→re-space→lose-hover loop).
-function orderedLayout(
-  visible: NodeDataRendering[],
-  fullPositions: Map<string, { x: number; y: number }>,
-): Map<string, { x: number; y: number }> {
-  const pos = new Map<string, { x: number; y: number }>();
-  if (visible.length === 0) return pos;
-  const byId = new Map(visible.map((n) => [n.id, n]));
-  const fx = (id: string) => fullPositions.get(id)?.x ?? 0;
-  const kids = new Map<string, string[]>();
-  for (const n of visible) {
-    const p = n.sentTreeVote;
-    if (byId.has(p) && p !== n.id) {
-      const arr = kids.get(p);
-      if (arr) arr.push(n.id);
-      else kids.set(p, [n.id]);
-    }
-  }
-  // Fixed order: sort siblings by their full-graph x.
-  for (const arr of kids.values()) arr.sort((a, b) => fx(a) - fx(b));
-
-  const widthMemo = new Map<string, number>(); // subtree width in leaf units
-  const width = (id: string): number => {
-    const cached = widthMemo.get(id);
-    if (cached !== undefined) return cached;
-    const cs = kids.get(id) ?? [];
-    const w = cs.length === 0 ? 1 : cs.reduce((s, c) => s + width(c), 0);
-    widthMemo.set(id, w);
-    return w;
-  };
-
-  const COL = 3 * BASE_RADIUS; // horizontal step per leaf
-  const ROW = 3.4 * BASE_RADIUS; // vertical step per depth
-  const place = (id: string, xCenter: number) => {
-    const n = byId.get(id);
-    pos.set(id, { x: xCenter, y: (n?.depth ?? 0) * ROW });
-    const cs = kids.get(id) ?? [];
-    if (cs.length === 0) return;
-    let left = xCenter - (width(id) * COL) / 2;
-    for (const c of cs) {
-      const w = width(c);
-      place(c, left + (w * COL) / 2);
-      left += w * COL;
-    }
-  };
-  // Roots = visible nodes whose parent isn't visible; lay them out in order.
-  const roots = visible
-    .filter((n) => !byId.has(n.sentTreeVote) || n.sentTreeVote === n.id)
-    .sort((a, b) => fx(a.id) - fx(b.id));
-  let cursor = 0;
-  for (const r of roots) {
-    const w = width(r.id);
-    place(r.id, cursor + (w * COL) / 2);
-    cursor += w * COL;
-  }
-  return pos;
 }
 
 // Default collapse state: keep the top 3 levels open and fold everything below
@@ -985,13 +927,11 @@ export const GraphFlow = (props: {
       }
     }
 
-    // FIXED ORDER, compacting spacing: a tidy layout of the visible set whose
-    // per-layer order comes from the stable full-graph layout. Peeking widens a
-    // node's subtree and pushes its siblings symmetrically outward while the node
-    // stays put — so hovering never slides a node under the cursor (no loop) —
-    // and children stay centred under their parent.
+    // Sugiyama layout of the VISIBLE set (the compact, regular look) with a FIXED
+    // per-layer order taken from the stable full-graph x — so spacing compacts
+    // around what's rendered while the left-to-right order never changes.
     const positions = props.treeMode
-      ? orderedLayout(visible, fullPositions)
+      ? layoutPositions(visible, (id) => fullPositions.get(id)?.x ?? 0)
       : fullPositions;
     const spos = positions;
 
