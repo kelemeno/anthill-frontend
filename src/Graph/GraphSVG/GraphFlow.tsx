@@ -133,7 +133,11 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           if (!ptrStart.current || !nodeStart.current) return;
           const dx = e.clientX - ptrStart.current.x;
           const dy = e.clientY - ptrStart.current.y;
-          if (Math.hypot(dx, dy) > 4) movedRef.current = true;
+          // Touch needs a bigger threshold — a finger tap jitters several px, and
+          // mis-reading it as a drag means the tap never opens the popover (the
+          // only way to expand children on a phone).
+          const threshold = e.pointerType === "touch" ? 14 : 4;
+          if (Math.hypot(dx, dy) > threshold) movedRef.current = true;
           if (!movedRef.current) return;
           // damped + capped in screen px (a little give), then to world units
           // (÷ zoom) so it moves by that screen amount at any zoom level.
@@ -637,13 +641,6 @@ export const GraphFlow = (props: {
   onNodeMouseEnter: (
     event: React.MouseEvent<HTMLElement>,
     node: NodeDataRendering,
-    // Collapse state for this node, so the popover can offer Show/Hide children.
-    collapse?: {
-      hasChildren: boolean;
-      collapsed: boolean;
-      hiddenCount: number;
-      toggle: () => void;
-    },
   ) => void;
   onNodeMouseLeave: () => void;
   // When true, start fully expanded (no default top-3 collapse).
@@ -803,9 +800,9 @@ export const GraphFlow = (props: {
     };
     const fn = graph[props.clickedNode];
     if (!forced) {
-      // Hover-peek is a desktop-only preview; on touch there's no hover, and an
-      // emulated one would re-open a branch the user just collapsed.
-      if (!IS_MOBILE) openPath(hoveredId);
+      // Peek the hovered/tapped node's branch open: hover on desktop, tap on
+      // mobile (onInfo sets hoveredId) — there's no hover on a phone.
+      openPath(hoveredId);
       if (props.viewMode === "rep") {
         // Reputation: show the tree only DOWN TO the focus (open its ancestors)
         // and collapse the focus's subtree — the incoming voters are shown
@@ -917,19 +914,15 @@ export const GraphFlow = (props: {
           onSelect: forced
             ? () => {}
             : () => props.onNodeClick(n.id, n.name, n.currentRep),
-          onInfo: (el: HTMLElement) =>
+          onInfo: (el: HTMLElement) => {
+            // Touch tap = the mobile equivalent of hover: peek this node's
+            // children open AND open its popover (info + actions).
+            onHoverEnter(n.id);
             props.onNodeMouseEnter(
               { currentTarget: el } as unknown as React.MouseEvent<HTMLElement>,
               n,
-              {
-                hasChildren,
-                collapsed: isCollapsed,
-                hiddenCount: isCollapsed ? subtreeCount(n.id) : 0,
-                toggle: () => {
-                  if (!forced) toggleCollapse(n.id);
-                },
-              },
-            ),
+            );
+          },
           onDragEnd: () => onNodeDragEnd(),
         },
       };
@@ -1153,12 +1146,6 @@ export const GraphFlow = (props: {
           props.onNodeMouseEnter(
             event as unknown as React.MouseEvent<HTMLElement>,
             node.data.node,
-            {
-              hasChildren: node.data.hasChildren,
-              collapsed: node.data.collapsed,
-              hiddenCount: node.data.hiddenCount,
-              toggle: () => node.data.onToggle(node.data.node.id),
-            },
           );
         }}
         onNodeMouseLeave={() => {
@@ -1166,9 +1153,13 @@ export const GraphFlow = (props: {
           scheduleClose();
           props.onNodeMouseLeave();
         }}
-        // Tapping/clicking empty space dismisses the popover (the main way to
-        // close it on touch, where there's no mouse-leave).
-        onPaneClick={() => props.onNodeMouseLeave()}
+        // Tapping/clicking empty space collapses the peeked branch AND dismisses
+        // the popover (the main way to close both on touch — no mouse-leave).
+        onPaneClick={() => {
+          setHoveredId(null);
+          cancelClose();
+          props.onNodeMouseLeave();
+        }}
       >
         <NodeSync nodes={nodes} edges={edges} />
         <AutoFitView graph={layoutSource} focus={props.clickedNode} />

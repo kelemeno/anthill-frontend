@@ -92,15 +92,6 @@ export const GraphSVG = (props: {
   // we delay the popover to render only after the graph is loaded. This is set as true in useEffect
   const [loaded, setLoaded] = React.useState(false);
 
-  // Collapse state of the popover's node, so the popover can show a
-  // Show/Hide-children action (the on-node +/- button was removed).
-  const [hoverCollapse, setHoverCollapse] = React.useState<{
-    hasChildren: boolean;
-    collapsed: boolean;
-    hiddenCount: number;
-    toggle: () => void;
-  } | null>(null);
-
   // --- history scrubber (scoped to the currently displayed graph + mode) ---
   const [history, setHistory] = useState<HistoryStep[]>([]);
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
@@ -231,14 +222,7 @@ export const GraphSVG = (props: {
           onNodeMouseEnter={(
             event: React.MouseEvent<HTMLElement>,
             node: NodeDataRendering,
-            collapse?: {
-              hasChildren: boolean;
-              collapsed: boolean;
-              hiddenCount: number;
-              toggle: () => void;
-            },
           ) => {
-            setHoverCollapse(collapse ?? null);
             handleMouseOver(
               event,
               node,
@@ -412,22 +396,6 @@ export const GraphSVG = (props: {
             2,
           )}{" "}
         </div>
-
-        {hoverCollapse?.hasChildren && (
-          <button
-            type="button"
-            className="PopoverButton"
-            onClick={() => {
-              hoverCollapse.toggle();
-              // close so the expanded/collapsed result is visible underneath
-              handleMouseOut(loaded, setOpen, setAnchorEl);
-            }}
-          >
-            {hoverCollapse.collapsed
-              ? `Show children (${hoverCollapse.hiddenCount})`
-              : "Hide children"}
-          </button>
-        )}
 
         {SwitchParentCheck(
           props.isAccountInGraph,

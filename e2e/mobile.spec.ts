@@ -22,8 +22,7 @@ test.describe("mobile", () => {
   });
 
   // On touch a tap opens the popover via a real pointerup handler (the pointer
-  // type, not a hover media-query — some phones mis-report that). The popover
-  // carries the info, actions AND the expand control.
+  // type, not a hover media-query — some phones mis-report that).
   test("tapping a node opens the popover", async ({ page }) => {
     await page.goto(`/?id=${ROOT}`);
     await waitForGraph(page);
@@ -32,36 +31,35 @@ test.describe("mobile", () => {
     await expect(page.locator("#mouse-over-popover")).toHaveCount(1);
   });
 
-  test("the popover collapses then re-expands a branch (locked layout)", async ({
-    page,
-  }) => {
-    await page.goto(`/?id=${ROOT}`);
+  // No hover on a phone, so a tap peeks the node's collapsed children open (the
+  // mobile equivalent of desktop hover) — and tapping empty space collapses it.
+  test("tapping a node peeks its children open", async ({ page }) => {
+    await page.goto(`/?id=${WITH_CHILDREN}`); // deeper neighbourhood (has collapse)
     await waitForGraph(page);
-    const full = await nodeCount(page);
-    // world position of the focus — it stays visible and must not move
-    const rootT = () =>
-      page
-        .locator(`.react-flow__node[data-id="${ROOT}"]`)
-        .evaluate((el) => (el as HTMLElement).style.transform);
-    const t0 = await rootT();
+    const before = await nodeCount(page);
+    const ids = await page.$$eval(".react-flow__node", (els) =>
+      els.map((e) => e.getAttribute("data-id")),
+    );
+    // find a visible node whose tap reveals more (i.e. had collapsed children)
+    // far-left, mid-height: empty pane (nodes are centred; avoids the top-left
+    // zoom Controls).
+    const tapEmpty = () => page.mouse.click(5, 420);
+    let revealedId: string | null = null;
+    for (const id of ids) {
+      await page.locator(`.react-flow__node[data-id="${id}"]`).tap();
+      await page.waitForTimeout(400);
+      if ((await nodeCount(page)) > before) {
+        revealedId = id;
+        break;
+      }
+      await tapEmpty(); // collapse peek + dismiss popover
+      await page.waitForTimeout(200);
+    }
+    expect(revealedId).not.toBeNull();
 
-    // The focus (root) has children → its popover offers "Hide children".
-    await page.locator(`.react-flow__node[data-id="${ROOT}"]`).tap();
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: /Hide children/ }).first().tap();
-    await page.waitForTimeout(700);
-    // collapsed: fewer nodes, but the focus itself is still shown
-    expect(await nodeCount(page)).toBeLessThan(full);
-    expect(
-      await page.locator(`.react-flow__node[data-id="${ROOT}"]`).count(),
-    ).toBe(1);
-
-    // re-expand → back to full, and the focus didn't move (locked layout)
-    await page.locator(`.react-flow__node[data-id="${ROOT}"]`).tap();
-    await page.waitForTimeout(500);
-    await page.getByRole("button", { name: /Show children/ }).first().tap();
-    await page.waitForTimeout(700);
-    expect(await nodeCount(page)).toBe(full);
-    expect(await rootT()).toBe(t0);
+    // tapping empty space collapses the peek again
+    await tapEmpty();
+    await page.waitForTimeout(600);
+    expect(await nodeCount(page)).toBe(before);
   });
 });
