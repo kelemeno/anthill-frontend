@@ -46,4 +46,51 @@ test.describe("graph interactions", () => {
       await page.locator('.react-flow__edge[data-id^="vote-out-"]').count(),
     ).toBeGreaterThan(0);
   });
+
+  // Hover-peeking a node must not move the node you're hovering — otherwise the
+  // cursor falls off it, the peek closes, and it loops (jumps back and forth).
+  test("hovering a node doesn't make it jump around", async ({ page }) => {
+    await page.goto(`/?id=0x0000000000000000000000000000000000000008`); // deep view
+    await waitForGraph(page);
+    await page.waitForTimeout(1500);
+    const focus = "0x0000000000000000000000000000000000000008";
+    const ids = (
+      await page.$$eval(".react-flow__node", (els) =>
+        els.map((e) => e.getAttribute("data-id")),
+      )
+    ).filter((i) => i !== focus);
+    // find a non-focus node whose hover peeks children open (would re-layout)
+    let target: string | null = null;
+    for (const id of ids) {
+      const box = await page
+        .locator(`.react-flow__node[data-id="${id}"]`)
+        .boundingBox();
+      if (!box) continue;
+      const c0 = await nodeCount(page);
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.waitForTimeout(500);
+      if ((await nodeCount(page)) > c0) {
+        target = id;
+        break;
+      }
+      await page.mouse.move(2, 2);
+      await page.waitForTimeout(1700); // let the peek close
+    }
+    expect(target).not.toBeNull();
+
+    // keep hovering it and sample its screen position — it must stay put
+    const box = await page
+      .locator(`.react-flow__node[data-id="${target}"]`)
+      .boundingBox();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    const xs: number[] = [];
+    for (let i = 0; i < 8; i++) {
+      await page.waitForTimeout(300);
+      const b = await page
+        .locator(`.react-flow__node[data-id="${target}"]`)
+        .boundingBox();
+      xs.push(Math.round(b?.x ?? 0));
+    }
+    expect(Math.max(...xs) - Math.min(...xs)).toBeLessThan(10);
+  });
 });

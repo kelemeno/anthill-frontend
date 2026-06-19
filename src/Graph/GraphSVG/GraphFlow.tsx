@@ -920,45 +920,15 @@ export const GraphFlow = (props: {
       }
     }
 
-    // Every node sits at its fixed full-layout position (locked layout).
-    // Lay out the VISIBLE set (not the full graph): sugiyama centres each parent
-    // over its visible children, so the focus's children sit symmetrically under
-    // it (not pushed to one side by full-tree offsets). The spine shift below
-    // then straightens the focus path to the central vertical line.
+    // Lay out the VISIBLE set: sugiyama's deterministic DFS keeps each layer's
+    // left-to-right ORDER fixed, while the SPACING compacts around the rendered
+    // nodes and each parent is centred over its children (so children pull in
+    // toward the centre). No per-focus shift — that flung nodes to centre and
+    // caused the hover→recentre→lose-hover loop + cross-branch overlaps.
     const positions = props.treeMode
       ? layoutPositions(visible)
       : fullPositions;
-
-    // Centered spine: shift each tree level horizontally so the focused node's
-    // ancestor path becomes a vertical line at the focus's column. Uses the
-    // FIXED full-graph x's (so peeking a branch never moves anything — only
-    // navigating to a new focus re-shifts, which we animate). Below the focus,
-    // everything shifts by the focus's amount so its subtree stays centred under
-    // it.
-    const spineFocus = graph[props.clickedNode];
-    const spineShift = new Map<number, number>(); // depth -> x to subtract
-    if (spineFocus) {
-      let cur: NodeDataRendering | undefined = spineFocus;
-      let g = 0;
-      while (cur && g++ < 1000) {
-        const cp = positions.get(cur.id);
-        if (cp) spineShift.set(cur.depth, cp.x);
-        const parent: NodeDataRendering | undefined = graph[cur.sentTreeVote];
-        if (!parent || parent.id === cur.id) break;
-        cur = parent;
-      }
-    }
-    const focusDepth = spineFocus?.depth ?? 0;
-    const focusShift = positions.get(props.clickedNode)?.x ?? 0;
-    const shiftAt = (depth: number) =>
-      spineShift.get(Math.min(depth, focusDepth)) ?? focusShift;
-    // Shifted positions for every visible node — used for both node placement
-    // and edge gradient endpoints (so the gradients stay aligned with the edges).
-    const spos = new Map<string, { x: number; y: number }>();
-    for (const n of visible) {
-      const base = positions.get(n.id) ?? { x: 0, y: 0 };
-      spos.set(n.id, { x: base.x - shiftAt(n.depth), y: base.y });
-    }
+    const spos = positions;
 
     const nodes: AnthillNode[] = visible.map((n) => {
       const r = radiusForDistance(distances.get(n.id) ?? Infinity);
