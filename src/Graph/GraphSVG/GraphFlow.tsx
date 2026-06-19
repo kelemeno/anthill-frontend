@@ -195,6 +195,9 @@ function AutoFitView({
   const { fitView, getNode } = useReactFlow();
   const prevFocus = useRef<string | null>(null);
   const prevWorld = useRef<{ x: number; y: number } | null>(null);
+  // First fit (initial load) is instant — no animated shift on open. Later
+  // re-fits (navigation) animate.
+  const firstFit = useRef(true);
   const centerOf = (node: ReturnType<typeof getNode>) =>
     node
       ? {
@@ -219,7 +222,12 @@ function AutoFitView({
               prevWorld.current.y - world.y,
             )
           : Number.POSITIVE_INFINITY;
-      if (moved >= 1) fitView({ padding: 0.15, duration: 300 });
+      if (moved >= 1) {
+        // First fit (initial load) snaps instantly — no shift on open; later
+        // re-fits (navigation) animate.
+        fitView({ padding: 0.15, duration: firstFit.current ? 0 : 300 });
+        firstFit.current = false;
+      }
       prevFocus.current = focus;
       prevWorld.current = world;
     });

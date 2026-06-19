@@ -97,16 +97,24 @@ test.describe("history scrubber", () => {
         .locator(".react-flow__viewport")
         .first()
         .evaluate((el) => getComputedStyle(el).transform);
+    // Default (no scrub) === live; capture it.
+    const liveIds = await ids();
+    const liveVt = await vt();
     const slider = page.locator("input[type=range]");
     const max = Number(await slider.getAttribute("max"));
+    // Engage the scrubber (move away first — the slider already sits at max when
+    // live, so filling max directly is a no-op), then scrub to the rightmost.
+    await slider.fill("0");
+    await page.waitForTimeout(300);
     await slider.fill(String(max));
     await page.waitForTimeout(400);
-    const lastIds = await ids();
-    const lastVt = await vt();
+    // Rightmost step renders identically to live (same nodes + viewport).
+    expect(await ids()).toEqual(liveIds);
+    expect(await vt()).toBe(liveVt);
+    // Live button is present once scrubbed, and snaps back to live.
     await page.getByRole("button", { name: "Live" }).click();
     await page.waitForTimeout(500);
-    expect(await ids()).toEqual(lastIds);
-    expect(await vt()).toBe(lastVt);
+    expect(await ids()).toEqual(liveIds);
   });
 
   test("Live button returns to the current state", async ({ page }) => {

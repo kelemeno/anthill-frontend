@@ -151,6 +151,12 @@ export const GraphSVG = (props: {
     ? new Set(scrubStep.collapsedIds)
     : undefined;
 
+  // Until the real graph arrives, `props.graph` is just a placeholder node
+  // (relRoot "Enter"). Show a blank area then, not that lone "Enter" node.
+  const isLoadingGraph =
+    Object.keys(props.graph).length === 0 ||
+    Object.values(props.graph).some((n) => n.relRoot === "Enter");
+
   // console.log("open", open, anchorEl, loaded)
 
   // var checkForClick = () => {
@@ -192,31 +198,38 @@ export const GraphSVG = (props: {
 
   return (
     <div style={{ position: "relative" }}>
-      <GraphFlow
-        graph={displayGraph}
-        layoutGraph={props.graph}
-        clickedNode={props.clickedNode}
-        treeMode={props.treeMode}
-        viewMode={props.viewMode}
-        forcedCollapsed={forcedCollapsed}
-        onViewChange={onViewChange}
-        onNodeClick={handleClickConstructed}
-        onNodeMouseEnter={(
-          event: React.MouseEvent<HTMLElement>,
-          node: NodeDataRendering,
-        ) =>
-          handleMouseOver(
-            event,
-            node,
-            loaded,
-            setHoverNode,
-            setAnchorEl,
-            setAnchorElSaver,
-            setOpen,
-          )
-        }
-        onNodeMouseLeave={() => handleMouseOut(loaded, setOpen, setAnchorEl)}
-      />
+      {isLoadingGraph ? (
+        <div
+          className="Graph"
+          style={{ width: "100%", height: "80vh", background: "#fff" }}
+        />
+      ) : (
+        <GraphFlow
+          graph={displayGraph}
+          layoutGraph={props.graph}
+          clickedNode={props.clickedNode}
+          treeMode={props.treeMode}
+          viewMode={props.viewMode}
+          forcedCollapsed={forcedCollapsed}
+          onViewChange={onViewChange}
+          onNodeClick={handleClickConstructed}
+          onNodeMouseEnter={(
+            event: React.MouseEvent<HTMLElement>,
+            node: NodeDataRendering,
+          ) =>
+            handleMouseOver(
+              event,
+              node,
+              loaded,
+              setHoverNode,
+              setAnchorEl,
+              setAnchorElSaver,
+              setOpen,
+            )
+          }
+          onNodeMouseLeave={() => handleMouseOut(loaded, setOpen, setAnchorEl)}
+        />
+      )}
       {viewSteps.length > 1 &&
         (() => {
           const last = viewSteps.length - 1;
