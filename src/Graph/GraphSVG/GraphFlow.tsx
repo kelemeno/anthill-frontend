@@ -260,29 +260,30 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
 function AutoFitView({
   graph,
   focus,
+  focusTarget,
 }: {
   graph: GraphDataRendering;
   focus: string;
+  // The focused node's FINAL (target) world centre — read instead of the live
+  // store position, which animates during a re-org and would mis-centre us.
+  focusTarget: { x: number; y: number } | null;
 }) {
-  const { fitView, getNode, setCenter, getViewport } = useReactFlow();
+  const { fitView, setCenter, getViewport } = useReactFlow();
   const prevFocus = useRef<string | null>(null);
   const prevWorld = useRef<{ x: number; y: number } | null>(null);
   // First fit (initial load) is instant — no animated shift on open. Later
   // re-fits (navigation) animate.
   const firstFit = useRef(true);
-  const centerOf = (node: ReturnType<typeof getNode>) =>
-    node
-      ? {
-          x: node.position.x + (node.width ?? 0) / 2,
-          y: node.position.y + (node.height ?? 0) / 2,
-        }
-      : null;
+  // Latest target, read without re-firing the effect (so peeking — which changes
+  // the layout but not graph/focus — never re-fits the viewport).
+  const targetRef = useRef(focusTarget);
+  targetRef.current = focusTarget;
   // Re-fit only when the loaded graph or focus changes — NOT on hover/collapse,
   // so peeking a branch open never moves the viewport out from under the cursor.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const id = requestAnimationFrame(() => {
-      const world = centerOf(getNode(focus));
+      const world = targetRef.current;
       // How far the focused node moved since the last fit. ~0 means the layout
       // is unchanged (e.g. toggling tree/votes/reputation, which share node
       // positions) — keep the viewport so the switch isn't jumpy. Any real move
@@ -301,13 +302,10 @@ function AutoFitView({
           fitView({ padding: 0.15, duration: 0 });
           firstFit.current = false;
         }
-        // Centre on the focus, which the spine layout pins to the central
-        // vertical line (world x=0) — so the active path stays centred and
-        // drilling doesn't drag the view sideways. Chained rAF so this runs
-        // AFTER any fitView commit (otherwise fitView's bbox-centring wins and
-        // leaves the spine off to one side).
+        // Centre on the focus's target. Chained rAF so this runs AFTER any
+        // fitView commit (otherwise fitView's bbox-centring wins).
         requestAnimationFrame(() => {
-          const w2 = centerOf(getNode(focus));
+          const w2 = targetRef.current;
           if (w2) {
             setCenter(w2.x, w2.y, {
               zoom: getViewport().zoom,
@@ -378,10 +376,46 @@ function NodeSync({
   nodes: AnthillNode[];
   edges: GradientEdge[];
 }) {
-  const { setNodes, setEdges } = useReactFlow();
+  const { setNodes, setEdges, getNodes } = useReactFlow();
+  const rafRef = useRef<number | null>(null);
   useEffect(() => {
-    setNodes(nodes);
-  }, [nodes, setNodes]);
+    // Animate node POSITIONS through the store (not via a CSS transform
+    // transition) so the edges — which React Flow draws from store positions —
+    // follow the nodes every frame and stay connected during a re-org. New nodes
+    // jump to their target (they grow in via their own per-node scale animation).
+    const start = new Map(getNodes().map((n) => [n.id, n.position]));
+    const t0 = performance.now();
+    const DUR = 350;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - t0) / DUR);
+      const e = 1 - (1 - t) ** 3; // easeOutCubic
+      setNodes((prev) => {
+        const live = new Map(prev.map((n) => [n.id, n]));
+        return nodes.map((n) => {
+          // Never fight the pointer handlers: a node mid-drag or mid-spring is
+          // positioned imperatively — leave it exactly as they set it.
+          const pn = live.get(n.id);
+          const cls = pn?.className ?? "";
+          if (cls.includes("anthill-dragging") || cls.includes("anthill-spring"))
+            return pn ?? n;
+          const s = start.get(n.id);
+          if (!s || (s.x === n.position.x && s.y === n.position.y)) return n;
+          return {
+            ...n,
+            position: {
+              x: s.x + (n.position.x - s.x) * e,
+              y: s.y + (n.position.y - s.y) * e,
+            },
+          };
+        });
+      });
+      if (t < 1) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [nodes, setNodes, getNodes]);
   useEffect(() => {
     setEdges(edges);
   }, [edges, setEdges]);
@@ -1176,6 +1210,16 @@ export const GraphFlow = (props: {
     props.viewMode,
   ]);
 
+  // The focused node's target world centre (node position is top-left; centre =
+  // position + radius). Fed to AutoFitView so it centres on the final spot, not
+  // the live store position which animates during a re-org.
+  const focusTarget = useMemo(() => {
+    const fn = nodes.find((n) => n.id === props.clickedNode);
+    return fn
+      ? { x: fn.position.x + fn.data.radius, y: fn.position.y + fn.data.radius }
+      : null;
+  }, [nodes, props.clickedNode]);
+
   return (
     <div
       className="Graph"
@@ -1232,7 +1276,11 @@ export const GraphFlow = (props: {
         }}
       >
         <NodeSync nodes={nodes} edges={edges} />
-        <AutoFitView graph={layoutSource} focus={props.clickedNode} />
+        <AutoFitView
+          graph={layoutSource}
+          focus={props.clickedNode}
+          focusTarget={focusTarget}
+        />
         {!IS_MOBILE && <HoverZoom hoveredId={hoveredId} graph={props.graph} />}
         <Controls showInteractive={false} position="top-left" />
       </ReactFlow>

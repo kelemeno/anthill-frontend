@@ -8,15 +8,9 @@
 }
 
 /* Newly-mounted nodes grow in place (handled per-node in AnthillNodeView). */
-/* Base: ease node position changes so the centred-spine layout re-arranges
-   fluidly when you navigate (only navigation re-shifts; peeking doesn't). */
-.react-flow__node {
-  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
-}
-/* While dragging: follow the pointer 1:1 (no ease). */
-.react-flow__node.anthill-dragging {
-  transition: none;
-}
+/* Node POSITION changes are animated through the store (NodeSync rAF), NOT a CSS
+   transform transition — so the edges, which React Flow draws from store
+   positions, follow the nodes every frame and stay connected during a re-org. */
 /* Drag-wiggle spring-back: a springier ease (with overshoot) on release. */
 .react-flow__node.anthill-spring {
   transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
