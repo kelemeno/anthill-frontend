@@ -392,15 +392,20 @@ function NodeSync({
       setNodes((prev) => {
         const live = new Map(prev.map((n) => [n.id, n]));
         return nodes.map((n) => {
+          const pn = live.get(n.id);
           // Never fight the pointer handlers: a node mid-drag or mid-spring is
           // positioned imperatively — leave it exactly as they set it.
-          const pn = live.get(n.id);
           const cls = pn?.className ?? "";
           if (cls.includes("anthill-dragging") || cls.includes("anthill-spring"))
             return pn ?? n;
           const s = start.get(n.id);
-          if (!s || (s.x === n.position.x && s.y === n.position.y)) return n;
+          // New node (not in the store yet): appears at target, grows in.
+          if (!pn || !s) return n;
+          // Spread the LIVE node first so React Flow's measured dimensions are
+          // preserved — rebuilding the node from the memo (which has no measured
+          // size) makes RF re-measure every frame, which flickers the edges.
           return {
+            ...pn,
             ...n,
             position: {
               x: s.x + (n.position.x - s.x) * e,
