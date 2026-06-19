@@ -22,6 +22,7 @@ import {
 
 import { GraphDemo } from "./Graph/GraphDemo";
 import { Graph } from "./Graph/GraphMain";
+import { IS_MOBILE } from "./isMobile";
 import "./main.css";
 import TutorialPopup, {
   TreeOrRepModeSwitch,
@@ -197,66 +198,39 @@ const App = () => {
 
   // var [clickedNodeId, setClickedNodeId]=useState({"id":"Enter", "name":"Enter", "totalWeight": 0, "currentRep": 1, "depth":0, "relRoot":"Enter", "sentTreeVote": "1", "parentIds": [], "recTreeVotes": []} as NodeDataRendering);
 
+  // Flex-column page: header (auto) + the graph area (fills). Same view for
+  // both routes.
+  const view = (
+    <div className="page">
+      <Header
+        showTutorial={showTutorial}
+        setShowTutorial={setShowTutorial}
+        setChain={switchChain}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+      />
+      <TutorialPopup
+        showTutorial={showTutorial}
+        setShowTutorial={setShowTutorial}
+      />
+      <Graph
+        account={account as string}
+        chainId={chainId}
+        clickedNode={clickedNode}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        AnthillContract={AnthillContract}
+        setClickedNode={setClickedNode}
+        backendUrl={backendUrl}
+        wsUrl={wsUrl}
+      />
+    </div>
+  );
+
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <>
-            <Header
-              showTutorial={showTutorial}
-              setShowTutorial={setShowTutorial}
-              setChain={switchChain}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-            />
-
-            <TutorialPopup
-              showTutorial={showTutorial}
-              setShowTutorial={setShowTutorial}
-            />
-            <Graph
-              account={account as string}
-              chainId={chainId}
-              clickedNode={clickedNode}
-              viewMode={viewMode}
-              AnthillContract={AnthillContract}
-              setClickedNode={setClickedNode}
-              backendUrl={backendUrl}
-              wsUrl={wsUrl}
-            />
-          </>
-        }
-      />
-      <Route
-        path="/:id"
-        element={
-          <>
-            <Header
-              showTutorial={showTutorial}
-              setShowTutorial={setShowTutorial}
-              setChain={switchChain}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-            />
-
-            <TutorialPopup
-              showTutorial={showTutorial}
-              setShowTutorial={setShowTutorial}
-            />
-            <Graph
-              account={account as string}
-              chainId={chainId}
-              clickedNode={clickedNode}
-              viewMode={viewMode}
-              AnthillContract={AnthillContract}
-              setClickedNode={setClickedNode}
-              backendUrl={backendUrl}
-              wsUrl={wsUrl}
-            />
-          </>
-        }
-      />
+      <Route path="/" element={view} />
+      <Route path="/:id" element={view} />
     </Routes>
   );
 };
@@ -272,10 +246,13 @@ function Header(props: {
     <header>
       <div className="header__left">
         <span className="brand">🐜 Anthill</span>
-        <TreeOrRepModeSwitch
-          viewMode={props.viewMode}
-          setViewMode={props.setViewMode}
-        />
+        {/* On mobile the view toggle lives in the bottom bar (thumb zone). */}
+        {!IS_MOBILE && (
+          <TreeOrRepModeSwitch
+            viewMode={props.viewMode}
+            setViewMode={props.setViewMode}
+          />
+        )}
       </div>
       <div className="header__right">
         <Web3Button />

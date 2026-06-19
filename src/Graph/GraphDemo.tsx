@@ -55,7 +55,9 @@ export const GraphDemo = () => {
   const setN = (value: number) => setParams({ n: String(value) });
 
   return (
-    <div>
+    <div
+      style={{ display: "flex", flexDirection: "column", height: "100dvh" }}
+    >
       <div
         style={{
           display: "flex",
@@ -81,15 +83,17 @@ export const GraphDemo = () => {
           </button>
         ))}
       </div>
-      <GraphFlow
-        graph={graph}
-        clickedNode={idOf(0)}
-        treeMode={true}
-        viewMode={"tree"}
-        onNodeClick={() => {}}
-        onNodeMouseEnter={() => {}}
-        onNodeMouseLeave={() => {}}
-      />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <GraphFlow
+          graph={graph}
+          clickedNode={idOf(0)}
+          treeMode={true}
+          viewMode={"tree"}
+          onNodeClick={() => {}}
+          onNodeMouseEnter={() => {}}
+          onNodeMouseLeave={() => {}}
+        />
+      </div>
     </div>
   );
 };

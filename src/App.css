@@ -1,8 +1,7 @@
 .Graph {
   text-align: center;
-  /* Height comes from the inline 80vh (also used by /demo). Note: no
-     min-height:100vh — that overflowed the viewport below the header/buttons and
-     pushed the fitted graph down + off the bottom. */
+  /* Fills its parent (the flex graph-area, which flexes between the header and
+     the bottom bar) via the inline height:100%. */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,25 +22,55 @@
   }
 }
 
+/* Idle "alive" wiggle on each node (it's an ant-hill). Subtle: a couple of px
+   of bob + a small tilt. Per-node duration/delay de-sync it (set inline). */
+@keyframes anthillWiggle {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(0.7px, -0.9px) rotate(1.3deg);
+  }
+  50% {
+    transform: translate(-0.6px, 0.7px) rotate(-1.1deg);
+  }
+  75% {
+    transform: translate(0.8px, 0.5px) rotate(0.9deg);
+  }
+}
+
+/* Respect reduced-motion: hold still for users who ask for it. */
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node [style*="anthillWiggle"] {
+    animation: none !important;
+  }
+}
+
+/* In-flow bottom control bar (the visual container): mobile view toggle +
+   history scrubber. Sits at the bottom of the page flex column, so the graph
+   fills the space above it (no overlap). */
+.BottomBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #e6e6e6;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.07);
+}
+
+/* The scrubber row inside .BottomBar (layout only — the bar provides chrome). */
 .HistoryBar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 10;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 10px 14px;
-  font-family: system-ui, -apple-system, sans-serif;
+  width: 100%;
   font-size: 13px;
   color: #2d3748;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-top: 1px solid #e6e6e6;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.07);
 }
 .HistoryBar button {
   transition: filter 0.12s ease, background 0.12s ease;

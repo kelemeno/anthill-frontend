@@ -12,12 +12,6 @@ export async function waitForGraph(page: Page): Promise<void> {
 export const nodeCount = (page: Page) =>
   page.locator(".react-flow__node").count();
 
-export const collapseBadges = (page: Page) =>
-  page.locator(".react-flow__node button", { hasText: "+" });
-
-export const expandedBadges = (page: Page) =>
-  page.locator(".react-flow__node button", { hasText: "−" });
-
 // id of the currently selected (ringed) node — the one whose circle has the
 // selection box-shadow.
 export function ringedId(page: Page): Promise<string | null> {

@@ -6,6 +6,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import ".././../App.css";
+import { TreeOrRepModeSwitch } from "../../Buttons/MainAppButtons";
+import { IS_MOBILE } from "../../isMobile";
 import {
   AddDagVoteButton,
   AddDagVoteCheck,
@@ -57,6 +59,7 @@ export const GraphSVG = (props: {
   anthillGraphBare: GraphDataBare;
   treeMode: boolean;
   viewMode: "tree" | "votes" | "rep";
+  setViewMode: any;
   backendUrl: string;
 }) => {
   // console.log("rendering graph")
@@ -88,6 +91,15 @@ export const GraphSVG = (props: {
 
   // we delay the popover to render only after the graph is loaded. This is set as true in useEffect
   const [loaded, setLoaded] = React.useState(false);
+
+  // Collapse state of the popover's node, so the popover can show a
+  // Show/Hide-children action (the on-node +/- button was removed).
+  const [hoverCollapse, setHoverCollapse] = React.useState<{
+    hasChildren: boolean;
+    collapsed: boolean;
+    hiddenCount: number;
+    toggle: () => void;
+  } | null>(null);
 
   // --- history scrubber (scoped to the currently displayed graph + mode) ---
   const [history, setHistory] = useState<HistoryStep[]>([]);
@@ -197,14 +209,17 @@ export const GraphSVG = (props: {
   }, [props.graph, props.clickedNode]);
 
   return (
-    <div style={{ position: "relative" }}>
-      {isLoadingGraph ? (
-        <div
-          className="Graph"
-          style={{ width: "100%", height: "80vh", background: "#fff" }}
-        />
-      ) : (
-        <GraphFlow
+    <div
+      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+    >
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+        {isLoadingGraph ? (
+          <div
+            className="Graph"
+            style={{ width: "100%", height: "100%", background: "#fff" }}
+          />
+        ) : (
+          <GraphFlow
           graph={displayGraph}
           layoutGraph={props.graph}
           clickedNode={props.clickedNode}
@@ -216,7 +231,14 @@ export const GraphSVG = (props: {
           onNodeMouseEnter={(
             event: React.MouseEvent<HTMLElement>,
             node: NodeDataRendering,
-          ) =>
+            collapse?: {
+              hasChildren: boolean;
+              collapsed: boolean;
+              hiddenCount: number;
+              toggle: () => void;
+            },
+          ) => {
+            setHoverCollapse(collapse ?? null);
             handleMouseOver(
               event,
               node,
@@ -225,13 +247,22 @@ export const GraphSVG = (props: {
               setAnchorEl,
               setAnchorElSaver,
               setOpen,
-            )
-          }
+            );
+          }}
           onNodeMouseLeave={() => handleMouseOut(loaded, setOpen, setAnchorEl)}
         />
-      )}
-      {viewSteps.length > 1 &&
-        (() => {
+        )}
+      </div>
+      {(IS_MOBILE || viewSteps.length > 1) && (
+        <div className="BottomBar">
+          {IS_MOBILE && (
+            <TreeOrRepModeSwitch
+              viewMode={props.viewMode}
+              setViewMode={props.setViewMode}
+            />
+          )}
+          {viewSteps.length > 1 &&
+            (() => {
           const last = viewSteps.length - 1;
           const cur = scrubIndex ?? last;
           const btn: React.CSSProperties = {
@@ -345,6 +376,8 @@ export const GraphSVG = (props: {
             </div>
           );
         })()}
+        </div>
+      )}
       <Popover
         id="mouse-over-popover"
         sx={{
@@ -379,6 +412,22 @@ export const GraphSVG = (props: {
             2,
           )}{" "}
         </div>
+
+        {hoverCollapse?.hasChildren && (
+          <button
+            type="button"
+            className="PopoverButton"
+            onClick={() => {
+              hoverCollapse.toggle();
+              // close so the expanded/collapsed result is visible underneath
+              handleMouseOut(loaded, setOpen, setAnchorEl);
+            }}
+          >
+            {hoverCollapse.collapsed
+              ? `Show children (${hoverCollapse.hiddenCount})`
+              : "Hide children"}
+          </button>
+        )}
 
         {SwitchParentCheck(
           props.isAccountInGraph,

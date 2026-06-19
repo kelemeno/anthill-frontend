@@ -207,6 +207,7 @@ export const Graph = (props: {
   clickedNode: string;
   setClickedNode: any;
   viewMode: "tree" | "votes" | "rep";
+  setViewMode: any;
   AnthillContract: any;
   backendUrl: string;
   wsUrl: string;
@@ -343,6 +344,7 @@ export const Graph = (props: {
     anthillGraphBare: anthillGraphBare,
     treeMode: treeMode,
     viewMode: props.viewMode,
+    setViewMode: props.setViewMode,
     backendUrl: props.backendUrl,
   };
 

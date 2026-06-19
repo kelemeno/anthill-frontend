@@ -29,6 +29,7 @@ import {
 } from "d3-dag";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { IS_MOBILE } from "../../isMobile";
 import {
   type GraphDataRendering,
   nameShortener,
@@ -36,18 +37,21 @@ import {
 } from "../GraphBase";
 
 const BASE_RADIUS = 30;
-const MIN_RADIUS = 8;
+// On mobile there's no hover-zoom to enlarge distant nodes, so keep a bigger
+// floor — small nodes are hard to tap with a finger.
+const MIN_RADIUS = IS_MOBILE ? 14 : 8;
 const SHRINK = 0.8; // radius multiplier per hop away from focus
-
-// Touch devices have no hover; enlarge tap targets (the collapse badge) there.
-const IS_TOUCH =
-  typeof window !== "undefined" &&
-  typeof window.matchMedia === "function" &&
-  window.matchMedia("(hover: none)").matches;
 
 function radiusForDistance(distance: number): number {
   if (!Number.isFinite(distance)) return MIN_RADIUS;
   return Math.max(MIN_RADIUS, BASE_RADIUS * SHRINK ** distance);
+}
+
+// Small stable per-node hash → 0..1, for de-synchronising the idle wiggle.
+function nodeHash01(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return ((h % 1000) + 1000) / 1000 % 1;
 }
 
 // Same per-id rainbow hash the old renderer used, so colours are identical.
@@ -86,8 +90,14 @@ type GradientEdge = Edge<GradientEdgeData, "gradient">;
 function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
   const d = data.radius * 2;
   const fontSize = Math.max(7, data.radius * 0.5);
-  // No per-node scale: hovering zooms the whole VIEW toward this node (see
-  // HoverZoom), so the node, its curves and its neighbours magnify as one unit.
+  // Idle "wiggle" — a tiny living jitter (it's an ant-hill). De-sync per node
+  // via a stable hash so they don't all move in lockstep.
+  const h = nodeHash01(data.node.id);
+  const wiggle = `anthillWiggle ${(2.6 + h * 1.4).toFixed(2)}s ease-in-out ${(
+    -h * 4
+  ).toFixed(2)}s infinite`;
+  // Plain node: no on-node controls. Hover (desktop) / tap (touch) opens the
+  // popover, which carries the info, actions and Show/Hide-children control.
   return (
     <div
       style={{
@@ -104,12 +114,16 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
       />
       <div
         // pointerup fires on a real touch tap (unlike hover/onNodeClick, which
-        // the pan/zoom layer or touch hardware swallow). On a phone a tap opens
-        // the popover (info + actions) — there's no hover to trigger it — while
-        // on desktop it selects/focuses as before. Drilling stays on the badge.
+        // the pan/zoom layer or touch hardware swallow). Branch off the EVENT's
+        // pointer type — not a global matchMedia("(hover: none)") guess, which
+        // some phones mis-report, leaving the popover unreachable on touch.
+        // Touch/pen → open the popover (info + actions); mouse → select/focus.
         onPointerUp={(e) => {
-          if (IS_TOUCH) data.onInfo(e.currentTarget as HTMLElement);
-          else data.onSelect();
+          if (e.pointerType === "touch" || e.pointerType === "pen") {
+            data.onInfo(e.currentTarget as HTMLElement);
+          } else {
+            data.onSelect();
+          }
         }}
         style={{
           width: d,
@@ -129,40 +143,12 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
           textShadow: "0 1px 2px rgba(0,0,0,0.65)",
           userSelect: "none",
           cursor: "pointer",
+          animation: wiggle,
         }}
       >
         {data.label}
       </div>
-      {data.hasChildren && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            data.onToggle(data.node.id);
-          }}
-          title={data.collapsed ? "Expand subtree" : "Collapse subtree"}
-          style={{
-            position: "absolute",
-            // Kept inside the node box so hovering it keeps the node enlarged.
-            bottom: IS_TOUCH ? -6 : 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            minWidth: IS_TOUCH ? 28 : 16,
-            height: IS_TOUCH ? 24 : 14,
-            padding: "0 6px",
-            borderRadius: IS_TOUCH ? 12 : 7,
-            border: "1px solid #888",
-            background: "#fff",
-            color: "#333",
-            fontSize: IS_TOUCH ? 13 : 9,
-            lineHeight: IS_TOUCH ? "22px" : "12px",
-            cursor: "pointer",
-            zIndex: 2,
-          }}
-        >
-          {data.collapsed ? `+${data.hiddenCount}` : "−"}
-        </button>
-      )}
+      {/* Expand/collapse moved into the node's popover (no on-node button). */}
       <Handle
         type="source"
         position={Position.Bottom}
@@ -226,10 +212,9 @@ function AutoFitView({
   return null;
 }
 
-// Unified hover zoom: hovering a node smoothly zooms the whole view in toward
-// it (node + curves + neighbours all magnify together), and eases back to the
-// pre-hover view when the hover ends. Smaller (further) nodes zoom in more, so
-// they become readable.
+// DESKTOP interaction: hovering a node smoothly zooms the whole view in toward
+// it (node + curves + neighbours magnify together), easing back on leave. Only
+// fires for mouse hover (touch never sets hoveredId), so it's desktop-only.
 function HoverZoom({
   hoveredId,
   graph,
@@ -237,25 +222,30 @@ function HoverZoom({
   hoveredId: string | null;
   graph: GraphDataRendering;
 }) {
-  const { getNode, getViewport, setViewport, setCenter } = useReactFlow();
+  const { getNode, getViewport, setViewport } = useReactFlow();
   const base = useRef<{ x: number; y: number; zoom: number } | null>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (hoveredId && graph[hoveredId]) {
-      // Remember the view we zoomed FROM (only on the first hover of a run).
       if (!base.current) base.current = getViewport();
       const node = getNode(hoveredId);
       if (node) {
         const w = node.width ?? 2 * BASE_RADIUS;
         const cx = node.position.x + w / 2;
         const cy = node.position.y + (node.height ?? w) / 2;
-        // zoom so the node reaches a comfortable size, but at least a gentle
-        // step in from the base view; capped so it never lurches too far.
-        const zoom = Math.min(
-          2.8,
-          Math.max(base.current.zoom * 1.4, 70 / w),
+        const zoom = Math.min(2.8, Math.max(base.current.zoom * 1.4, 70 / w));
+        // Zoom ABOUT the node's current screen position (don't recenter it),
+        // so the node stays under the cursor — recentering would slide it away,
+        // flipping the hover to a neighbour and causing a zoom-jitter loop.
+        const vp = getViewport();
+        setViewport(
+          {
+            x: vp.x + cx * (vp.zoom - zoom),
+            y: vp.y + cy * (vp.zoom - zoom),
+            zoom,
+          },
+          { duration: 260 },
         );
-        setCenter(cx, cy, { zoom, duration: 260 });
       }
     } else if (base.current) {
       setViewport(base.current, { duration: 260 });
@@ -513,6 +503,13 @@ export const GraphFlow = (props: {
   onNodeMouseEnter: (
     event: React.MouseEvent<HTMLElement>,
     node: NodeDataRendering,
+    // Collapse state for this node, so the popover can offer Show/Hide children.
+    collapse?: {
+      hasChildren: boolean;
+      collapsed: boolean;
+      hiddenCount: number;
+      toggle: () => void;
+    },
   ) => void;
   onNodeMouseLeave: () => void;
   // When true, start fully expanded (no default top-3 collapse).
@@ -643,18 +640,23 @@ export const GraphFlow = (props: {
     //    clickedNode each render makes it survive any collapse reset.
     const forced = props.forcedCollapsed;
     const effectiveCollapsed = forced ? new Set(forced) : new Set(collapsed);
-    // Open the path to a node (node + every collapsed ancestor).
+    // Open the path to a node (node + every collapsed ancestor). Stops on a
+    // self-referential parent (the root points at itself).
     const openPath = (id: string | null | undefined) => {
       let cur: string | undefined = id ?? undefined;
       let guard = 0;
       while (cur && graph[cur] && guard++ < 1000) {
         effectiveCollapsed.delete(cur);
-        cur = graph[cur].sentTreeVote;
+        const next: string = graph[cur].sentTreeVote;
+        if (next === cur) break;
+        cur = next;
       }
     };
     const fn = graph[props.clickedNode];
     if (!forced) {
-      openPath(hoveredId);
+      // Hover-peek is a desktop-only preview; on touch there's no hover, and an
+      // emulated one would re-open a branch the user just collapsed.
+      if (!IS_MOBILE) openPath(hoveredId);
       if (props.viewMode === "rep") {
         // Reputation: show the tree only DOWN TO the focus (open its ancestors)
         // and collapse the focus's subtree — the incoming voters are shown
@@ -662,7 +664,13 @@ export const GraphFlow = (props: {
         openPath(fn?.sentTreeVote);
         effectiveCollapsed.add(props.clickedNode);
       } else {
-        openPath(props.clickedNode);
+        // Open the focus's ANCESTORS (so the focus stays visible after a hover
+        // ends) but not the focus itself — that way its own subtree can still be
+        // collapsed/expanded from the popover. (Skip when the parent IS the
+        // focus, i.e. the self-referential root.)
+        if (fn?.sentTreeVote && fn.sentTreeVote !== props.clickedNode) {
+          openPath(fn.sentTreeVote);
+        }
         // "+ Votes": make the focus's outgoing-vote recipients visible WITHOUT
         // expanding them — open their parent path, not the recipient itself, so
         // we don't reveal each recipient's own tree children.
@@ -684,11 +692,14 @@ export const GraphFlow = (props: {
       }
     }
 
-    // A node is hidden if any tree-ancestor is collapsed.
+    // A node is hidden if any tree-ancestor is collapsed. The focus is always
+    // shown (so collapsing the focus hides its children but keeps it visible,
+    // and a self-referential root can't hide itself).
     const isHidden = (id: string): boolean => {
+      if (id === props.clickedNode) return false;
       let cur = graph[id]?.sentTreeVote;
       let guard = 0;
-      while (cur && graph[cur] && guard++ < 1000) {
+      while (cur && graph[cur] && cur !== id && guard++ < 1000) {
         if (effectiveCollapsed.has(cur)) return true;
         cur = graph[cur].sentTreeVote;
       }
@@ -758,6 +769,14 @@ export const GraphFlow = (props: {
             props.onNodeMouseEnter(
               { currentTarget: el } as unknown as React.MouseEvent<HTMLElement>,
               n,
+              {
+                hasChildren,
+                collapsed: isCollapsed,
+                hiddenCount: isCollapsed ? subtreeCount(n.id) : 0,
+                toggle: () => {
+                  if (!forced) toggleCollapse(n.id);
+                },
+              },
             ),
         },
       };
@@ -934,7 +953,7 @@ export const GraphFlow = (props: {
   return (
     <div
       className="Graph"
-      style={{ width: "100%", height: "80vh" }}
+      style={{ width: "100%", height: "100%" }}
       // Keep peeked branches open while the cursor is on the graph; close only
       // when it leaves the graph entirely.
       onMouseEnter={cancelClose}
@@ -965,6 +984,12 @@ export const GraphFlow = (props: {
           props.onNodeMouseEnter(
             event as unknown as React.MouseEvent<HTMLElement>,
             node.data.node,
+            {
+              hasChildren: node.data.hasChildren,
+              collapsed: node.data.collapsed,
+              hiddenCount: node.data.hiddenCount,
+              toggle: () => node.data.onToggle(node.data.node.id),
+            },
           );
         }}
         onNodeMouseLeave={() => {
@@ -977,7 +1002,7 @@ export const GraphFlow = (props: {
         onPaneClick={() => props.onNodeMouseLeave()}
       >
         <AutoFitView graph={layoutSource} focus={props.clickedNode} />
-        <HoverZoom hoveredId={hoveredId} graph={props.graph} />
+        {!IS_MOBILE && <HoverZoom hoveredId={hoveredId} graph={props.graph} />}
         <Controls showInteractive={false} position="top-left" />
       </ReactFlow>
     </div>
