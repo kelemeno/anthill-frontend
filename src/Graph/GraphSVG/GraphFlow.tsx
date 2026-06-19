@@ -269,7 +269,12 @@ function GradientEdgeView({
       <BaseEdge
         id={id}
         path={path}
-        style={{ stroke: `url(#${gid})`, strokeWidth: data?.width ?? 2 }}
+        style={{
+          stroke: `url(#${gid})`,
+          strokeWidth: data?.width ?? 2,
+          // matches the node hover-zoom's 0.12s ease, so curves thicken in sync
+          transition: "stroke-width 0.12s ease",
+        }}
       />
     </>
   );
@@ -725,6 +730,18 @@ export const GraphFlow = (props: {
       };
     });
 
+    // When a node hover-zooms, its connecting curves should zoom too — scale the
+    // width of edges touching the hovered node by the same factor the node uses.
+    const hoveredR =
+      hoveredId && graph[hoveredId]
+        ? radiusForDistance(distances.get(hoveredId) ?? Infinity)
+        : 0;
+    const hoverEdgeScale = hoveredR
+      ? Math.min(3, Math.max(1, (BASE_RADIUS * 1.1) / hoveredR))
+      : 1;
+    const hoverMult = (a: string, b: string) =>
+      hoveredId && (a === hoveredId || b === hoveredId) ? hoverEdgeScale : 1;
+
     const edges: GradientEdge[] = [];
     for (const n of visible) {
       for (const parentId of n.parentIds) {
@@ -742,7 +759,9 @@ export const GraphFlow = (props: {
           data: {
             sourceColor: colorOf(parentId),
             targetColor: colorOf(n.id),
-            width: Math.max(0.75, (isTreeEdge ? 6 : 2) * rFactor),
+            width:
+              Math.max(0.75, (isTreeEdge ? 6 : 2) * rFactor) *
+              hoverMult(parentId, n.id),
           },
         });
       }
@@ -765,16 +784,18 @@ export const GraphFlow = (props: {
       const maxW = Math.max(1, ...overlay.map((e) => e.weight));
       for (const e of overlay) {
         const color = e.outgoing ? DAG_OUT_COLOR : DAG_IN_COLOR;
+        const src = e.outgoing ? e.to : props.clickedNode;
+        const tgt = e.outgoing ? props.clickedNode : e.to;
         edges.push({
           id: `vote-${e.outgoing ? "out" : "in"}-${props.clickedNode}-${e.to}`,
           // outgoing: recipient (above) → focus; incoming: focus → voter (below)
-          source: e.outgoing ? e.to : props.clickedNode,
-          target: e.outgoing ? props.clickedNode : e.to,
+          source: src,
+          target: tgt,
           type: "gradient",
           data: {
             sourceColor: color,
             targetColor: color,
-            width: 1.5 + 4 * (e.weight / maxW),
+            width: (1.5 + 4 * (e.weight / maxW)) * hoverMult(src, tgt),
           },
         });
       }
