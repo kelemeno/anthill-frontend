@@ -192,7 +192,7 @@ function AutoFitView({
   graph: GraphDataRendering;
   focus: string;
 }) {
-  const { fitView, setViewport, getNode, getViewport } = useReactFlow();
+  const { fitView, getNode } = useReactFlow();
   const prevFocus = useRef<string | null>(null);
   const prevWorld = useRef<{ x: number; y: number } | null>(null);
   const centerOf = (node: ReturnType<typeof getNode>) =>
@@ -207,23 +207,19 @@ function AutoFitView({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const id = requestAnimationFrame(() => {
-      const node = getNode(focus);
-      const world = centerOf(node);
-      // Same focus but a new layout (e.g. toggling tree <-> reputation): keep
-      // the focused node pinned at the EXACT same screen position by shifting
-      // the viewport to cancel its world-position change — so it doesn't move
-      // at all and only the surrounding nodes rearrange. Otherwise (navigation
-      // / first load) fit the new neighbourhood.
-      if (prevFocus.current === focus && world && prevWorld.current) {
-        const vp = getViewport();
-        setViewport({
-          x: vp.x + (prevWorld.current.x - world.x) * vp.zoom,
-          y: vp.y + (prevWorld.current.y - world.y) * vp.zoom,
-          zoom: vp.zoom,
-        });
-      } else {
-        fitView({ padding: 0.15, duration: 300 });
-      }
+      const world = centerOf(getNode(focus));
+      // How far the focused node moved since the last fit. ~0 means the layout
+      // is unchanged (e.g. toggling tree/votes/reputation, which share node
+      // positions) — keep the viewport so the switch isn't jumpy. Any real move
+      // (first/staged load, navigation, re-layout) means re-fit and centre.
+      const moved =
+        prevFocus.current === focus && world && prevWorld.current
+          ? Math.hypot(
+              prevWorld.current.x - world.x,
+              prevWorld.current.y - world.y,
+            )
+          : Number.POSITIVE_INFINITY;
+      if (moved >= 1) fitView({ padding: 0.15, duration: 300 });
       prevFocus.current = focus;
       prevWorld.current = world;
     });
