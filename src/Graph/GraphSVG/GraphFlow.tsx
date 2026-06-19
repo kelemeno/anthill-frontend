@@ -920,14 +920,12 @@ export const GraphFlow = (props: {
       }
     }
 
-    // Lay out the VISIBLE set: sugiyama's deterministic DFS keeps each layer's
-    // left-to-right ORDER fixed, while the SPACING compacts around the rendered
-    // nodes and each parent is centred over its children (so children pull in
-    // toward the centre). No per-focus shift — that flung nodes to centre and
-    // caused the hover→recentre→lose-hover loop + cross-branch overlaps.
-    const positions = props.treeMode
-      ? layoutPositions(visible)
-      : fullPositions;
+    // Fixed full-neighbourhood positions: every node keeps its place, so peeking
+    // a branch on hover only REVEALS pre-placed nodes — it never re-spaces and so
+    // can never shift a node under the cursor (that re-spacing was the 8↔9 hover
+    // loop). Sugiyama already centres each parent over its children, so children
+    // sit under their parent; AutoFitView keeps the focus centred.
+    const positions = fullPositions;
     const spos = positions;
 
     const nodes: AnthillNode[] = visible.map((n) => {
