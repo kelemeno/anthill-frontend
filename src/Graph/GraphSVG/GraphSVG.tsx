@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 
 import ".././../App.css";
 import { TreeOrRepModeSwitch } from "../../Buttons/MainAppButtons";
-import { IS_MOBILE } from "../../isMobile";
 import {
   AddDagVoteButton,
   AddDagVoteCheck,
@@ -24,6 +23,8 @@ import {
   SwitchParentButton,
   SwitchParentCheck,
 } from "../../Buttons/PopupButtons";
+import { IS_MOBILE } from "../../isMobile";
+import { READ_ONLY } from "../../readOnly";
 import type {
   GraphData,
   GraphDataBare,
@@ -201,7 +202,12 @@ export const GraphSVG = (props: {
 
   return (
     <div
-      style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
       <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
         {isLoadingGraph ? (
@@ -211,30 +217,32 @@ export const GraphSVG = (props: {
           />
         ) : (
           <GraphFlow
-          graph={displayGraph}
-          layoutGraph={props.graph}
-          clickedNode={props.clickedNode}
-          treeMode={props.treeMode}
-          viewMode={props.viewMode}
-          forcedCollapsed={forcedCollapsed}
-          onViewChange={onViewChange}
-          onNodeClick={handleClickConstructed}
-          onNodeMouseEnter={(
-            event: React.MouseEvent<HTMLElement>,
-            node: NodeDataRendering,
-          ) => {
-            handleMouseOver(
-              event,
-              node,
-              loaded,
-              setHoverNode,
-              setAnchorEl,
-              setAnchorElSaver,
-              setOpen,
-            );
-          }}
-          onNodeMouseLeave={() => handleMouseOut(loaded, setOpen, setAnchorEl)}
-        />
+            graph={displayGraph}
+            layoutGraph={props.graph}
+            clickedNode={props.clickedNode}
+            treeMode={props.treeMode}
+            viewMode={props.viewMode}
+            forcedCollapsed={forcedCollapsed}
+            onViewChange={onViewChange}
+            onNodeClick={handleClickConstructed}
+            onNodeMouseEnter={(
+              event: React.MouseEvent<HTMLElement>,
+              node: NodeDataRendering,
+            ) => {
+              handleMouseOver(
+                event,
+                node,
+                loaded,
+                setHoverNode,
+                setAnchorEl,
+                setAnchorElSaver,
+                setOpen,
+              );
+            }}
+            onNodeMouseLeave={() =>
+              handleMouseOut(loaded, setOpen, setAnchorEl)
+            }
+          />
         )}
       </div>
       {(IS_MOBILE || viewSteps.length > 1) && (
@@ -247,119 +255,119 @@ export const GraphSVG = (props: {
           )}
           {viewSteps.length > 1 &&
             (() => {
-          const last = viewSteps.length - 1;
-          const cur = scrubIndex ?? last;
-          const btn: React.CSSProperties = {
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: 36,
-            height: 34,
-            padding: "0 10px",
-            border: "1px solid #d8dde3",
-            borderRadius: 8,
-            background: "#fff",
-            color: "#2d3748",
-            fontSize: 14,
-            cursor: "pointer",
-          };
-          const step = (i: number) => {
-            setPlaying(false);
-            setScrubIndex(Math.max(0, Math.min(last, i)));
-          };
-          return (
-            <div className="HistoryBar">
-              <button
-                type="button"
-                title="Previous step"
-                aria-label="Previous step"
-                disabled={cur <= 0}
-                onClick={() => step(cur - 1)}
-                style={{ ...btn, opacity: cur <= 0 ? 0.4 : 1 }}
-              >
-                ⏮
-              </button>
-              <button
-                type="button"
-                title={playing ? "Pause" : "Play"}
-                aria-label={playing ? "Pause" : "Play"}
-                onClick={() => {
-                  if (playing) setPlaying(false);
-                  else {
-                    if (scrubIndex == null || scrubIndex >= last) {
-                      setScrubIndex(0);
-                    }
-                    setPlaying(true);
-                  }
-                }}
-                style={{
-                  ...btn,
-                  minWidth: 40,
-                  background: "#2b6cb0",
-                  borderColor: "#2b6cb0",
-                  color: "#fff",
-                  fontSize: 15,
-                }}
-              >
-                {playing ? "⏸" : "▶"}
-              </button>
-              <button
-                type="button"
-                title="Next step"
-                aria-label="Next step"
-                disabled={cur >= last}
-                onClick={() => step(cur + 1)}
-                style={{ ...btn, opacity: cur >= last ? 0.4 : 1 }}
-              >
-                ⏭
-              </button>
-              <input
-                type="range"
-                min={0}
-                max={last}
-                value={cur}
-                onChange={(e) => {
-                  setPlaying(false);
-                  setScrubIndex(Number(e.target.value));
-                }}
-                style={{ flex: "1 1 120px", accentColor: "#2b6cb0" }}
-              />
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  fontVariantNumeric: "tabular-nums",
-                  color: "#718096",
-                }}
-              >
-                {cur + 1} / {viewSteps.length}
-              </span>
-              <span
-                style={{
-                  color: "#2d3748",
-                  flex: "1 1 90px",
-                  minWidth: 0,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {describeStep(viewSteps[cur])}
-              </span>
-              {scrubIndex != null && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlaying(false);
-                    setScrubIndex(null);
-                  }}
-                  style={{ ...btn, color: "#2b6cb0", fontSize: 13 }}
-                >
-                  Live
-                </button>
-              )}
-            </div>
-          );
-        })()}
+              const last = viewSteps.length - 1;
+              const cur = scrubIndex ?? last;
+              const btn: React.CSSProperties = {
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 36,
+                height: 34,
+                padding: "0 10px",
+                border: "1px solid #d8dde3",
+                borderRadius: 8,
+                background: "#fff",
+                color: "#2d3748",
+                fontSize: 14,
+                cursor: "pointer",
+              };
+              const step = (i: number) => {
+                setPlaying(false);
+                setScrubIndex(Math.max(0, Math.min(last, i)));
+              };
+              return (
+                <div className="HistoryBar">
+                  <button
+                    type="button"
+                    title="Previous step"
+                    aria-label="Previous step"
+                    disabled={cur <= 0}
+                    onClick={() => step(cur - 1)}
+                    style={{ ...btn, opacity: cur <= 0 ? 0.4 : 1 }}
+                  >
+                    ⏮
+                  </button>
+                  <button
+                    type="button"
+                    title={playing ? "Pause" : "Play"}
+                    aria-label={playing ? "Pause" : "Play"}
+                    onClick={() => {
+                      if (playing) setPlaying(false);
+                      else {
+                        if (scrubIndex == null || scrubIndex >= last) {
+                          setScrubIndex(0);
+                        }
+                        setPlaying(true);
+                      }
+                    }}
+                    style={{
+                      ...btn,
+                      minWidth: 40,
+                      background: "#2b6cb0",
+                      borderColor: "#2b6cb0",
+                      color: "#fff",
+                      fontSize: 15,
+                    }}
+                  >
+                    {playing ? "⏸" : "▶"}
+                  </button>
+                  <button
+                    type="button"
+                    title="Next step"
+                    aria-label="Next step"
+                    disabled={cur >= last}
+                    onClick={() => step(cur + 1)}
+                    style={{ ...btn, opacity: cur >= last ? 0.4 : 1 }}
+                  >
+                    ⏭
+                  </button>
+                  <input
+                    type="range"
+                    min={0}
+                    max={last}
+                    value={cur}
+                    onChange={(e) => {
+                      setPlaying(false);
+                      setScrubIndex(Number(e.target.value));
+                    }}
+                    style={{ flex: "1 1 120px", accentColor: "#2b6cb0" }}
+                  />
+                  <span
+                    style={{
+                      whiteSpace: "nowrap",
+                      fontVariantNumeric: "tabular-nums",
+                      color: "#718096",
+                    }}
+                  >
+                    {cur + 1} / {viewSteps.length}
+                  </span>
+                  <span
+                    style={{
+                      color: "#2d3748",
+                      flex: "1 1 90px",
+                      minWidth: 0,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {describeStep(viewSteps[cur])}
+                  </span>
+                  {scrubIndex != null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlaying(false);
+                        setScrubIndex(null);
+                      }}
+                      style={{ ...btn, color: "#2b6cb0", fontSize: 13 }}
+                    >
+                      Live
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
         </div>
       )}
       <Popover
@@ -397,102 +405,112 @@ export const GraphSVG = (props: {
           )}{" "}
         </div>
 
-        {SwitchParentCheck(
-          props.isAccountInGraph,
-          props.graph[hoverNode.id],
-        ) && (
-          <SwitchParentButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
-            isAccountInGraph={props.isAccountInGraph}
-            voter={props.account}
-            recipient={hoverNode}
-            graph={props.graph}
-          />
-        )}
-        {LeaveTreeCheck(
-          props.isAccountInGraph,
-          props.account,
-          props.graph[hoverNode.id],
-        ) && (
-          <LeaveTreeButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
-            isAccountInGraph={props.isAccountInGraph}
-            voter={props.account}
-            recipient={hoverNode}
-            setIsAccountInGraph={props.setIsAccountInGraph}
-            setClickedNode={props.setClickedNode}
-            navigate={navigate}
-            altNode={props.altNode}
-          />
-        )}
-        {MoveTreeVoteCheck(
-          props.isAccountInGraph,
-          props.account,
-          props.graph[hoverNode.id],
-        ) && (
-          <MoveTreeVoteButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
-            isAccountInGraph={props.isAccountInGraph}
-            voter={props.account}
-            recipient={hoverNode}
-            setClickedNode={props.setClickedNode}
-            navigate={navigate}
-          />
-        )}
-        {AddDagVoteCheck(props.isAccountInGraph, props.graph[hoverNode.id]) && (
-          <AddDagVoteButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
-            isAccountInGraph={props.isAccountInGraph}
-            account={props.account}
-            recipient={hoverNode.id}
-            graph={props.graph}
-          />
-        )}
-        {RemoveDagVoteCheck(
-          props.isAccountInGraph,
-          props.graph[hoverNode.id],
-        ) && (
-          <RemoveDagVoteButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
-            isAccountInGraph={props.isAccountInGraph}
-            account={props.account}
-            recipient={hoverNode.id}
-            graph={props.graph}
-          />
-        )}
-        {JoinTreeCheck(
-          props.isAccountInGraph,
-          props.account,
-          props.graph[hoverNode.id],
-        ) && (
-          <JoinTreeButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
-            isAccountInGraph={props.isAccountInGraph}
-            voter={props.account}
-            recipient={hoverNode}
-            setClickedNode={props.setClickedNode}
-            setIsAccountInGraph={props.setIsAccountInGraph}
-          />
-        )}
-        {ChangeNameCheck(
-          props.isAccountInGraph,
-          props.account,
-          props.graph[hoverNode.id],
-        ) && (
-          <ChangeNameButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
-            isAccountInGraph={props.isAccountInGraph}
-            voter={props.account}
-            recipient={hoverNode}
-          />
-        )}
+        {!READ_ONLY &&
+          SwitchParentCheck(
+            props.isAccountInGraph,
+            props.graph[hoverNode.id],
+          ) && (
+            <SwitchParentButton
+              AnthillContract={props.AnthillContract}
+              chainId={props.chainId}
+              isAccountInGraph={props.isAccountInGraph}
+              voter={props.account}
+              recipient={hoverNode}
+              graph={props.graph}
+            />
+          )}
+        {!READ_ONLY &&
+          LeaveTreeCheck(
+            props.isAccountInGraph,
+            props.account,
+            props.graph[hoverNode.id],
+          ) && (
+            <LeaveTreeButton
+              AnthillContract={props.AnthillContract}
+              chainId={props.chainId}
+              isAccountInGraph={props.isAccountInGraph}
+              voter={props.account}
+              recipient={hoverNode}
+              setIsAccountInGraph={props.setIsAccountInGraph}
+              setClickedNode={props.setClickedNode}
+              navigate={navigate}
+              altNode={props.altNode}
+            />
+          )}
+        {!READ_ONLY &&
+          MoveTreeVoteCheck(
+            props.isAccountInGraph,
+            props.account,
+            props.graph[hoverNode.id],
+          ) && (
+            <MoveTreeVoteButton
+              AnthillContract={props.AnthillContract}
+              chainId={props.chainId}
+              isAccountInGraph={props.isAccountInGraph}
+              voter={props.account}
+              recipient={hoverNode}
+              setClickedNode={props.setClickedNode}
+              navigate={navigate}
+            />
+          )}
+        {!READ_ONLY &&
+          AddDagVoteCheck(
+            props.isAccountInGraph,
+            props.graph[hoverNode.id],
+          ) && (
+            <AddDagVoteButton
+              AnthillContract={props.AnthillContract}
+              chainId={props.chainId}
+              isAccountInGraph={props.isAccountInGraph}
+              account={props.account}
+              recipient={hoverNode.id}
+              graph={props.graph}
+            />
+          )}
+        {!READ_ONLY &&
+          RemoveDagVoteCheck(
+            props.isAccountInGraph,
+            props.graph[hoverNode.id],
+          ) && (
+            <RemoveDagVoteButton
+              AnthillContract={props.AnthillContract}
+              chainId={props.chainId}
+              isAccountInGraph={props.isAccountInGraph}
+              account={props.account}
+              recipient={hoverNode.id}
+              graph={props.graph}
+            />
+          )}
+        {!READ_ONLY &&
+          JoinTreeCheck(
+            props.isAccountInGraph,
+            props.account,
+            props.graph[hoverNode.id],
+          ) && (
+            <JoinTreeButton
+              AnthillContract={props.AnthillContract}
+              chainId={props.chainId}
+              isAccountInGraph={props.isAccountInGraph}
+              voter={props.account}
+              recipient={hoverNode}
+              setClickedNode={props.setClickedNode}
+              setIsAccountInGraph={props.setIsAccountInGraph}
+            />
+          )}
+        {!READ_ONLY &&
+          ChangeNameCheck(
+            props.isAccountInGraph,
+            props.account,
+            props.graph[hoverNode.id],
+          ) && (
+            <ChangeNameButton
+              AnthillContract={props.AnthillContract}
+              chainId={props.chainId}
+              isAccountInGraph={props.isAccountInGraph}
+              voter={props.account}
+              recipient={hoverNode}
+            />
+          )}
 
         <div className="Popover">
           {" "}

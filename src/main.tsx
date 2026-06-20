@@ -33,6 +33,7 @@ import {
   getIsNodeInGraph,
   getRandomLeaf,
 } from "./ExternalConnections/BackendGetters";
+import { READ_ONLY } from "./readOnly";
 
 const doc = document.getElementById("root");
 const root = client.createRoot(doc!);
@@ -89,6 +90,24 @@ const Web3Button = () => {
   const { disconnect } = useDisconnect();
   const { open } = useAppKit();
 
+  // Read-only showcase: no wallet, just a label.
+  if (READ_ONLY) {
+    return (
+      <span
+        style={{
+          fontSize: 13,
+          color: "#64748b",
+          border: "1px solid #e2e8f0",
+          borderRadius: 8,
+          padding: "6px 10px",
+          whiteSpace: "nowrap",
+        }}
+      >
+        🔍 Read-only demo
+      </span>
+    );
+  }
+
   if (isConnected) {
     return (
       <div>
@@ -106,7 +125,16 @@ let chainId: number;
 let backendUrl = "";
 let wsUrl: string;
 
-if (!testing) {
+if (READ_ONLY) {
+  // Hosted showcase: talk to the snapshot-mode backend on Heroku. No chain, so
+  // the contract address / chain id are unused placeholders. Override the hosts
+  // at build time with VITE_BACKEND_URL / VITE_WS_URL if the Heroku app differs.
+  anthillContractAddress = "0x0000000000000000000000000000000000000000";
+  chainId = 11155111;
+  backendUrl =
+    import.meta.env.VITE_BACKEND_URL || "https://anthill-db.herokuapp.com/";
+  wsUrl = import.meta.env.VITE_WS_URL || "wss://anthill-db.herokuapp.com/";
+} else if (!testing) {
   anthillContractAddress = "0x0000000000000000000000000000000000000000"; // TODO: set deployed contract address on Ethereum Sepolia
   chainId = 11155111; // Ethereum Sepolia testnet
 
