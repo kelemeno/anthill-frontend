@@ -47,12 +47,11 @@ import {
 
 export const GraphSVG = (props: {
   account: string;
-  chainId: number;
   isAccountInGraph: boolean;
   setIsAccountInGraph: any;
   clickedNode: string;
   setClickedNode: any;
-  AnthillContract: any;
+  api: any;
   graph: GraphDataRendering;
   altNode: string;
   maxRelRootDepth: number;
@@ -411,8 +410,7 @@ export const GraphSVG = (props: {
             props.graph[hoverNode.id],
           ) && (
             <SwitchParentButton
-              AnthillContract={props.AnthillContract}
-              chainId={props.chainId}
+              api={props.api}
               isAccountInGraph={props.isAccountInGraph}
               voter={props.account}
               recipient={hoverNode}
@@ -426,8 +424,7 @@ export const GraphSVG = (props: {
             props.graph[hoverNode.id],
           ) && (
             <LeaveTreeButton
-              AnthillContract={props.AnthillContract}
-              chainId={props.chainId}
+              api={props.api}
               isAccountInGraph={props.isAccountInGraph}
               voter={props.account}
               recipient={hoverNode}
@@ -444,8 +441,7 @@ export const GraphSVG = (props: {
             props.graph[hoverNode.id],
           ) && (
             <MoveTreeVoteButton
-              AnthillContract={props.AnthillContract}
-              chainId={props.chainId}
+              api={props.api}
               isAccountInGraph={props.isAccountInGraph}
               voter={props.account}
               recipient={hoverNode}
@@ -459,8 +455,7 @@ export const GraphSVG = (props: {
             props.graph[hoverNode.id],
           ) && (
             <AddDagVoteButton
-              AnthillContract={props.AnthillContract}
-              chainId={props.chainId}
+              api={props.api}
               isAccountInGraph={props.isAccountInGraph}
               account={props.account}
               recipient={hoverNode.id}
@@ -473,8 +468,7 @@ export const GraphSVG = (props: {
             props.graph[hoverNode.id],
           ) && (
             <RemoveDagVoteButton
-              AnthillContract={props.AnthillContract}
-              chainId={props.chainId}
+              api={props.api}
               isAccountInGraph={props.isAccountInGraph}
               account={props.account}
               recipient={hoverNode.id}
@@ -488,8 +482,7 @@ export const GraphSVG = (props: {
             props.graph[hoverNode.id],
           ) && (
             <JoinTreeButton
-              AnthillContract={props.AnthillContract}
-              chainId={props.chainId}
+              api={props.api}
               isAccountInGraph={props.isAccountInGraph}
               voter={props.account}
               recipient={hoverNode}
@@ -504,8 +497,7 @@ export const GraphSVG = (props: {
             props.graph[hoverNode.id],
           ) && (
             <ChangeNameButton
-              AnthillContract={props.AnthillContract}
-              chainId={props.chainId}
+              api={props.api}
               isAccountInGraph={props.isAccountInGraph}
               voter={props.account}
               recipient={hoverNode}

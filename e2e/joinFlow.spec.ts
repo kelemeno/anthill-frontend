@@ -2,11 +2,11 @@ import { expect, test } from "@playwright/test";
 
 // End-to-end of the read/navigate workflow through a real browser:
 // the app boots, asks the backend for a random leaf, navigates to /?id=0x...,
-// and the React Flow graph renders nodes. (The on-chain *join* write is
-// wallet-gated, so it is covered by the Vitest on-chain integration test.)
+// and the React Flow graph renders nodes. (Joining needs a passkey, so it is
+// not driven here.)
 //
-// Requires the full local stack up: anvil + seeded contract, backend :5001,
-// Vite :5173 (Playwright starts/reuses Vite; anvil + backend must be running).
+// Requires the backend on :5001 (off-chain mode, seeded from the snapshot) and
+// Vite :5173 (Playwright starts/reuses Vite; the backend must be running).
 
 test.describe("graph read/navigate flow", () => {
   test("boots, fetches a random leaf, and renders the graph", async ({
@@ -27,9 +27,9 @@ test.describe("graph read/navigate flow", () => {
       })
       .toBeGreaterThan(0);
 
-    // The wallet entry point (gate for joining) is present.
+    // The passkey sign-in (gate for joining) is present.
     await expect(
-      page.getByRole("button", { name: /connect wallet/i }),
+      page.getByRole("button", { name: /sign in with passkey/i }),
     ).toBeVisible();
   });
 

@@ -203,12 +203,11 @@ const loadGraphDetails = async (
 
 export const Graph = (props: {
   account: string;
-  chainId: number;
   clickedNode: string;
   setClickedNode: any;
   viewMode: "tree" | "votes" | "rep";
   setViewMode: any;
-  AnthillContract: any;
+  api: any;
   backendUrl: string;
   wsUrl: string;
 }) => {
@@ -330,13 +329,12 @@ export const Graph = (props: {
 
   const props2 = {
     account: props.account,
-    chainId: props.chainId,
     isAccountInGraph: isAccountInGraph,
     setIsAccountInGraph: setIsAccountInGraph,
     // here we use the state variable and not the props variable for clickedNode
     clickedNode: clickedNode,
     setClickedNode: setClickedNode,
-    AnthillContract: props.AnthillContract,
+    api: props.api,
     graph: graphDisplayed,
     altNode: altNode,
     maxRelRootDepth: maxRelRootDepth,
@@ -358,8 +356,7 @@ export const Graph = (props: {
         />
         {JoinTreeRandomlyCheck(isAccountInGraph, props.account) && (
           <JoinTreeRandomlyButton
-            AnthillContract={props.AnthillContract}
-            chainId={props.chainId}
+            api={props.api}
             account={props.account}
             isAccountInGraph={isAccountInGraph}
             setClickedNode={setClickedNode}

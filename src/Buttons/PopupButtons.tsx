@@ -9,7 +9,7 @@ import {
   useMoveTreeVote,
   useRemoveDagVote,
   useSwitchWithParent,
-} from "../ExternalConnections/SmartContractInteractions";
+} from "../ExternalConnections/BackendActions";
 import {
   address0,
   type GraphDataRendering,
@@ -24,18 +24,13 @@ export const AddDagVoteCheck = (
 };
 
 export const AddDagVoteButton = (props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   isAccountInGraph: boolean;
   account: string;
   recipient: string;
   graph: GraphDataRendering;
 }) => {
-  const addDagVote = useAddDagVote(
-    props.AnthillContract,
-    props.account,
-    props.recipient,
-  );
+  const addDagVote = useAddDagVote(props.api, props.recipient);
   return (
     <div className="Popover">
       <button className="PopoverButton" onClick={() => addDagVote?.()}>
@@ -53,19 +48,13 @@ export const RemoveDagVoteCheck = (
 };
 
 export const RemoveDagVoteButton = (props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   isAccountInGraph: boolean;
   account: string;
   recipient: string;
   graph: GraphDataRendering;
 }) => {
-  // var addDagVote = AddDagVote(props.AnthillContract,  props.account, props.recipient)
-  const removeDagVote = useRemoveDagVote(
-    props.AnthillContract,
-    props.account,
-    props.recipient,
-  );
+  const removeDagVote = useRemoveDagVote(props.api, props.recipient);
   return (
     <div className="Popover">
       <button className="PopoverButton" onClick={() => removeDagVote?.()}>
@@ -83,14 +72,13 @@ export const SwitchParentCheck = (
 };
 
 export const SwitchParentButton = (props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   isAccountInGraph: boolean;
   voter: string;
   recipient: NodeDataRendering;
   graph: GraphDataRendering;
 }) => {
-  const switchWithParent = useSwitchWithParent(props.AnthillContract, props.voter);
+  const switchWithParent = useSwitchWithParent(props.api);
 
   // var switchable= props.graph[props.recipient.id].isSwitchable
 
@@ -118,19 +106,14 @@ export const JoinTreeCheck = (
 };
 
 export const JoinTreeButton = (props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   isAccountInGraph: boolean;
   voter: string;
   recipient: NodeDataRendering;
   setClickedNode: any;
   setIsAccountInGraph: any;
 }) => {
-  const joinTree = useJoinTree(
-    props.AnthillContract,
-    props.voter,
-    props.recipient.id,
-  );
+  const joinTree = useJoinTree(props.api, props.recipient.id);
 
   return (
     <div className="Popover">
@@ -155,15 +138,14 @@ export const ChangeNameCheck = (
 };
 
 export const ChangeNameButton = (props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   isAccountInGraph: boolean;
   voter: string;
   recipient: NodeDataRendering;
 }) => {
   const [nameInput, setNameInput] = useState("");
 
-  const changeName = useChangeName(props.AnthillContract, props.voter, nameInput);
+  const changeName = useChangeName(props.api, nameInput);
 
   return (
     <div className="Popover">
@@ -195,8 +177,7 @@ export const LeaveTreeCheck = (
 };
 
 export const LeaveTreeButton = (props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   isAccountInGraph: boolean;
   setIsAccountInGraph: any;
   voter: string;
@@ -206,8 +187,7 @@ export const LeaveTreeButton = (props: {
   altNode: string;
 }) => {
   const leaveTree = useLeaveTree(
-    props.AnthillContract,
-    props.voter,
+    props.api,
     props.navigate,
     props.setClickedNode,
     props.altNode,
@@ -241,8 +221,7 @@ export const MoveTreeVoteCheck = (
 };
 
 export const MoveTreeVoteButton = (props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   isAccountInGraph: boolean;
   voter: string;
   recipient: NodeDataRendering;
@@ -250,8 +229,7 @@ export const MoveTreeVoteButton = (props: {
   navigate: any;
 }) => {
   const moveTreeVote = useMoveTreeVote(
-    props.AnthillContract,
-    props.voter,
+    props.api,
     props.recipient.id,
     props.setClickedNode,
     props.navigate,

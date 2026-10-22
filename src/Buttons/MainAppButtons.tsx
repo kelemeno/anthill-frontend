@@ -6,7 +6,7 @@ import { address0 } from "../Graph/GraphBase";
 import ".././App.css";
 import { getRandomLeaf } from "../ExternalConnections/BackendGetters";
 
-import { useJoinTree } from "../ExternalConnections/SmartContractInteractions";
+import { useJoinTree } from "../ExternalConnections/BackendActions";
 
 export function GoHomeButton(props: {
   account: string;
@@ -39,8 +39,7 @@ export const JoinTreeRandomlyCheck = (
 };
 
 export function JoinTreeRandomlyButton(props: {
-  AnthillContract: any;
-  chainId: number;
+  api: any;
   account: string;
   isAccountInGraph: boolean;
   setIsAccountInGraph: any;
@@ -66,7 +65,7 @@ export function JoinTreeRandomlyButton(props: {
     });
   }, [props.backendUrl]);
 
-  const joinTree = useJoinTree(props.AnthillContract, props.account, recipient);
+  const joinTree = useJoinTree(props.api, recipient);
 
   return (
     // <div className='Popover'>
