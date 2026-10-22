@@ -9,6 +9,8 @@ export type DagVote = { id: string; weight: number; posInOther: number };
 export type NodeData = {
   id: string;
   name: string;
+  bio?: string;
+  link?: string;
   totalWeight: number;
   currentRep: number;
   depth: number;

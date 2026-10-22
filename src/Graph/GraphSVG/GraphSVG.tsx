@@ -12,6 +12,7 @@ import {
   AddDagVoteCheck,
   ChangeNameButton,
   ChangeNameCheck,
+  InviteButton,
   JoinTreeButton,
   JoinTreeCheck,
   LeaveTreeButton,
@@ -23,6 +24,7 @@ import {
   SwitchParentButton,
   SwitchParentCheck,
 } from "../../Buttons/PopupButtons";
+import { getNodeFromServer } from "../../ExternalConnections/BackendGetters";
 import { IS_MOBILE } from "../../isMobile";
 import { READ_ONLY } from "../../readOnly";
 import type {
@@ -61,6 +63,7 @@ export const GraphSVG = (props: {
   viewMode: "tree" | "votes" | "rep";
   setViewMode: any;
   backendUrl: string;
+  inviteOnly: boolean;
 }) => {
   // console.log("rendering graph")
 
@@ -81,6 +84,25 @@ export const GraphSVG = (props: {
     isDagVote: false,
     isSwitchable: false,
   } as NodeDataRendering);
+
+  // The hovered node's profile (bio, link), from the cached graph.
+  const [hoverProfile, setHoverProfile] = useState<{ bio?: string; link?: string }>(
+    {},
+  );
+  useEffect(() => {
+    let cancelled = false;
+    setHoverProfile({});
+    getNodeFromServer(props.backendUrl, hoverNode.id).then(
+      (node) => !cancelled && setHoverProfile({ bio: node.bio, link: node.link }),
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [props.backendUrl, hoverNode.id]);
+
+  const myParent = props.anthillGraph[props.account]?.sentTreeVote;
+  const isOwnNode = props.isAccountInGraph && hoverNode.id === props.account;
 
   // for the popover
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -403,10 +425,21 @@ export const GraphSVG = (props: {
             2,
           )}{" "}
         </div>
+        {hoverProfile.bio && (
+          <div className="Popover PopoverBio">{hoverProfile.bio}</div>
+        )}
+        {hoverProfile.link && (
+          <div className="Popover">
+            <a href={hoverProfile.link} target="_blank" rel="noopener noreferrer nofollow">
+              {hoverProfile.link.replace(/^https?:\/\//, "")}
+            </a>
+          </div>
+        )}
 
         {!READ_ONLY &&
           SwitchParentCheck(
             props.isAccountInGraph,
+            myParent,
             props.graph[hoverNode.id],
           ) && (
             <SwitchParentButton
@@ -452,6 +485,7 @@ export const GraphSVG = (props: {
         {!READ_ONLY &&
           AddDagVoteCheck(
             props.isAccountInGraph,
+            props.account,
             props.graph[hoverNode.id],
           ) && (
             <AddDagVoteButton
@@ -480,6 +514,7 @@ export const GraphSVG = (props: {
             props.isAccountInGraph,
             props.account,
             props.graph[hoverNode.id],
+            props.inviteOnly,
           ) && (
             <JoinTreeButton
               api={props.api}
@@ -504,12 +539,10 @@ export const GraphSVG = (props: {
             />
           )}
 
-        <div className="Popover">
-          {" "}
-          Address:{" "}
-          <a href={"https://sepolia.etherscan.io/address/" + hoverNode.id}>
-            {hoverNode.id.slice(0, 5)}...{hoverNode.id.slice(-3)}
-          </a>{" "}
+        {!READ_ONLY && isOwnNode && <InviteButton api={props.api} />}
+
+        <div className="Popover PopoverReason">
+          ID: {hoverNode.id.slice(0, 6)}…{hoverNode.id.slice(-4)}
         </div>
       </Popover>
     </div>

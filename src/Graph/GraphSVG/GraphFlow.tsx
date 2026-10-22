@@ -3,7 +3,8 @@
 //     from the focused/clicked node, so the local area stays prominent.
 //   - collapse/expand: a node's tree-subtree can be folded into a "+N" badge,
 //     so you only render what you've opened.
-//   - hover-enlarge: hovering a (small) node scales it up to reveal its label.
+//   - hover peeks: hovering a node opens its branch and its popover; the view
+//     itself stays still (clicking recentres on a node, without zooming).
 // d3-dag stays a pure layout calculator (Sugiyama, scalable heuristics).
 import {
   BaseEdge,
@@ -38,8 +39,7 @@ import {
 } from "../GraphBase";
 
 const BASE_RADIUS = 30;
-// On mobile there's no hover-zoom to enlarge distant nodes, so keep a bigger
-// floor — small nodes are hard to tap with a finger.
+// Small nodes are hard to tap with a finger, so mobile gets a bigger floor.
 const MIN_RADIUS = IS_MOBILE ? 14 : 8;
 const SHRINK = 0.8; // radius multiplier per hop away from focus
 
@@ -320,49 +320,6 @@ function AutoFitView({
     });
     return () => cancelAnimationFrame(id);
   }, [graph, focus]);
-  return null;
-}
-
-// DESKTOP interaction: hovering a node smoothly zooms the whole view in toward
-// it (node + curves + neighbours magnify together), easing back on leave. Only
-// fires for mouse hover (touch never sets hoveredId), so it's desktop-only.
-function HoverZoom({
-  hoveredId,
-  graph,
-}: {
-  hoveredId: string | null;
-  graph: GraphDataRendering;
-}) {
-  const { getNode, getViewport, setViewport } = useReactFlow();
-  const base = useRef<{ x: number; y: number; zoom: number } | null>(null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (hoveredId && graph[hoveredId]) {
-      if (!base.current) base.current = getViewport();
-      const node = getNode(hoveredId);
-      if (node) {
-        const w = node.width ?? 2 * BASE_RADIUS;
-        const cx = node.position.x + w / 2;
-        const cy = node.position.y + (node.height ?? w) / 2;
-        const zoom = Math.min(2.8, Math.max(base.current.zoom * 1.4, 70 / w));
-        // Zoom ABOUT the node's current screen position (don't recenter it),
-        // so the node stays under the cursor — recentering would slide it away,
-        // flipping the hover to a neighbour and causing a zoom-jitter loop.
-        const vp = getViewport();
-        setViewport(
-          {
-            x: vp.x + cx * (vp.zoom - zoom),
-            y: vp.y + cy * (vp.zoom - zoom),
-            zoom,
-          },
-          { duration: 260 },
-        );
-      }
-    } else if (base.current) {
-      setViewport(base.current, { duration: 260 });
-      base.current = null;
-    }
-  }, [hoveredId]);
   return null;
 }
 
@@ -1070,8 +1027,7 @@ export const GraphFlow = (props: {
       };
     });
 
-    // Curves scale with the unified hover zoom (the whole view magnifies), so no
-    // per-edge hover thickening is needed here.
+    // No per-edge hover thickening: hovering doesn't change the view.
     const edges: GradientEdge[] = [];
     for (const n of visible) {
       for (const parentId of n.parentIds) {
@@ -1321,7 +1277,6 @@ export const GraphFlow = (props: {
           focus={props.clickedNode}
           focusTarget={focusTarget}
         />
-        {!IS_MOBILE && <HoverZoom hoveredId={hoveredId} graph={props.graph} />}
         <Controls showInteractive={false} position="top-left" />
       </ReactFlow>
     </div>

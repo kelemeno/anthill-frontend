@@ -29,7 +29,7 @@ export function saveSession(session: Session | undefined) {
   }
 }
 
-async function request<T>(
+export async function request<T>(
   backendUrl: string,
   path: string,
   body: unknown,
@@ -50,20 +50,65 @@ async function request<T>(
   return data as T;
 }
 
+// A new account comes with a recovery code, to be shown to the user once.
+export type NewSession = Session & { recoveryCode: string };
+
 export async function createPasskey(
   backendUrl: string,
   name: string,
-): Promise<Session> {
+): Promise<NewSession> {
   const { flowId, options } = await request<{ flowId: string; options: any }>(
     backendUrl,
     "auth/register/options",
     { name },
   );
   const response = await startRegistration({ optionsJSON: options });
-  return request<Session>(backendUrl, "auth/register/verify", {
+  return request<NewSession>(backendUrl, "auth/register/verify", {
     flowId,
     response,
   });
+}
+
+// Another passkey (e.g. this device) for the signed-in account.
+export async function addPasskey(api: Api): Promise<void> {
+  const token = api.session?.token;
+  const { flowId, options } = await request<{ flowId: string; options: any }>(
+    api.backendUrl,
+    "auth/passkeys/options",
+    {},
+    token,
+  );
+  const response = await startRegistration({ optionsJSON: options });
+  await request(api.backendUrl, "auth/passkeys/verify", { flowId, response }, token);
+}
+
+// Lost every passkey: register a new one with the recovery code. Returns a
+// session and the replacement recovery code.
+export async function recoverAccount(
+  backendUrl: string,
+  code: string,
+): Promise<NewSession> {
+  const { flowId, options } = await request<{ flowId: string; options: any }>(
+    backendUrl,
+    "auth/recover/options",
+    { code },
+  );
+  const response = await startRegistration({ optionsJSON: options });
+  return request<NewSession>(backendUrl, "auth/recover/verify", {
+    flowId,
+    response,
+  });
+}
+
+// Replaces the account's recovery code; the old one stops working.
+export async function newRecoveryCode(api: Api): Promise<string> {
+  const { recoveryCode } = await request<{ recoveryCode: string }>(
+    api.backendUrl,
+    "auth/recovery-code",
+    {},
+    api.session?.token,
+  );
+  return recoveryCode;
 }
 
 export async function signInWithPasskey(backendUrl: string): Promise<Session> {

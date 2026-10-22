@@ -15,6 +15,7 @@ type GraphResponse = {
   rootId: string;
   maxRelRootDepth: number;
   randomLeaf: string;
+  config?: { inviteOnly: boolean };
   nodes: { [id: string]: NodeData };
 };
 
@@ -90,6 +91,13 @@ export async function getBareNodeFromServer(
     sentTreeVote: node.sentTreeVote,
     recTreeVotes: node.recTreeVotes,
   };
+}
+
+// Server settings that change what the UI offers.
+export async function getConfig(
+  backendUrl: string,
+): Promise<{ inviteOnly: boolean }> {
+  return (await getGraph(backendUrl)).config ?? { inviteOnly: false };
 }
 
 export async function getRandomLeaf(backendUrl: string): Promise<string> {

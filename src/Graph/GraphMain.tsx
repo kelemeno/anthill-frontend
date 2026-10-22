@@ -17,7 +17,9 @@ import {
   JoinTreeRandomlyCheck,
   // TreeOrRepModeSwitch,
 } from "../Buttons/MainAppButtons";
+import { invalidateChecks } from "../ExternalConnections/BackendActions";
 import {
+  getConfig,
   getIsNodeInGraph,
   getMaxRelRootDepth,
   invalidateGraph,
@@ -246,6 +248,14 @@ export const Graph = (props: {
 
   const [altNode, setAltNode] = useState("");
 
+  const [inviteOnly, setInviteOnly] = useState(false);
+  React.useEffect(() => {
+    getConfig(props.backendUrl).then(
+      (config) => setInviteOnly(config.inviteOnly),
+      () => {},
+    );
+  }, [props.backendUrl]);
+
   const clearingGraph = async () => {
     if (props.account !== undefined) {
       await getIsNodeInGraph(props.backendUrl, props.account).then((res) => {
@@ -272,6 +282,7 @@ export const Graph = (props: {
       // Any message (the hello on (re)connect, or an update) means the cached
       // graph may be stale.
       invalidateGraph();
+      invalidateChecks();
       clearingGraph();
       console.log("WebSocket message received.", event);
     },
@@ -348,6 +359,7 @@ export const Graph = (props: {
     viewMode: props.viewMode,
     setViewMode: props.setViewMode,
     backendUrl: props.backendUrl,
+    inviteOnly: inviteOnly,
   };
 
   return (
@@ -358,7 +370,7 @@ export const Graph = (props: {
           isAccountInGraph={isAccountInGraph}
           setClickedNode={setClickedNode}
         />
-        {JoinTreeRandomlyCheck(isAccountInGraph, props.account) && (
+        {!inviteOnly && JoinTreeRandomlyCheck(isAccountInGraph, props.account) && (
           <JoinTreeRandomlyButton
             api={props.api}
             account={props.account}

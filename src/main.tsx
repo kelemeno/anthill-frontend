@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import * as client from "react-dom/client";
 import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 import useWebSocketDefault from "react-use-websocket";
@@ -8,6 +8,8 @@ import useWebSocketDefault from "react-use-websocket";
 const useWebSocket = ((useWebSocketDefault as any).default ??
   useWebSocketDefault) as typeof useWebSocketDefault;
 
+import { AccountControls } from "./Account/AccountControls";
+import { InviteLanding, inviteCodeFromUrl } from "./Account/InviteLanding";
 import { GraphDemo } from "./Graph/GraphDemo";
 import { Graph } from "./Graph/GraphMain";
 import { IS_MOBILE } from "./isMobile";
@@ -22,13 +24,12 @@ import {
 } from "./ExternalConnections/BackendGetters";
 import {
   type Api,
-  createPasskey,
   fetchMe,
   loadSession,
   type Session,
   saveSession,
-  signInWithPasskey,
 } from "./ExternalConnections/Passkey";
+import { PollsDrawer } from "./Polls/PollsDrawer";
 import { READ_ONLY } from "./readOnly";
 
 const doc = document.getElementById("root");
@@ -41,78 +42,6 @@ console.log("Version 2");
 // origin: localhost, or https.
 const localHost =
   typeof window !== "undefined" ? window.location.hostname : "localhost";
-
-// Sign in / create a passkey. Replaces the wallet connect button.
-const PasskeyButton = (props: {
-  backendUrl: string;
-  session: Session | undefined;
-  setSession: (session: Session | undefined) => void;
-}) => {
-  const [busy, setBusy] = useState(false);
-
-  // Read-only showcase: no sign-in, just a label.
-  if (READ_ONLY) {
-    return (
-      <span
-        style={{
-          fontSize: 13,
-          color: "#64748b",
-          border: "1px solid #e2e8f0",
-          borderRadius: 8,
-          padding: "6px 10px",
-          whiteSpace: "nowrap",
-        }}
-      >
-        🔍 Read-only demo
-      </span>
-    );
-  }
-
-  const run = (signIn: () => Promise<Session>) => async () => {
-    setBusy(true);
-    try {
-      props.setSession(await signIn());
-    } catch (error) {
-      // Cancelling the browser's passkey sheet is not worth an alert.
-      if ((error as Error).name !== "NotAllowedError") {
-        alert((error as Error).message);
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (props.session !== undefined) {
-    return (
-      <div>
-        <span style={{ marginRight: 8 }}>{props.session.user.name}</span>
-        <button onClick={() => props.setSession(undefined)}>Sign out</button>
-      </div>
-    );
-  }
-
-  const create = run(async () => {
-    const name = prompt("Your name in the tree")?.trim();
-    if (!name) {
-      throw Object.assign(new Error("cancelled"), { name: "NotAllowedError" });
-    }
-    return createPasskey(props.backendUrl, name);
-  });
-
-  return (
-    <div>
-      <button
-        disabled={busy}
-        onClick={run(() => signInWithPasskey(props.backendUrl))}
-      >
-        Sign in with passkey
-      </button>{" "}
-      <button disabled={busy} onClick={create}>
-        Create passkey
-      </button>
-    </div>
-  );
-};
 
 // Production builds name their backend (VITE_BACKEND_URL / VITE_WS_URL, see
 // .env.production); in local dev it runs on this machine.
@@ -134,7 +63,10 @@ const App = () => {
     saveSession(next);
     setSessionState(next);
   };
-  const api: Api = { backendUrl, session };
+  const api: Api = useMemo(() => ({ backendUrl, session }), [session]);
+  const [pollsOpen, setPollsOpen] = useState(false);
+  // read once: the app soon navigates to /?id=..., which drops ?invite=
+  const [inviteCode] = useState(() => (READ_ONLY ? null : inviteCodeFromUrl()));
 
   // Drop a stored session the backend no longer accepts (expired, or the
   // backend's data was reset).
@@ -217,7 +149,19 @@ const App = () => {
         setSession={setSession}
         viewMode={viewMode}
         setViewMode={setViewMode}
+        openPolls={() => setPollsOpen(true)}
       />
+      {!READ_ONLY && (
+        <PollsDrawer api={api} open={pollsOpen} onClose={() => setPollsOpen(false)} />
+      )}
+      {inviteCode && (
+        <InviteLanding
+          code={inviteCode}
+          backendUrl={backendUrl}
+          session={session}
+          setSession={setSession}
+        />
+      )}
       <TutorialPopup
         showTutorial={showTutorial}
         setShowTutorial={setShowTutorial}
@@ -250,6 +194,7 @@ function Header(props: {
   setSession: (session: Session | undefined) => void;
   viewMode: "tree" | "votes" | "rep";
   setViewMode: any;
+  openPolls: () => void;
 }) {
   return (
     <header>
@@ -264,11 +209,20 @@ function Header(props: {
         )}
       </div>
       <div className="header__right">
-        <PasskeyButton
-          backendUrl={backendUrl}
-          session={props.session}
-          setSession={props.setSession}
-        />
+        {READ_ONLY ? (
+          <span className="ReadOnlyLabel">🔍 Read-only demo</span>
+        ) : (
+          <>
+            <button type="button" onClick={props.openPolls}>
+              Polls
+            </button>
+            <AccountControls
+              backendUrl={backendUrl}
+              session={props.session}
+              setSession={props.setSession}
+            />
+          </>
+        )}
         <TutorialButton
           showTutorial={props.showTutorial}
           setShowTutorial={props.setShowTutorial}

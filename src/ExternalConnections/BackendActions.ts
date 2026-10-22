@@ -3,7 +3,8 @@
 // writes; the backend now enforces the same rules. Each returns the action to
 // run on click, or `undefined` when nobody is signed in (callers invoke with
 // `?.()`). Failures are shown with an alert.
-import { type Api, sendAction } from "./Passkey";
+import { useEffect, useState } from "react";
+import { type Api, request, sendAction } from "./Passkey";
 
 function action(
   api: Api,
@@ -65,4 +66,60 @@ export function useMoveTreeVote(
     setClickedNodeId(recipient);
     navigate("/?id=" + recipient);
   });
+}
+
+//// Why an action isn't possible
+
+export type CheckResult = { ok: true } | { ok: false; reason: string };
+
+// Dry-run results, per user + action. Cleared whenever the backend announces
+// an update (see GraphMain), since any change can make an action (im)possible.
+const checkCache = new Map<string, Promise<CheckResult>>();
+
+export function invalidateChecks() {
+  checkCache.clear();
+}
+
+export function checkAction(
+  api: Api,
+  fn: string,
+  args: Record<string, string>,
+): Promise<CheckResult> | undefined {
+  if (api.session === undefined) return undefined;
+  const key = `${api.session.user.id}|${fn}|${JSON.stringify(args)}`;
+  let result = checkCache.get(key);
+  if (result === undefined) {
+    result = request<{ results: CheckResult[] }>(
+      api.backendUrl,
+      "check",
+      { actions: [{ fn, args }] },
+      api.session.token,
+    ).then((r) => r.results[0]);
+    checkCache.set(key, result);
+    result.catch(() => checkCache.delete(key));
+  }
+  return result;
+}
+
+// Whether the action would succeed, and if not why; undefined while unknown.
+export function useActionCheck(
+  api: Api,
+  fn: string,
+  args: Record<string, string>,
+): CheckResult | undefined {
+  const argsKey = JSON.stringify(args);
+  const [result, setResult] = useState<CheckResult | undefined>(undefined);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: argsKey stands in for args
+  useEffect(() => {
+    setResult(undefined);
+    let cancelled = false;
+    checkAction(api, fn, args)?.then(
+      (r) => !cancelled && setResult(r),
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api.backendUrl, api.session?.token, fn, argsKey]);
+  return result;
 }

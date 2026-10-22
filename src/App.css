@@ -64,6 +64,25 @@
   min-height: 38px;
   cursor: pointer;
 }
+
+.PopoverButton:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* why an action isn't possible, or a status message, under its button */
+.PopoverReason {
+  max-width: 260px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.PopoverBio {
+  max-width: 260px;
+  white-space: pre-wrap;
+  color: #334155;
+}
 /* .container {
   top: 50%;
   left: 50%;
