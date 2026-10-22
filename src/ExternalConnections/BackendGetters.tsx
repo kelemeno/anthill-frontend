@@ -10,26 +10,58 @@ async function getJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+type GraphResponse = {
+  version: number;
+  rootId: string;
+  maxRelRootDepth: number;
+  randomLeaf: string;
+  nodes: { [id: string]: NodeData };
+};
+
+// The whole graph is fetched once (GET /graph) and every getter below reads
+// from it, instead of one request per node. Call invalidateGraph when the
+// backend announces an update.
+let graphCache: { backendUrl: string; graph: Promise<GraphResponse> } | null =
+  null;
+
+export function invalidateGraph() {
+  graphCache = null;
+}
+
+function getGraph(backendUrl: string): Promise<GraphResponse> {
+  if (graphCache === null || graphCache.backendUrl !== backendUrl) {
+    const graph = getJson<GraphResponse>(backendUrl + "graph");
+    const entry = { backendUrl, graph };
+    graphCache = entry;
+    // don't keep a failed fetch around
+    graph.catch(() => {
+      if (graphCache === entry) graphCache = null;
+    });
+  }
+  return graphCache.graph;
+}
+
+async function getNode(backendUrl: string, id: string): Promise<NodeData> {
+  const node = (await getGraph(backendUrl)).nodes[id];
+  if (node === undefined) {
+    throw new Error(`node ${id} not found`);
+  }
+  return node;
+}
+
 export async function getMaxRelRootDepth(backendUrl: string): Promise<number> {
-  const data = await getJson<{ maxRelRootDepth: number }>(
-    backendUrl + "maxRelRootDepth",
-  );
-  return data.maxRelRootDepth;
+  return (await getGraph(backendUrl)).maxRelRootDepth;
 }
 
 export async function getIsNodeInGraph(
   backendUrl: string,
   id: string,
 ): Promise<boolean> {
-  const data = await getJson<{ isNodeInGraph: boolean }>(
-    backendUrl + "isNodeInGraph/" + id,
-  );
-  return data.isNodeInGraph;
+  return (await getGraph(backendUrl)).nodes[id] !== undefined;
 }
 
 export async function getRootNodeId(backendUrl: string): Promise<string> {
-  const data = await getJson<{ id: string }>(backendUrl + "rootId");
-  return data.id;
+  return (await getGraph(backendUrl)).rootId;
 }
 
 export async function getNodeFromServer(
@@ -40,21 +72,26 @@ export async function getNodeFromServer(
     console.log("bug: trying to get undefined from backend");
     return {} as NodeData;
   }
-  const data = await getJson<{ nodeData: NodeData }>(backendUrl + "id/" + id);
-  return data.nodeData;
+  return getNode(backendUrl, id);
 }
 
 export async function getBareNodeFromServer(
   backendUrl: string,
   id: string,
 ): Promise<NodeDataBare> {
-  const data = await getJson<{ nodeData: NodeDataBare }>(
-    backendUrl + "bareId/" + id,
-  );
-  return data.nodeData;
+  const node = await getNode(backendUrl, id);
+  return {
+    id: node.id,
+    name: node.name,
+    totalWeight: node.totalWeight,
+    currentRep: node.currentRep,
+    depth: node.depth,
+    relRoot: node.relRoot,
+    sentTreeVote: node.sentTreeVote,
+    recTreeVotes: node.recTreeVotes,
+  };
 }
 
 export async function getRandomLeaf(backendUrl: string): Promise<string> {
-  const data = await getJson<{ randomLeaf: string }>(backendUrl + "randomLeaf");
-  return data.randomLeaf;
+  return (await getGraph(backendUrl)).randomLeaf;
 }

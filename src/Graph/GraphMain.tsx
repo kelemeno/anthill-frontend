@@ -20,6 +20,7 @@ import {
 import {
   getIsNodeInGraph,
   getMaxRelRootDepth,
+  invalidateGraph,
 } from "../ExternalConnections/BackendGetters";
 import {
   address1,
@@ -268,6 +269,9 @@ export const Graph = (props: {
       console.log("WebSocket connection established.");
     },
     onMessage: (event) => {
+      // Any message (the hello on (re)connect, or an update) means the cached
+      // graph may be stale.
+      invalidateGraph();
       clearingGraph();
       console.log("WebSocket message received.", event);
     },

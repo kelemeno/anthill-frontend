@@ -1,6 +1,6 @@
 // Tests for the read-side workflow: the frontend fetching graph data from the
-// backend. The global fetch is mocked so we assert the right endpoint is hit
-// and the response is unwrapped correctly.
+// backend. The global fetch is mocked; all getters read from one cached
+// GET /graph, which invalidateGraph drops.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,17 +10,40 @@ import {
   getNodeFromServer,
   getRandomLeaf,
   getRootNodeId,
+  invalidateGraph,
 } from "./BackendGetters";
 
 const backendUrl = "http://localhost:5001/";
 const fetchMock = vi.fn();
+
+const root = {
+  id: "0x02",
+  name: "Root2",
+  totalWeight: "0",
+  currentRep: "3",
+  depth: 0,
+  relRoot: "0x02",
+  sentTreeVote: "0x01",
+  recTreeVotes: ["0x04"],
+  sentDagVotes: [],
+  recDagVotes: [{ id: "0x04", weight: "1", dist: 1, posInOther: 0 }],
+};
+const graph = {
+  version: 1,
+  rootId: "0x02",
+  maxRelRootDepth: 6,
+  randomLeaf: "0x0b",
+  nodes: { "0x02": root },
+};
 
 function jsonResponse(data: unknown, ok = true, status = 200) {
   return { ok, status, json: async () => data } as Response;
 }
 
 beforeEach(() => {
+  invalidateGraph();
   fetchMock.mockReset();
+  fetchMock.mockResolvedValue(jsonResponse(graph));
   vi.stubGlobal("fetch", fetchMock);
 });
 
@@ -28,44 +51,30 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("getRandomLeaf hits /randomLeaf and returns the id", async () => {
-  fetchMock.mockResolvedValue(jsonResponse({ randomLeaf: "0x0b" }));
+it("all getters share a single GET /graph", async () => {
   await expect(getRandomLeaf(backendUrl)).resolves.toBe("0x0b");
-  expect(fetchMock).toHaveBeenCalledWith(backendUrl + "randomLeaf");
-});
-
-it("getMaxRelRootDepth hits /maxRelRootDepth and returns the number", async () => {
-  fetchMock.mockResolvedValue(jsonResponse({ maxRelRootDepth: 6 }));
   await expect(getMaxRelRootDepth(backendUrl)).resolves.toBe(6);
-  expect(fetchMock).toHaveBeenCalledWith(backendUrl + "maxRelRootDepth");
+  await expect(getRootNodeId(backendUrl)).resolves.toBe("0x02");
+  await expect(getNodeFromServer(backendUrl, "0x02")).resolves.toEqual(root);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledWith(backendUrl + "graph");
 });
 
-it("getRootNodeId hits /rootId and returns the id", async () => {
-  fetchMock.mockResolvedValue(jsonResponse({ id: "0x02" }));
-  await expect(getRootNodeId(backendUrl)).resolves.toBe("0x02");
-  expect(fetchMock).toHaveBeenCalledWith(backendUrl + "rootId");
+it("invalidateGraph makes the next getter refetch", async () => {
+  await getRootNodeId(backendUrl);
+  invalidateGraph();
+  await getRootNodeId(backendUrl);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 
 describe("getIsNodeInGraph", () => {
   it("returns true when the node is present", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ isNodeInGraph: true }));
-    await expect(getIsNodeInGraph(backendUrl, "0x04")).resolves.toBe(true);
-    expect(fetchMock).toHaveBeenCalledWith(backendUrl + "isNodeInGraph/0x04");
+    await expect(getIsNodeInGraph(backendUrl, "0x02")).resolves.toBe(true);
   });
 
   it("returns false when the node is absent", async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ isNodeInGraph: false }));
     await expect(getIsNodeInGraph(backendUrl, "0x99")).resolves.toBe(false);
   });
-});
-
-it("getNodeFromServer hits /id/:id and returns the nodeData", async () => {
-  const nodeData = { id: "0x02", name: "Root2", depth: 0 };
-  fetchMock.mockResolvedValue(jsonResponse({ nodeData }));
-  await expect(getNodeFromServer(backendUrl, "0x02")).resolves.toEqual(
-    nodeData,
-  );
-  expect(fetchMock).toHaveBeenCalledWith(backendUrl + "id/0x02");
 });
 
 it("getNodeFromServer short-circuits on an undefined id without calling the backend", async () => {
@@ -74,16 +83,27 @@ it("getNodeFromServer short-circuits on an undefined id without calling the back
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
-it("getBareNodeFromServer hits /bareId/:id and returns the nodeData", async () => {
-  const nodeData = { id: "0x04", name: "Node4" };
-  fetchMock.mockResolvedValue(jsonResponse({ nodeData }));
-  await expect(getBareNodeFromServer(backendUrl, "0x04")).resolves.toEqual(
-    nodeData,
-  );
-  expect(fetchMock).toHaveBeenCalledWith(backendUrl + "bareId/0x04");
+it("getNodeFromServer rejects for an unknown node", async () => {
+  await expect(getNodeFromServer(backendUrl, "0xff")).rejects.toThrow();
 });
 
-it("getJson rejects on a non-2xx response (parity with the old axios client)", async () => {
-  fetchMock.mockResolvedValue(jsonResponse({}, false, 404));
-  await expect(getNodeFromServer(backendUrl, "0xff")).rejects.toThrow();
+it("getBareNodeFromServer returns only the bare fields", async () => {
+  const bare = await getBareNodeFromServer(backendUrl, "0x02");
+  expect(bare).toEqual({
+    id: "0x02",
+    name: "Root2",
+    totalWeight: "0",
+    currentRep: "3",
+    depth: 0,
+    relRoot: "0x02",
+    sentTreeVote: "0x01",
+    recTreeVotes: ["0x04"],
+  });
+});
+
+it("a failed fetch rejects and is not cached", async () => {
+  fetchMock.mockResolvedValueOnce(jsonResponse({}, false, 500));
+  await expect(getRootNodeId(backendUrl)).rejects.toThrow();
+  await expect(getRootNodeId(backendUrl)).resolves.toBe("0x02");
+  expect(fetchMock).toHaveBeenCalledTimes(2);
 });
