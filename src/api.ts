@@ -97,6 +97,31 @@ export const fetchReach = (cid: string, id: string, session?: Session) =>
     (r) => r.canEndorse,
   );
 
+//// history: the tree after every step, for the replay
+
+export type HistoryNode = {
+  id: string;
+  name: string;
+  currentRep: string;
+  depth: number;
+  sentTreeVote: string;
+  recTreeVotes: string[];
+  dagVotes: string[]; // who they endorse
+};
+
+export type HistoryStep = {
+  index: number;
+  eventName: string;
+  voter: string;
+  recipient: string;
+  name: string;
+  weight: string;
+  nodes: HistoryNode[];
+};
+
+export const fetchHistory = (cid: string, session?: Session) =>
+  request<{ steps: HistoryStep[] }>(inside(cid, "history"), undefined, session?.token).then((r) => r.steps);
+
 //// communities
 
 // Public communities and the private ones you belong to.

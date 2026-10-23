@@ -61,7 +61,16 @@ export function HomePage() {
             {demo ? (
               <div className="fade-in">
                 <TopOfTree graph={demo} cid={DEMO_COMMUNITY} />
-                <p className="pb-1 text-center text-[12px] text-slate-400">The top of the demo community</p>
+                <p className="pb-1 text-center text-[12px] text-slate-400">
+                  The top of the demo community ·{" "}
+                  <AppLink
+                    to={`${communityPath(DEMO_COMMUNITY, "/explore")}?replay=1`}
+                    global
+                    className="font-medium text-indigo-600 hover:underline"
+                  >
+                    watch it grow
+                  </AppLink>
+                </p>
               </div>
             ) : (
               <GhostTree />

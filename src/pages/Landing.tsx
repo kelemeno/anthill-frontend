@@ -1,7 +1,7 @@
 // A community's front page for visitors who aren't signed in: what it is, the
 // top of its live tree, and a way to look around as a member (read-only
 // preview). Also how Anthill works, shared with the home page.
-import { ArrowUpRight, Heart, Lock, TrendingUp, UserPlus } from "lucide-react";
+import { ArrowUpRight, Heart, Lock, Play, TrendingUp, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
 import { DEMO_COMMUNITY, type Graph } from "../api";
@@ -57,11 +57,18 @@ export function Landing() {
               </>
             )}
             {!empty && (
-              <AppLink to="/explore">
-                <Button variant="ghost">
-                  Explore the tree <ArrowUpRight size={15} />
-                </Button>
-              </AppLink>
+              <>
+                <AppLink to="/explore">
+                  <Button variant="ghost">
+                    Explore the tree <ArrowUpRight size={15} />
+                  </Button>
+                </AppLink>
+                <AppLink to="/explore?replay=1">
+                  <Button variant="ghost">
+                    <Play size={14} /> Watch it grow
+                  </Button>
+                </AppLink>
+              </>
             )}
           </div>
           {!empty && (

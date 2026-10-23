@@ -7,7 +7,7 @@ The website at anthilldao.dev: React, TypeScript, Tailwind, built with Vite and 
 - **Home** (`/`): your communities with your rank in each, public ones to discover, and starting a new one. Visitors see what Anthill is, with the top of the demo community's tree.
 - Inside a community (`/c/<id>`, switched from the header):
   - **You** (`/c/<id>`): your reputation and rank, next steps (how close you are to swapping with your parent, people you can endorse, free spots to invite into), where your reputation comes from, who you endorse, your neighbourhood. Visitors see the community's landing page, with a read-only preview as any member (`?as=<id>`); people signed in but not in it see how to join.
-  - **Explore** (`/c/<id>/explore`): the whole tree with pan and zoom, search, circles sized by reputation, endorsement arcs, who you can endorse highlighted, and a side panel (a sheet on phones) for whoever you click.
+  - **Explore** (`/c/<id>/explore`): the whole tree with pan and zoom (and a button to fit it all), search, circles sized by reputation, endorsement arcs (thicker for more weight), who you can endorse highlighted, and a side panel (a sheet on phones) for whoever you click. Changes glide into place. **Watch it grow** replays the community's history step by step: play, pause, step, scrub, speed, what happened in words, and the view following the tree; `?replay=1` opens it, so a link can be shared (the front page links the demo's).
   - **Polls** (`/c/<id>/polls`): polls weighted by reputation.
   - **People** (`/c/<id>/people`): everyone by reputation.
   - **Person pages** (`/c/<id>/p/<id>`): their standing, how they relate to you, what you can do with them (dry-run on the server, with the reason when it isn't possible), endorsements in and out.
