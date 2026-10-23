@@ -3,7 +3,7 @@
 import { ArrowRight, Lock, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { type Community, DEFAULT_COMMUNITY, fetchGraph, type Graph } from "../api";
+import { type Community, DEMO_COMMUNITY, fetchGraph, type Graph } from "../api";
 import { readCache, writeCache } from "../cache";
 import { CommunityMark } from "../components/CommunitySwitcher";
 import { CardGridSkeleton, GhostTree } from "../components/Skeletons";
@@ -12,12 +12,12 @@ import { useApp } from "../state";
 import { AppLink, Badge, Button, Card, communityPath, Empty } from "../ui";
 import { HowItWorks, TopOfTree } from "./Landing";
 
-// The Commons' tree for the front page, loaded in the background.
-function useCommonsTree() {
-  const key = `graph.${DEFAULT_COMMUNITY}`;
+// The demo's tree for the front page, loaded in the background.
+function useDemoTree() {
+  const key = `graph.${DEMO_COMMUNITY}`;
   const [graph, setGraph] = useState<Graph | undefined>(() => readCache(key));
   useEffect(() => {
-    fetchGraph(DEFAULT_COMMUNITY).then((g) => {
+    fetchGraph(DEMO_COMMUNITY).then((g) => {
       writeCache(key, g);
       setGraph(g);
     }, () => {});
@@ -27,7 +27,7 @@ function useCommonsTree() {
 
 export function HomePage() {
   const { session, communities, createCommunity, openAuth } = useApp();
-  const commons = useCommonsTree();
+  const demo = useDemoTree();
   const yours = communities?.filter((c) => c.you !== null) ?? [];
   const others = communities?.filter((c) => c.you === null) ?? [];
 
@@ -50,18 +50,18 @@ export function HomePage() {
                 <Plus size={15} /> Start a community
               </Button>
               <Button onClick={() => openAuth("signin")}>Sign in</Button>
-              <AppLink to={communityPath(DEFAULT_COMMUNITY, "/")} global>
+              <AppLink to={communityPath(DEMO_COMMUNITY, "/")} global>
                 <Button variant="ghost">
-                  Explore the Commons <ArrowRight size={15} />
+                  See the demo <ArrowRight size={15} />
                 </Button>
               </AppLink>
             </div>
           </div>
           <Card className="p-3">
-            {commons ? (
+            {demo ? (
               <div className="fade-in">
-                <TopOfTree graph={commons} cid={DEFAULT_COMMUNITY} />
-                <p className="pb-1 text-center text-[12px] text-slate-400">The top of the Commons, live</p>
+                <TopOfTree graph={demo} cid={DEMO_COMMUNITY} />
+                <p className="pb-1 text-center text-[12px] text-slate-400">The top of the demo community</p>
               </div>
             ) : (
               <GhostTree />

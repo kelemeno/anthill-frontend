@@ -93,7 +93,9 @@ export function PeoplePage() {
         {!graph && <RowsSkeleton rows={8} />}
         {graph && shown.length === 0 && (
           <div className="px-3">
-            <Empty>{filter === "reach" && !reach ? "Loading…" : "No one matches."}</Empty>
+            <Empty>
+              {all.length === 0 ? "Nobody's here yet." : filter === "reach" && !reach ? "Loading…" : "No one matches."}
+            </Empty>
           </div>
         )}
       </Card>

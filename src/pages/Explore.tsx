@@ -131,6 +131,19 @@ export function ExplorePage() {
   }
 
   const people = members(graph);
+  if (people.length === 0) {
+    return (
+      <div className="-mx-4 -my-5 flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 px-6 sm:-mx-6 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]">
+        <div className="text-center">
+          <h1 className="text-[15px] font-semibold">Nobody's here yet</h1>
+          <p className="mt-1 text-sm text-slate-600">The tree appears once someone starts it.</p>
+          <AppLink to="/" className="mt-4 inline-block">
+            <Button size="sm">Back to the overview</Button>
+          </AppLink>
+        </div>
+      </div>
+    );
+  }
   const sel = selected ? graph.nodes[selected] : undefined;
   const matches = query.trim()
     ? people.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)

@@ -5,6 +5,7 @@ import { BarChart3, CircleHelp, Home, Network, Users } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+import { DEMO_COMMUNITY } from "./api";
 import { AccountMenu } from "./components/AccountMenu";
 import { CommunitySwitcher } from "./components/CommunitySwitcher";
 import { Tour, tourSteps } from "./components/Tour";
@@ -54,8 +55,19 @@ function TabLink(props: { cid: string; to: string; label: string; icon: typeof H
 }
 
 export function App() {
-  const { cid: urlCid, notFound, homeCid, error, session, viewer, previewing, openAuth, tourRequested, startTour } =
-    useApp();
+  const {
+    cid: urlCid,
+    notFound,
+    homeCid,
+    communities,
+    error,
+    session,
+    viewer,
+    previewing,
+    openAuth,
+    tourRequested,
+    startTour,
+  } = useApp();
   // the community whose tabs to show
   const cid = notFound ? undefined : urlCid;
   const navigate = useNavigate();
@@ -88,13 +100,15 @@ export function App() {
 
   const member = viewer !== undefined;
   const signedIn = session !== undefined;
-  // the tour's pages are in the current (or last visited) community
+  // the tour's pages are in the current (or last visited) community, or the
+  // demo when that one is still empty
+  const tourCid = communities?.find((c) => c.id === homeCid)?.members === 0 ? DEMO_COMMUNITY : homeCid;
   const steps = useMemo(
     () =>
       tourSteps({ member, signedIn }).map((step) =>
-        step.path ? { ...step, path: communityPath(homeCid, step.path) } : step,
+        step.path ? { ...step, path: communityPath(tourCid, step.path) } : step,
       ),
-    [member, signedIn, homeCid],
+    [member, signedIn, tourCid],
   );
 
   return (

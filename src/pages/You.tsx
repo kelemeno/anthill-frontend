@@ -28,7 +28,10 @@ export function YouPage() {
   const { graph, viewer, session } = useApp();
   if (!graph) return session ? <DashboardSkeleton /> : <Landing />;
   if (viewer) return <Dashboard me={viewer} />;
-  if (session) return <JoinOptions />;
+  // signed in but not a member: how to join, unless only an invite will do
+  // (then the community's front page, to look around)
+  const inviteOnly = graph.community.joinPolicy === "invite";
+  if (session && (!inviteOnly || members(graph).length === 0)) return <JoinOptions />;
   return <Landing />;
 }
 
@@ -383,6 +386,9 @@ function JoinOptions() {
   const { community } = graph;
   const inviteOnly = community.joinPolicy === "invite";
   const empty = members(graph).length === 0;
+  // an empty tree is started by its founder, or without one by anyone
+  // (unless it's invite only)
+  const canStart = community.founder ? community.isFounder : !inviteOnly;
   // free spots, highest in the tree first
   const open = members(graph)
     .filter((p) => p.recTreeVotes.length < 2)
@@ -405,14 +411,20 @@ function JoinOptions() {
         <h1 className="text-xl font-semibold tracking-tight">Join {community.name}, {session.user.name}</h1>
         {community.description && <p className="mt-2 text-sm text-slate-600">{community.description}</p>}
         <p className="mt-2 text-sm text-slate-600">
-          {inviteOnly
-            ? "Joining is by invite: ask someone in the community for an invite link. You'll start right under them."
-            : "The best way in is an invite link from someone you know: you start right under them, next to people who can vouch for you."}
+          {empty
+            ? canStart
+              ? "Nobody's here yet. Start the tree: you'll be at the top, and everyone you invite joins below you."
+              : `Nobody's here yet. ${community.founder?.name || "Its founder"} starts the tree; then you can join.`
+            : inviteOnly
+              ? "Joining is by invite: ask someone in the community for an invite link. You'll start right under them."
+              : "The best way in is an invite link from someone you know: you start right under them, next to people who can vouch for you."}
         </p>
       </Card>
-      {empty && (inviteOnly ? community.isFounder : true) && (
+      {empty && canStart && (
         <Card>
-          <CardTitle hint="Everyone has left. Whoever joins first starts at the top.">Nobody's here yet</CardTitle>
+          <CardTitle hint="Then invite people: they join below you and can endorse you.">
+            Start {community.name}
+          </CardTitle>
           <Button
             variant="primary"
             disabled={busy}

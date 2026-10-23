@@ -4,7 +4,7 @@ The website at anthilldao.dev: React, TypeScript, Tailwind, built with Vite and 
 
 ## Pages
 
-- **Home** (`/`): your communities with your rank in each, public ones to discover, and starting a new one. Visitors see what Anthill is, with the live top of the Commons.
+- **Home** (`/`): your communities with your rank in each, public ones to discover, and starting a new one. Visitors see what Anthill is, with the top of the demo community's tree.
 - Inside a community (`/c/<id>`, switched from the header):
   - **You** (`/c/<id>`): your reputation and rank, next steps (how close you are to swapping with your parent, people you can endorse, free spots to invite into), where your reputation comes from, who you endorse, your neighbourhood. Visitors see the community's landing page, with a read-only preview as any member (`?as=<id>`); people signed in but not in it see how to join.
   - **Explore** (`/c/<id>/explore`): the whole tree with pan and zoom, search, circles sized by reputation, endorsement arcs, who you can endorse highlighted, and a side panel (a sheet on phones) for whoever you click.

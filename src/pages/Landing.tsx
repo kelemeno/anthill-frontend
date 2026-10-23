@@ -4,20 +4,21 @@
 import { ArrowUpRight, Heart, Lock, TrendingUp, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
-import type { Graph } from "../api";
+import { DEMO_COMMUNITY, type Graph } from "../api";
 import { colorOf, formatRep, initials, members, rep } from "../model";
 import { useApp } from "../state";
 import { GhostTree, Skeleton } from "../components/Skeletons";
-import { AppLink, Button, Card, CardTitle, PersonRow, useAppNavigate } from "../ui";
+import { AppLink, Button, Card, CardTitle, communityPath, PersonRow, useAppNavigate } from "../ui";
 
 // Renders at once: the community's name and description come from the
 // communities list while its tree loads.
 export function Landing() {
-  const { graph, cid, communities, openAuth } = useApp();
+  const { graph, cid, session, communities, openAuth } = useApp();
   const community = graph?.community ?? communities?.find((c) => c.id === cid);
   const people = graph ? members(graph) : [];
   const endorsements = people.reduce((n, p) => n + p.sentDagVotes.length, 0);
   const levels = people.length === 0 ? 0 : Math.max(0, ...people.map((p) => p.depth)) + 1;
+  const empty = graph !== undefined && people.length === 0;
 
   return (
     <div className="space-y-6">
@@ -44,33 +45,53 @@ export function Landing() {
               "A tree of people. You join next to someone you know, endorse people above you, and climb when your reputation passes your parent's."}{" "}
             No wallet, no password: you sign in with a passkey.
           </p>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <Button variant="primary" onClick={() => openAuth("signin")}>
-              Sign in
-            </Button>
-            <Button onClick={() => openAuth("create")}>Create account</Button>
-            <AppLink to="/explore">
-              <Button variant="ghost">
-                Explore the tree <ArrowUpRight size={15} />
-              </Button>
-            </AppLink>
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            {session ? (
+              <p className="mr-2 text-sm text-slate-600">Joining is by invite: ask a member for a link.</p>
+            ) : (
+              <>
+                <Button variant="primary" onClick={() => openAuth("signin")}>
+                  Sign in
+                </Button>
+                <Button onClick={() => openAuth("create")}>Create account</Button>
+              </>
+            )}
+            {!empty && (
+              <AppLink to="/explore">
+                <Button variant="ghost">
+                  Explore the tree <ArrowUpRight size={15} />
+                </Button>
+              </AppLink>
+            )}
           </div>
-          <dl className="mt-8 flex gap-8">
-            <Stat label="people" value={graph && people.length} />
-            <Stat label="endorsements" value={graph && endorsements} />
-            <Stat label="levels" value={graph && levels} />
-          </dl>
+          {!empty && (
+            <dl className="mt-8 flex gap-8">
+              <Stat label="people" value={graph && people.length} />
+              <Stat label="endorsements" value={graph && endorsements} />
+              <Stat label="levels" value={graph && levels} />
+            </dl>
+          )}
         </div>
         {!graph ? (
           <Card className="p-3">
             <GhostTree />
           </Card>
+        ) : empty ? (
+          <Card className="fade-in py-10 text-center">
+            <h2 className="text-[15px] font-semibold">Nobody's here yet</h2>
+            <p className="mx-auto mt-1 max-w-xs text-sm text-slate-600">
+              {community?.founder
+                ? `${community.founder.name || "Its founder"} starts the tree; then anyone can join.`
+                : "Whoever joins first starts at the top of the tree."}
+            </p>
+            <AppLink to={communityPath(DEMO_COMMUNITY, "/")} global className="mt-4 inline-block">
+              <Button size="sm">See how it works in the demo</Button>
+            </AppLink>
+          </Card>
         ) : (
-          people.length > 0 && (
-            <Card className="fade-in p-3">
-              <TopOfTree graph={graph} />
-            </Card>
-          )
+          <Card className="fade-in p-3">
+            <TopOfTree graph={graph} />
+          </Card>
         )}
       </section>
 

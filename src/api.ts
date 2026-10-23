@@ -25,8 +25,10 @@ export type Person = {
   recDagVotes: Vote[]; // endorsements received
 };
 
-// The original public tree, which every server has.
+// The public community every server has, open to everyone.
 export const DEFAULT_COMMUNITY = "commons";
+// The original Anthill tree, kept to show how it works.
+export const DEMO_COMMUNITY = "demo";
 
 export type Visibility = "public" | "private";
 export type JoinPolicy = "open" | "invite";
