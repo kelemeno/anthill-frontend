@@ -77,7 +77,7 @@ function fittedRadii(
 }
 
 // Same per-id rainbow hash the old renderer used, so colours are identical.
-function colorOf(id: string): string {
+export function colorOf(id: string): string {
   const hash = [...id].reduce(
     (acc, ch) => ch.charCodeAt(0) + ((acc << 5) - acc),
     0,

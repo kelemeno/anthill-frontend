@@ -16,6 +16,7 @@
     "@xyflow/react": "^12.11.0",
     "d3": "^7.9.0",
     "d3-dag": "^1.1.0",
+    "lucide-react": "^1.61.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0",

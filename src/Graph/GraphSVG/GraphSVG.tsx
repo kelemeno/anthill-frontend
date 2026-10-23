@@ -39,7 +39,14 @@ import {
   type HistoryStep,
   type LiveView,
 } from "../history";
-import { GraphFlow } from "./GraphFlow";
+import { colorOf, GraphFlow } from "./GraphFlow";
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 import {
   handleClick,
   handleMouseOut,
@@ -439,137 +446,125 @@ export const GraphSVG = (props: {
             onMouseEnter: () =>
               handleMouseStay(anchorElSaver, setAnchorEl, setOpen, loaded),
             onMouseLeave: () => handleMouseOut(loaded, setOpen, setAnchorEl),
-            sx: { pointerEvents: "auto" },
+            sx: {
+              pointerEvents: "auto",
+              borderRadius: "14px",
+              border: "1px solid #e2e8f0",
+              boxShadow: "0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06)",
+              marginTop: "6px",
+            },
           },
         }}
         transitionDuration="auto"
       >
-        <div className="Popover">Name: {hoverNode.name}. </div>
-        {/* <div className='Popover'>Depth: {hoverNode.depth}.  </div> */}
-        <div className="Popover">
-          {" "}
-          Current reputation: {(hoverNode.currentRep / 10 ** 18).toFixed(
-            2,
-          )}{" "}
-        </div>
-        {hoverProfile.bio && (
-          <div className="Popover PopoverBio">{hoverProfile.bio}</div>
-        )}
-        {hoverProfile.link && (
-          <div className="Popover">
-            <a href={hoverProfile.link} target="_blank" rel="noopener noreferrer nofollow">
-              {hoverProfile.link.replace(/^https?:\/\//, "")}
-            </a>
+        <div className="NodeCard">
+          <div className="NodeCard-head">
+            <span className="NodeCard-avatar" style={{ background: colorOf(hoverNode.id) }}>
+              {initialsOf(hoverNode.name)}
+            </span>
+            <div className="NodeCard-who">
+              <div className="NodeCard-name">
+                {hoverNode.name}
+                {isOwnNode && <span className="NodeCard-badge">You</span>}
+              </div>
+              <div className="NodeCard-meta">
+                {(hoverNode.currentRep / 10 ** 18).toFixed(2)} reputation
+              </div>
+            </div>
           </div>
-        )}
-
-        {!READ_ONLY &&
-          SwitchParentCheck(
-            props.isAccountInGraph,
-            myParent,
-            props.graph[hoverNode.id],
-          ) && (
-            <SwitchParentButton
-              api={props.api}
-              isAccountInGraph={props.isAccountInGraph}
-              voter={props.account}
-              recipient={hoverNode}
-              graph={props.graph}
-            />
-          )}
-        {!READ_ONLY &&
-          LeaveTreeCheck(
-            props.isAccountInGraph,
-            props.account,
-            props.graph[hoverNode.id],
-          ) && (
-            <LeaveTreeButton
-              api={props.api}
-              isAccountInGraph={props.isAccountInGraph}
-              voter={props.account}
-              recipient={hoverNode}
-              setIsAccountInGraph={props.setIsAccountInGraph}
-              setClickedNode={props.setClickedNode}
-              navigate={navigate}
-              altNode={props.altNode}
-            />
-          )}
-        {!READ_ONLY &&
-          MoveTreeVoteCheck(
-            props.isAccountInGraph,
-            props.account,
-            props.graph[hoverNode.id],
-          ) && (
-            <MoveTreeVoteButton
-              api={props.api}
-              isAccountInGraph={props.isAccountInGraph}
-              voter={props.account}
-              recipient={hoverNode}
-              setClickedNode={props.setClickedNode}
-              navigate={navigate}
-            />
-          )}
-        {!READ_ONLY &&
-          AddDagVoteCheck(
-            props.isAccountInGraph,
-            props.account,
-            props.graph[hoverNode.id],
-          ) && (
-            <AddDagVoteButton
-              api={props.api}
-              isAccountInGraph={props.isAccountInGraph}
-              account={props.account}
-              recipient={hoverNode.id}
-              graph={props.graph}
-            />
-          )}
-        {!READ_ONLY &&
-          RemoveDagVoteCheck(
-            props.isAccountInGraph,
-            props.graph[hoverNode.id],
-          ) && (
-            <RemoveDagVoteButton
-              api={props.api}
-              isAccountInGraph={props.isAccountInGraph}
-              account={props.account}
-              recipient={hoverNode.id}
-              graph={props.graph}
-            />
-          )}
-        {!READ_ONLY &&
-          JoinTreeCheck(
-            props.isAccountInGraph,
-            props.account,
-            props.graph[hoverNode.id],
-            props.inviteOnly,
-          ) && (
-            <JoinTreeButton
-              api={props.api}
-              isAccountInGraph={props.isAccountInGraph}
-              voter={props.account}
-              recipient={hoverNode}
-              setClickedNode={props.setClickedNode}
-              setIsAccountInGraph={props.setIsAccountInGraph}
-            />
-          )}
-        {!READ_ONLY &&
-          ChangeNameCheck(
-            props.isAccountInGraph,
-            props.account,
-            props.graph[hoverNode.id],
-          ) && (
-            <ChangeNameButton
-              api={props.api}
-              isAccountInGraph={props.isAccountInGraph}
-              voter={props.account}
-              recipient={hoverNode}
-            />
+          {hoverProfile.bio && <p className="NodeCard-bio">{hoverProfile.bio}</p>}
+          {hoverProfile.link && (
+            <a
+              className="NodeCard-link"
+              href={hoverProfile.link}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+            >
+              {hoverProfile.link.replace(/^https?:\/\//, "")} ↗
+            </a>
           )}
 
-        {!READ_ONLY && isOwnNode && <InviteButton api={props.api} />}
+          {!READ_ONLY && (
+            <div className="NodeCard-actions">
+              {JoinTreeCheck(
+                props.isAccountInGraph,
+                props.account,
+                props.graph[hoverNode.id],
+                props.inviteOnly,
+              ) && (
+                <JoinTreeButton
+                  api={props.api}
+                  isAccountInGraph={props.isAccountInGraph}
+                  voter={props.account}
+                  recipient={hoverNode}
+                  setClickedNode={props.setClickedNode}
+                  setIsAccountInGraph={props.setIsAccountInGraph}
+                />
+              )}
+              {AddDagVoteCheck(props.isAccountInGraph, props.account, props.graph[hoverNode.id]) && (
+                <AddDagVoteButton
+                  api={props.api}
+                  isAccountInGraph={props.isAccountInGraph}
+                  account={props.account}
+                  recipient={hoverNode.id}
+                  graph={props.graph}
+                />
+              )}
+              {RemoveDagVoteCheck(props.isAccountInGraph, props.graph[hoverNode.id]) && (
+                <RemoveDagVoteButton
+                  api={props.api}
+                  isAccountInGraph={props.isAccountInGraph}
+                  account={props.account}
+                  recipient={hoverNode.id}
+                  graph={props.graph}
+                />
+              )}
+              {SwitchParentCheck(props.isAccountInGraph, myParent, props.graph[hoverNode.id]) && (
+                <SwitchParentButton
+                  api={props.api}
+                  isAccountInGraph={props.isAccountInGraph}
+                  voter={props.account}
+                  recipient={hoverNode}
+                  graph={props.graph}
+                />
+              )}
+              {MoveTreeVoteCheck(props.isAccountInGraph, props.account, props.graph[hoverNode.id]) && (
+                <MoveTreeVoteButton
+                  api={props.api}
+                  isAccountInGraph={props.isAccountInGraph}
+                  voter={props.account}
+                  recipient={hoverNode}
+                  setClickedNode={props.setClickedNode}
+                  navigate={navigate}
+                />
+              )}
+              {isOwnNode && <InviteButton api={props.api} />}
+              {ChangeNameCheck(props.isAccountInGraph, props.account, props.graph[hoverNode.id]) && (
+                <ChangeNameButton
+                  api={props.api}
+                  isAccountInGraph={props.isAccountInGraph}
+                  voter={props.account}
+                  recipient={hoverNode}
+                />
+              )}
+              {LeaveTreeCheck(props.isAccountInGraph, props.account, props.graph[hoverNode.id]) && (
+                <LeaveTreeButton
+                  api={props.api}
+                  isAccountInGraph={props.isAccountInGraph}
+                  voter={props.account}
+                  recipient={hoverNode}
+                  setIsAccountInGraph={props.setIsAccountInGraph}
+                  setClickedNode={props.setClickedNode}
+                  navigate={navigate}
+                  altNode={props.altNode}
+                />
+              )}
+            </div>
+          )}
 
-        <div className="Popover PopoverReason">
-          ID: {hoverNode.id.slice(0, 6)}…{hoverNode.id.slice(-4)}
+          <div className="NodeCard-id">
+            {hoverNode.id.slice(0, 6)}…{hoverNode.id.slice(-4)}
+          </div>
         </div>
       </Popover>
     </div>

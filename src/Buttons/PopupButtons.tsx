@@ -1,6 +1,16 @@
 // we store the buttons that are used in the graph popup
 
-import { useState } from "react";
+import {
+  ArrowLeftRight,
+  Check,
+  CornerDownRight,
+  Heart,
+  HeartOff,
+  Link2,
+  LogOut,
+  UserPlus,
+} from "lucide-react";
+import { type ReactNode, useState } from "react";
 import {
   useActionCheck,
   useAddDagVote,
@@ -19,30 +29,36 @@ import {
   type NodeDataRendering,
 } from "../Graph/GraphBase";
 
-// A button for one tree action. The backend dry-runs it first; if it would
-// fail, the button is greyed out with the reason underneath.
+// One action on a node card: icon + label. The backend dry-runs it first; if
+// it would fail, the row is greyed out with the reason underneath.
 function ActionRow(props: {
   api: Api;
   fn: string;
   args: Record<string, string>;
   label: string;
+  icon: ReactNode;
+  primary?: boolean;
   run: (() => unknown) | undefined;
 }) {
   const check = useActionCheck(props.api, props.fn, props.args);
   const blocked = check !== undefined && !check.ok;
   return (
-    <div className="Popover">
+    <div>
       <button
-        className="PopoverButton"
+        type="button"
+        className={`CardAction${props.primary ? " CardAction--primary" : ""}`}
         disabled={blocked}
         onClick={() => props.run?.()}
       >
+        {props.icon}
         {props.label}
       </button>
-      {blocked && <div className="PopoverReason">{check.reason}</div>}
+      {blocked && <div className="CardReason">{check.reason}</div>}
     </div>
   );
 }
+
+const ICON = 16;
 
 // Shown for anyone else you don't vote for yet; if you can't vote for them,
 // the dry run says why.
@@ -67,12 +83,15 @@ export const AddDagVoteButton = (props: {
   graph: GraphDataRendering;
 }) => {
   const addDagVote = useAddDagVote(props.api, props.recipient);
+  const name = props.graph[props.recipient]?.name ?? "them";
   return (
     <ActionRow
       api={props.api}
       fn="addDagVote"
       args={{ recipient: props.recipient, weight: "1" }}
-      label="Add reputation vote"
+      label={`Endorse ${name}`}
+      icon={<Heart size={ICON} />}
+      primary
       run={addDagVote}
     />
   );
@@ -98,7 +117,8 @@ export const RemoveDagVoteButton = (props: {
       api={props.api}
       fn="removeDagVote"
       args={{ recipient: props.recipient }}
-      label="Remove reputation vote"
+      label="Remove my endorsement"
+      icon={<HeartOff size={ICON} />}
       run={removeDagVote}
     />
   );
@@ -126,7 +146,8 @@ export const SwitchParentButton = (props: {
       api={props.api}
       fn="switchPositionWithParent"
       args={{}}
-      label="Switch positions"
+      label={`Swap places with ${props.recipient.name}`}
+      icon={<ArrowLeftRight size={ICON} />}
       run={switchWithParent}
     />
   );
@@ -162,7 +183,9 @@ export const JoinTreeButton = (props: {
       api={props.api}
       fn="joinTree"
       args={{ name: props.api.session?.user.name ?? "", recipient: props.recipient.id }}
-      label="Join tree here"
+      label={`Join under ${props.recipient.name}`}
+      icon={<UserPlus size={ICON} />}
+      primary
       run={joinTree}
     />
   );
@@ -192,18 +215,25 @@ export const ChangeNameButton = (props: {
   const changeName = useChangeName(props.api, nameInput);
 
   return (
-    <div className="Popover">
+    <form
+      className="CardRename"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (nameInput.trim()) changeName?.();
+      }}
+    >
       <input
         name="nameInput"
         value={nameInput}
-        placeholder="Name"
+        placeholder="New name"
+        maxLength={40}
         autoComplete="off"
         onChange={(event) => setNameInput(event.target.value)}
       />
-      <button className="PopoverButton" onClick={() => changeName?.()}>
-        Change name
+      <button type="submit" disabled={!nameInput.trim()} title="Rename" aria-label="Rename">
+        <Check size={ICON} />
       </button>
-    </div>
+    </form>
   );
 };
 
@@ -237,11 +267,22 @@ export const LeaveTreeButton = (props: {
     props.altNode,
   );
   return (
-    <div className="Popover">
-      <button className="PopoverButton" onClick={() => leaveTree?.()}>
-        Leave the tree
-      </button>
-    </div>
+    <button
+      type="button"
+      className="CardAction CardAction--danger"
+      onClick={() => {
+        if (
+          confirm(
+            "Leave the tree? Your endorsements (given and received) are removed, and the people under you move up.",
+          )
+        ) {
+          leaveTree?.();
+        }
+      }}
+    >
+      <LogOut size={ICON} />
+      Leave the tree
+    </button>
   );
 };
 
@@ -283,7 +324,8 @@ export const MoveTreeVoteButton = (props: {
       api={props.api}
       fn="moveTreeVote"
       args={{ recipient: props.recipient.id }}
-      label="Move position"
+      label={`Move under ${props.recipient.name}`}
+      icon={<CornerDownRight size={ICON} />}
       run={moveTreeVote}
     />
   );
@@ -294,9 +336,10 @@ export const MoveTreeVoteButton = (props: {
 export const InviteButton = (props: { api: Api }) => {
   const [status, setStatus] = useState("");
   return (
-    <div className="Popover">
+    <div>
       <button
-        className="PopoverButton"
+        type="button"
+        className="CardAction"
         onClick={async () => {
           try {
             const { code } = await createInvite(props.api);
@@ -310,9 +353,10 @@ export const InviteButton = (props: { api: Api }) => {
           }
         }}
       >
+        <Link2 size={ICON} />
         Copy invite link
       </button>
-      {status && <div className="PopoverReason">{status}</div>}
+      {status && <div className="CardReason">{status}</div>}
     </div>
   );
 };
