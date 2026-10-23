@@ -1,6 +1,6 @@
 // React Flow rendering of the Anthill graph with focus+context navigation:
-//   - focus-distance sizing: nodes shrink the farther they are (by graph hops)
-//     from the focused/clicked node, so the local area stays prominent.
+//   - space-based sizing: every node is as big as its layout slot allows (the
+//     focus a bit bigger), so nodes far from the focus stay readable.
 //   - collapse/expand: a node's tree-subtree can be folded into a "+N" badge,
 //     so you only render what you've opened.
 //   - hover peeks: hovering a node opens its branch and its popover; the view
@@ -39,13 +39,41 @@ import {
 } from "../GraphBase";
 
 const BASE_RADIUS = 30;
+const FOCUS_RADIUS = 36;
 // Small nodes are hard to tap with a finger, so mobile gets a bigger floor.
 const MIN_RADIUS = IS_MOBILE ? 14 : 8;
-const SHRINK = 0.8; // radius multiplier per hop away from focus
+// Minimum space left between two neighbouring circles.
+const MIN_GAP = 12;
 
-function radiusForDistance(distance: number): number {
-  if (!Number.isFinite(distance)) return MIN_RADIUS;
-  return Math.max(MIN_RADIUS, BASE_RADIUS * SHRINK ** distance);
+// Node radii from the space available. The tree layout gives each node a slot
+// of 2*BASE_RADIUS plus a gap, so full size (and the slightly larger focus)
+// normally fits everywhere; a node only shrinks if its neighbours in the same
+// row are closer than that, so circles never overlap.
+function fittedRadii(
+  ids: string[],
+  positions: Map<string, { x: number; y: number }>,
+  focusId: string,
+): Map<string, number> {
+  const rows = new Map<number, { id: string; x: number }[]>();
+  for (const id of ids) {
+    const p = positions.get(id);
+    if (p === undefined) continue;
+    const row = Math.round(p.y);
+    if (!rows.has(row)) rows.set(row, []);
+    rows.get(row)?.push({ id, x: p.x });
+  }
+  const radii = new Map<string, number>();
+  for (const row of rows.values()) {
+    row.sort((a, b) => a.x - b.x);
+    row.forEach(({ id, x }, i) => {
+      const left = i > 0 ? x - row[i - 1].x : Number.POSITIVE_INFINITY;
+      const right = i < row.length - 1 ? row[i + 1].x - x : Number.POSITIVE_INFINITY;
+      const room = (Math.min(left, right) - MIN_GAP) / 2;
+      const wanted = id === focusId ? FOCUS_RADIUS : BASE_RADIUS;
+      radii.set(id, Math.max(MIN_RADIUS, Math.min(wanted, room)));
+    });
+  }
+  return radii;
 }
 
 // Same per-id rainbow hash the old renderer used, so colours are identical.
@@ -212,6 +240,7 @@ function AnthillNodeView({ data }: NodeProps<AnthillNode>) {
             data.onInfo(e.currentTarget as HTMLElement);
           }
         }}
+        data-focus={data.ring ? "true" : undefined}
         style={{
           width: d,
           height: d,
@@ -556,7 +585,7 @@ function dagLayout(
 
   const nodes: AnthillNode[] = [focusId, ...outgoing, ...incoming].map((id) => {
     const n = graph[id];
-    const r = id === focusId ? BASE_RADIUS : BASE_RADIUS * SHRINK;
+    const r = id === focusId ? FOCUS_RADIUS : BASE_RADIUS;
     const p = pos.get(id) ?? { x: 0, y: 0 };
     return {
       id,
@@ -620,42 +649,6 @@ function dagLayout(
     });
   }
   return { nodes, edges };
-}
-
-// Undirected BFS hop-distance from the focus node to every node.
-function distancesFrom(
-  graph: GraphDataRendering,
-  focus: string,
-): Map<string, number> {
-  const adj = new Map<string, string[]>();
-  const add = (a: string, b: string) => {
-    if (!adj.has(a)) adj.set(a, []);
-    adj.get(a)?.push(b);
-  };
-  for (const n of Object.values(graph)) {
-    for (const p of n.parentIds) {
-      if (graph[p]) {
-        add(n.id, p);
-        add(p, n.id);
-      }
-    }
-  }
-  const dist = new Map<string, number>();
-  const start = graph[focus] ? focus : Object.keys(graph)[0];
-  if (!start) return dist;
-  const queue = [start];
-  dist.set(start, 0);
-  for (let i = 0; i < queue.length; i++) {
-    const cur = queue[i];
-    const dcur = dist.get(cur) ?? 0;
-    for (const nb of adj.get(cur) ?? []) {
-      if (!dist.has(nb)) {
-        dist.set(nb, dcur + 1);
-        queue.push(nb);
-      }
-    }
-  }
-  return dist;
 }
 
 // Sugiyama layout for a set of nodes; returns center positions by id.
@@ -864,14 +857,9 @@ export const GraphFlow = (props: {
     if (!props.treeMode) {
       return dagLayout(graph, props.clickedNode, props.onNodeClick);
     }
-    // Size nodes by distance from the focus. During playback the focus may not
-    // exist yet at this step — fall back to the shallowest present node so the
-    // whole view doesn't collapse to minimum-size dots.
-    const focusId = graph[props.clickedNode]
-      ? props.clickedNode
-      : (Object.values(graph).sort((a, b) => a.depth - b.depth)[0]?.id ??
-        props.clickedNode);
-    const distances = distancesFrom(graph, focusId);
+    // The focus is drawn larger. During playback it may not exist yet at this
+    // step; then no node is.
+    const focusId = props.clickedNode;
 
     // Effective collapse = persistent set, with two paths always opened:
     //  - the hovered node's path (so hovering peeks a branch open), and
@@ -979,9 +967,14 @@ export const GraphFlow = (props: {
       ? layoutPositions(visible, (id) => fullPositions.get(id)?.x ?? 0)
       : fullPositions;
     const spos = positions;
+    const radii = fittedRadii(
+      visible.map((n) => n.id),
+      spos,
+      focusId,
+    );
 
     const nodes: AnthillNode[] = visible.map((n) => {
-      const r = radiusForDistance(distances.get(n.id) ?? Infinity);
+      const r = radii.get(n.id) ?? BASE_RADIUS;
       const p = spos.get(n.id) ?? { x: 0, y: 0 };
       const hasChildren = (children.get(n.id) ?? []).length > 0;
       // Badge shows the persistent pin state (stays +N while hover-peeking);
@@ -1033,10 +1026,7 @@ export const GraphFlow = (props: {
       for (const parentId of n.parentIds) {
         if (!visibleIds.has(parentId)) continue;
         const isTreeEdge = n.sentTreeVote === parentId;
-        const rFactor = Math.min(
-          1,
-          radiusForDistance(distances.get(n.id) ?? Infinity) / BASE_RADIUS,
-        );
+        const rFactor = Math.min(1, (radii.get(n.id) ?? BASE_RADIUS) / BASE_RADIUS);
         const sp = spos.get(parentId) ?? { x: 0, y: 0 };
         const tp = spos.get(n.id) ?? { x: 0, y: 0 };
         edges.push({

@@ -354,3 +354,80 @@ header button:hover {
   gap: 8px;
   margin-top: 8px;
 }
+
+/* ---- guided tour (src/Tour) ---- */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+/* catches clicks so the page can't be used mid-tour */
+.tour-blocker {
+  position: fixed;
+  inset: 0;
+}
+
+/* the hole around the element being explained; its huge shadow darkens the
+   rest of the page */
+.tour-spotlight {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.55);
+  pointer-events: none;
+  transition:
+    top 0.25s ease,
+    left 0.25s ease,
+    width 0.25s ease,
+    height 0.25s ease;
+}
+.tour-spotlight--none {
+  border-radius: 0;
+}
+
+.tour-card {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 18px 20px 16px;
+  border-radius: 14px;
+  background: #fff;
+  color: #334155;
+  box-shadow:
+    0 18px 50px rgba(15, 23, 42, 0.25),
+    0 2px 8px rgba(15, 23, 42, 0.1);
+  font-family: system-ui, -apple-system, sans-serif;
+  transition:
+    top 0.25s ease,
+    left 0.25s ease;
+}
+
+.tour-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2b6cb0;
+  letter-spacing: 0.02em;
+}
+
+.tour-title {
+  margin: 4px 28px 8px 0;
+  font-size: 17px;
+  color: #0f172a;
+}
+
+.tour-body {
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.tour-body p {
+  margin: 0;
+}
+
+.tour-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.tour-list li {
+  margin: 0 0 6px;
+}

@@ -210,6 +210,33 @@ export const GraphSVG = (props: {
     [props.clickedNode, props.setClickedNode, navigate],
   );
 
+  // The guided tour opens a node's card by dispatching "anthill:popover" with
+  // the node id, and closes it with "anthill:popover-close".
+  useEffect(() => {
+    const openCard = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      const el = document.querySelector<HTMLElement>(`.react-flow__node[data-id="${id}"]`);
+      const node = props.graph[id];
+      if (!el || !node) return;
+      handleMouseOver(
+        { currentTarget: el } as unknown as React.MouseEvent<HTMLElement>,
+        node,
+        true,
+        setHoverNode,
+        setAnchorEl,
+        setAnchorElSaver,
+        setOpen,
+      );
+    };
+    const closeCard = () => handleMouseOut(true, setOpen, setAnchorEl);
+    window.addEventListener("anthill:popover", openCard);
+    window.addEventListener("anthill:popover-close", closeCard);
+    return () => {
+      window.removeEventListener("anthill:popover", openCard);
+      window.removeEventListener("anthill:popover-close", closeCard);
+    };
+  }, [props.graph]);
+
   // Reset the popover whenever the rendered graph/selection changes, then mark
   // the graph loaded so hovers start producing popovers again.
   React.useEffect(() => {

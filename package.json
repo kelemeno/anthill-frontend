@@ -32,7 +32,8 @@
     "lint": "biome lint .",
     "preview": "vite preview",
     "format": "biome format --write .",
-    "fix": "biome check --write ."
+    "fix": "biome check --write .",
+    "build:all": "npm run build && npm run build --prefix next"
   },
   "browserslist": {
     "production": [

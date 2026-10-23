@@ -83,7 +83,11 @@ export function AccountControls(props: Props) {
         </div>
       ) : (
         <>
-          <button type="button" onClick={(e) => setMenuAnchor(e.currentTarget)}>
+          <button
+            type="button"
+            className="AccountMenuButton"
+            onClick={(e) => setMenuAnchor(e.currentTarget)}
+          >
             {props.session.user.name} ▾
           </button>
           <Menu

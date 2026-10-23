@@ -14,10 +14,7 @@ import { GraphDemo } from "./Graph/GraphDemo";
 import { Graph } from "./Graph/GraphMain";
 import { IS_MOBILE } from "./isMobile";
 import "./main.css";
-import TutorialPopup, {
-  TreeOrRepModeSwitch,
-  TutorialButton,
-} from "./Buttons/MainAppButtons";
+import { TreeOrRepModeSwitch, TutorialButton } from "./Buttons/MainAppButtons";
 import {
   getIsNodeInGraph,
   getRandomLeaf,
@@ -30,6 +27,8 @@ import {
   saveSession,
 } from "./ExternalConnections/Passkey";
 import { PollsDrawer } from "./Polls/PollsDrawer";
+import { Tour, type TourStep } from "./Tour/Tour";
+import { tourSteps } from "./Tour/steps";
 import { READ_ONLY } from "./readOnly";
 
 const doc = document.getElementById("root");
@@ -48,6 +47,8 @@ const localHost =
 const backendUrl: string =
   import.meta.env.VITE_BACKEND_URL || `http://${localHost}:5001/`;
 const wsUrl: string = import.meta.env.VITE_WS_URL || `ws://${localHost}:5001`;
+
+const TOUR_SEEN_KEY = "anthill.tourSeen";
 
 const App = () => {
   const navigate = useNavigate();
@@ -103,7 +104,43 @@ const App = () => {
 
   // var [provider, setProvider] = useState<any>(null);
 
-  const [showTutorial, setShowTutorial] = useState(false);
+  // Guided tour: started from the Tutorial button, and once by itself on a
+  // first visit (not when arriving from an invite link).
+  const [tour, setTour] = useState<TourStep[] | null>(null);
+  const startTour = React.useCallback(async () => {
+    const inTree = session
+      ? await getIsNodeInGraph(backendUrl, session.user.id).catch(() => false)
+      : false;
+    setTour(
+      tourSteps({ signedIn: session !== undefined, inTree, accountId: session?.user.id }),
+    );
+  }, [session]);
+  const endTour = React.useCallback(() => {
+    setTour(null);
+    try {
+      localStorage.setItem(TOUR_SEEN_KEY, "1");
+    } catch {}
+  }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only on first load
+  React.useEffect(() => {
+    let seen = true;
+    try {
+      seen = localStorage.getItem(TOUR_SEEN_KEY) !== null;
+    } catch {}
+    if (seen || inviteCode) return;
+    // wait until the tree is on screen
+    const timer = setInterval(() => {
+      if (document.querySelector(".react-flow__node")) {
+        clearInterval(timer);
+        setTimeout(startTour, 800);
+      }
+    }, 300);
+    const giveUp = setTimeout(() => clearInterval(timer), 20_000);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(giveUp);
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!isClickedNodeInGraph) {
@@ -143,8 +180,7 @@ const App = () => {
   const view = (
     <div className="page">
       <Header
-        showTutorial={showTutorial}
-        setShowTutorial={setShowTutorial}
+        startTour={startTour}
         session={session}
         setSession={setSession}
         viewMode={viewMode}
@@ -162,10 +198,7 @@ const App = () => {
           setSession={setSession}
         />
       )}
-      <TutorialPopup
-        showTutorial={showTutorial}
-        setShowTutorial={setShowTutorial}
-      />
+      {tour && <Tour steps={tour} onClose={endTour} />}
       <Graph
         account={account as string}
         clickedNode={clickedNode}
@@ -188,8 +221,7 @@ const App = () => {
 };
 
 function Header(props: {
-  showTutorial: boolean;
-  setShowTutorial: any;
+  startTour: () => void;
   session: Session | undefined;
   setSession: (session: Session | undefined) => void;
   viewMode: "tree" | "votes" | "rep";
@@ -213,7 +245,7 @@ function Header(props: {
           <span className="ReadOnlyLabel">🔍 Read-only demo</span>
         ) : (
           <>
-            <button type="button" onClick={props.openPolls}>
+            <button type="button" className="PollsButton" onClick={props.openPolls}>
               Polls
             </button>
             <AccountControls
@@ -224,8 +256,7 @@ function Header(props: {
           </>
         )}
         <TutorialButton
-          showTutorial={props.showTutorial}
-          setShowTutorial={props.setShowTutorial}
+          startTour={props.startTour}
         />
       </div>
     </header>
