@@ -1,10 +1,9 @@
 // A small diagram of someone's immediate family in the tree: their parent's
 // parent, parent, themselves and the person next to them, and the people under
 // them. Click anyone to open their page.
-import { useNavigate, useSearchParams } from "react-router-dom";
-
 import type { Graph, Person } from "../api";
 import { childrenOf, colorOf, initials, parentOf, siblingsOf } from "../model";
+import { useAppNavigate } from "../ui";
 
 const W = 300;
 const ROW = 74;
@@ -14,10 +13,8 @@ type Placed = { p: Person; x: number; y: number };
 
 export function Neighbourhood(props: { graph: Graph; person: Person; viewerId?: string }) {
   const { graph, person } = props;
-  const navigate = useNavigate();
-  const [params] = useSearchParams();
-  const as = params.get("as");
-  const open = (id: string) => navigate(`/p/${id}${as ? `?as=${as}` : ""}`);
+  const navigate = useAppNavigate();
+  const open = (id: string) => navigate(`/p/${id}`);
 
   const parent = parentOf(graph, person);
   const grand = parent ? parentOf(graph, parent) : undefined;

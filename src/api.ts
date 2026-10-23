@@ -1,6 +1,6 @@
-// Talking to the Anthill backend: the whole graph, passkey accounts and
-// sessions, tree actions and their dry runs, who someone can endorse, invites,
-// profiles and polls.
+// Talking to the Anthill backend: passkey accounts and sessions, communities,
+// and inside each community its whole graph, tree actions and their dry runs,
+// who someone can endorse, invites and polls. Profiles belong to the account.
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 
 export const backendUrl: string =
@@ -25,15 +25,50 @@ export type Person = {
   recDagVotes: Vote[]; // endorsements received
 };
 
+// The original public tree, which every server has.
+export const DEFAULT_COMMUNITY = "commons";
+
+export type Visibility = "public" | "private";
+export type JoinPolicy = "open" | "invite";
+
+export type Community = {
+  id: string;
+  name: string;
+  description: string;
+  // private: only members can see it, and joining needs an invite
+  visibility: Visibility;
+  // open: anyone signed in can take a free spot; invite: invite links only
+  joinPolicy: JoinPolicy;
+  createdAt: string;
+  founder: { id: string; name: string } | null;
+  members: number;
+  rootName: string;
+  isFounder: boolean;
+  // your standing, when you're a member
+  you: { reputation: string; rank: number } | null;
+};
+
+export type CommunitySettings = Pick<Community, "name" | "description" | "visibility" | "joinPolicy">;
+
 export type Graph = {
   version: number;
   rootId: string;
   maxRelRootDepth: number;
-  config?: { inviteOnly: boolean };
+  community: Community;
   nodes: Record<string, Person>;
 };
 
 export type Session = { token: string; user: { id: string; name: string } };
+
+// A failed request; status 404 means the community doesn't exist or is private.
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
 
 async function request<T>(path: string, body?: unknown, token?: string): Promise<T> {
   const res = await fetch(backendUrl + path, {
@@ -45,14 +80,51 @@ async function request<T>(path: string, body?: unknown, token?: string): Promise
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? `${path} failed (${res.status})`);
+  if (!res.ok) throw new ApiError(data.error ?? `${path} failed (${res.status})`, res.status);
   return data as T;
 }
 
-export const fetchGraph = () => request<Graph>("graph");
+// A path inside a community.
+const inside = (cid: string, path: string) => `c/${encodeURIComponent(cid)}/${path}`;
 
-export const fetchReach = (id: string) =>
-  request<{ canEndorse: string[] }>(`people/${id}/reach`).then((r) => r.canEndorse);
+export const fetchGraph = (cid: string, session?: Session) =>
+  request<Graph>(inside(cid, "graph"), undefined, session?.token);
+
+export const fetchReach = (cid: string, id: string, session?: Session) =>
+  request<{ canEndorse: string[] }>(inside(cid, `people/${id}/reach`), undefined, session?.token).then(
+    (r) => r.canEndorse,
+  );
+
+//// communities
+
+// Public communities and the private ones you belong to.
+export const fetchCommunities = (session?: Session) =>
+  request<{ communities: Community[] }>("communities", undefined, session?.token).then(
+    (r) => r.communities,
+  );
+
+export const createCommunity = (session: Session, community: CommunitySettings & { id: string }) =>
+  request<{ community: Community }>("communities", community, session.token).then(
+    (r) => r.community,
+  );
+
+// Founder only.
+export const saveCommunitySettings = (session: Session, cid: string, settings: CommunitySettings) =>
+  request<{ community: Community }>(inside(cid, "settings"), settings, session.token).then(
+    (r) => r.community,
+  );
+
+// A URL-friendly address from a name: "Book Club!" -> "book-club".
+export function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 32)
+    .replace(/-+$/, "");
+}
 
 //// session (same storage key as the current app)
 
@@ -78,6 +150,11 @@ export function saveSession(session: Session | undefined) {
 // server's data was reset).
 export const fetchMe = (token: string) =>
   request<{ user: Session["user"] }>("auth/me", undefined, token).then((r) => r.user);
+
+export type Profile = { bio: string; link: string };
+
+export const fetchProfile = (session: Session) =>
+  request<{ profile: Profile }>("auth/me", undefined, session.token).then((r) => r.profile);
 
 // A new account (or a recovered one) comes with a recovery code, shown once.
 export type NewSession = Session & { recoveryCode: string };
@@ -125,6 +202,10 @@ export function isCancel(error: unknown): boolean {
   return (error as Error)?.name === "NotAllowedError";
 }
 
+// Renames the account and its node in every community it's in.
+export const rename = (session: Session, name: string) =>
+  request<{ user: Session["user"] }>("name", { name }, session.token).then((r) => r.user);
+
 export async function signIn(): Promise<Session> {
   const { flowId, options } = await request<{ flowId: string; options: any }>(
     "auth/login/options",
@@ -139,13 +220,13 @@ export async function signIn(): Promise<Session> {
 export type Action = { fn: string; args: Record<string, string> };
 export type Check = { ok: true } | { ok: false; reason: string };
 
-export function act(session: Session, action: Action) {
-  return request("action", action, session.token);
+export function act(session: Session, cid: string, action: Action) {
+  return request(inside(cid, "action"), action, session.token);
 }
 
-export async function check(session: Session, actions: Action[]): Promise<Check[]> {
+export async function check(session: Session, cid: string, actions: Action[]): Promise<Check[]> {
   const { results } = await request<{ results: Check[] }>(
-    "check",
+    inside(cid, "check"),
     { actions },
     session.token,
   );
@@ -158,14 +239,16 @@ export function inviteLink(code: string): string {
   return `${window.location.origin}${import.meta.env.BASE_URL}invite/${encodeURIComponent(code)}`;
 }
 
-export async function createInviteLink(session: Session): Promise<string> {
-  const { code } = await request<{ code: string }>("invites", {}, session.token);
+export async function createInviteLink(session: Session, cid: string): Promise<string> {
+  const { code } = await request<{ code: string }>(inside(cid, "invites"), {}, session.token);
   return inviteLink(code);
 }
 
-export const fetchInvite = (code: string) =>
-  request<{ inviter: { id: string; name: string }; expires: string }>(
+export const fetchInvite = (code: string, session?: Session) =>
+  request<{ community: Community; inviter: { id: string; name: string }; expires: string }>(
     `invites/${encodeURIComponent(code)}`,
+    undefined,
+    session?.token,
   );
 
 //// profiles
@@ -187,14 +270,14 @@ export type Poll = {
   myVote?: number;
 };
 
-export const fetchPolls = (session?: Session) =>
-  request<{ polls: Poll[] }>("polls", undefined, session?.token).then((r) => r.polls);
+export const fetchPolls = (cid: string, session?: Session) =>
+  request<{ polls: Poll[] }>(inside(cid, "polls"), undefined, session?.token).then((r) => r.polls);
 
-export const createPoll = (session: Session, question: string, options: string[]) =>
-  request("polls", { question, options }, session.token);
+export const createPoll = (session: Session, cid: string, question: string, options: string[]) =>
+  request(inside(cid, "polls"), { question, options }, session.token);
 
-export const votePoll = (session: Session, id: string, option: number) =>
-  request(`polls/${id}/vote`, { option }, session.token);
+export const votePoll = (session: Session, cid: string, id: string, option: number) =>
+  request(inside(cid, `polls/${id}/vote`), { option }, session.token);
 
-export const closePoll = (session: Session, id: string) =>
-  request(`polls/${id}/close`, {}, session.token);
+export const closePoll = (session: Session, cid: string, id: string) =>
+  request(inside(cid, `polls/${id}/close`), {}, session.token);

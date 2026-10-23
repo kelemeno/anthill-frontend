@@ -180,8 +180,18 @@ export function tourSteps(context: { member: boolean; signedIn: boolean }): Tour
       path: "/",
       body: (
         <p>
-          A tree of people where reputation comes from the people around you. This tour shows
-          each part of the app; use Next, or the arrow keys.
+          Communities of people where reputation comes from the people around you. This tour
+          shows each part of the app; use Next, or the arrow keys.
+        </p>
+      ),
+    },
+    {
+      title: "Communities",
+      target: "communities",
+      body: (
+        <p>
+          Each community is its own tree, with its own reputation and polls; one account works
+          in all of them. Switch between them here, or start your own.
         </p>
       ),
     },

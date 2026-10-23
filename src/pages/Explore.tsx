@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { fetchReach, type Graph, type Person } from "../api";
+import { GhostTree } from "../components/Skeletons";
 import { PersonActions } from "../components/PersonActions";
 import { colorOf, formatRep, initials, level, members, rankOf, relation, rep } from "../model";
 import { useApp } from "../state";
@@ -46,7 +47,7 @@ function radius(p: Person) {
 }
 
 export function ExplorePage() {
-  const { graph, viewer } = useApp();
+  const { graph, cid = "", session, viewer } = useApp();
   const [params, setParams] = useSearchParams();
   const svgRef = useRef<SVGSVGElement>(null);
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown>>(null);
@@ -104,14 +105,14 @@ export function ExplorePage() {
       return;
     }
     let cancelled = false;
-    fetchReach(viewer.id).then(
+    fetchReach(cid, viewer.id, session).then(
       (ids) => !cancelled && setReach(new Set(ids)),
       () => {},
     );
     return () => {
       cancelled = true;
     };
-  }, [showReach, viewer, graph?.version]);
+  }, [showReach, viewer, graph?.version, cid, session]);
 
   const choose = (id: string | undefined) => {
     setSelected(id);
@@ -121,7 +122,13 @@ export function ExplorePage() {
     setParams(next, { replace: true });
   };
 
-  if (!graph) return <p className="text-slate-500">Loading the tree…</p>;
+  if (!graph) {
+    return (
+      <div className="-mx-4 -my-5 flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 px-6 sm:-mx-6 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]">
+        <GhostTree className="max-w-md" />
+      </div>
+    );
+  }
 
   const people = members(graph);
   const sel = selected ? graph.nodes[selected] : undefined;

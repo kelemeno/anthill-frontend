@@ -1,26 +1,27 @@
-// Everyone in the tree, ranked by reputation, with search and a few filters.
+// Everyone in the community, ranked by reputation, with search and a few
+// filters.
 import { useEffect, useState } from "react";
 
 import { fetchReach } from "../api";
 import { formatRep, level, ranked, relation, rep } from "../model";
 import { useApp } from "../state";
+import { RowsSkeleton } from "../components/Skeletons";
 import { AppLink, Avatar, Badge, Card, cx, Empty } from "../ui";
 
 type Filter = "all" | "reach" | "free";
 
 export function PeoplePage() {
-  const { graph, viewer } = useApp();
+  const { graph, cid = "", session, viewer } = useApp();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [reach, setReach] = useState<Set<string>>();
 
   useEffect(() => {
     if (filter !== "reach" || !viewer) return;
-    fetchReach(viewer.id).then((ids) => setReach(new Set(ids)), () => {});
-  }, [filter, viewer, graph?.version]);
+    fetchReach(cid, viewer.id, session).then((ids) => setReach(new Set(ids)), () => {});
+  }, [filter, viewer, graph?.version, cid, session]);
 
-  if (!graph) return <p className="text-slate-500">Loading the tree…</p>;
-  const all = ranked(graph);
+  const all = graph ? ranked(graph) : [];
   const q = query.trim().toLowerCase();
   const shown = all
     .map((p, i) => ({ p, rank: i + 1 }))
@@ -39,7 +40,7 @@ export function PeoplePage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">People</h1>
-        <p className="mt-1 text-sm text-slate-500">Everyone in the tree, by reputation.</p>
+        <p className="mt-1 text-sm text-slate-500">Everyone in {graph?.community.name ?? "this community"}, by reputation.</p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -66,7 +67,7 @@ export function PeoplePage() {
       </div>
       <Card className="p-2 sm:p-2" data-tour="people">
         {shown.map(({ p, rank }) => {
-          const rel = relation(graph, viewer, p);
+          const rel = graph && relation(graph, viewer, p);
           return (
             <AppLink
               key={p.id}
@@ -89,7 +90,8 @@ export function PeoplePage() {
             </AppLink>
           );
         })}
-        {shown.length === 0 && (
+        {!graph && <RowsSkeleton rows={8} />}
+        {graph && shown.length === 0 && (
           <div className="px-3">
             <Empty>{filter === "reach" && !reach ? "Loading…" : "No one matches."}</Empty>
           </div>

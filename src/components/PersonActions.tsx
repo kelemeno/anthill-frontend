@@ -57,7 +57,7 @@ function itemsFor(me: Person | undefined, them: Person): Item[] {
 }
 
 export function PersonActions(props: { them: Person }) {
-  const { graph, session, viewer, previewing, reload } = useApp();
+  const { graph, cid = "", session, viewer, previewing, reload } = useApp();
   const [checks, setChecks] = useState<Check[] | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -69,13 +69,13 @@ export function PersonActions(props: { them: Person }) {
       if (item.action.fn === "joinTree") item.action.args.name = session.user.name;
     }
   }
-  const key = JSON.stringify([session?.token, graph?.version, items.map((i) => i.action)]);
+  const key = JSON.stringify([cid, session?.token, graph?.version, items.map((i) => i.action)]);
 
   useEffect(() => {
     setChecks(undefined);
     if (!session || items.length === 0) return;
     let cancelled = false;
-    check(session, items.map((i) => i.action)).then(
+    check(session, cid, items.map((i) => i.action)).then(
       (r) => !cancelled && setChecks(r),
       () => {},
     );
@@ -91,7 +91,7 @@ export function PersonActions(props: { them: Person }) {
     setBusy(true);
     setError("");
     try {
-      await act(s, action);
+      await act(s, cid, action);
       reload();
     } catch (e) {
       setError((e as Error).message);

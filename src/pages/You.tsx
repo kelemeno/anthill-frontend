@@ -1,11 +1,14 @@
-// "You": your place in the tree at a glance. Your reputation and rank, what
-// you could do next (swap with your parent, endorse people in reach, invite),
-// where your reputation comes from, who you endorse, and your neighbourhood.
+// "You": your place in a community's tree at a glance. Your reputation and
+// rank, what you could do next (swap with your parent, endorse people in
+// reach, invite), where your reputation comes from, who you endorse, and your
+// neighbourhood. Visitors see the community's landing page, and people signed
+// in but not in it yet how to join.
 import { ArrowLeftRight, Heart, Link2, Sparkles, UserPlus, Users } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { type Action, act, createInviteLink, fetchReach, type Person } from "../api";
 import { Neighbourhood } from "../components/Neighbourhood";
+import { DashboardSkeleton } from "../components/Skeletons";
 import { Landing } from "./Landing";
 import {
   BASE_REPUTATION,
@@ -23,7 +26,7 @@ import { AppLink, Avatar, Badge, Button, Card, CardTitle, cx, Empty, PersonRow }
 
 export function YouPage() {
   const { graph, viewer, session } = useApp();
-  if (!graph) return <p className="text-slate-500">Loading the tree…</p>;
+  if (!graph) return session ? <DashboardSkeleton /> : <Landing />;
   if (viewer) return <Dashboard me={viewer} />;
   if (session) return <JoinOptions />;
   return <Landing />;
@@ -31,15 +34,15 @@ export function YouPage() {
 
 // Runs an action as the signed-in user; disabled in preview mode.
 function useAct() {
-  const { session, reload } = useApp();
+  const { session, cid, reload } = useApp();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const run = async (action: Action) => {
-    if (!session) return;
+    if (!session || !cid) return;
     setBusy(true);
     setError("");
     try {
-      await act(session, action);
+      await act(session, cid, action);
       reload();
     } catch (e) {
       setError((e as Error).message);
@@ -58,7 +61,7 @@ function Dashboard(props: { me: Person }) {
   const parent = parentOf(graph, me);
 
   return (
-    <div className="space-y-5">
+    <div className="fade-in space-y-5">
       {previewing && <PreviewBanner name={me.name} />}
       <Card data-tour="you-header">
         <div className="flex flex-wrap items-center gap-4">
@@ -134,16 +137,16 @@ function PreviewBanner(props: { name: string }) {
 }
 
 function InviteButton() {
-  const { session } = useApp();
+  const { session, cid } = useApp();
   const [status, setStatus] = useState("");
   return (
     <span className="inline-flex items-center gap-2">
       <Button
         size="sm"
         onClick={async () => {
-          if (!session) return;
+          if (!session || !cid) return;
           try {
-            const link = await createInviteLink(session);
+            const link = await createInviteLink(session, cid);
             await navigator.clipboard.writeText(link);
             setStatus("Invite link copied: it works once, for 14 days.");
           } catch (e) {
@@ -176,15 +179,16 @@ function Step(props: { icon: ReactNode; title: ReactNode; children?: ReactNode; 
 }
 
 function NextSteps(props: { me: Person }) {
-  const { graph, previewing } = useApp();
+  const { graph, cid, session, previewing } = useApp();
   const me = props.me;
   const { run, busy, error, canAct } = useAct();
   const [reach, setReach] = useState<string[] | undefined>();
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch on every graph change
   useEffect(() => {
+    if (!cid) return;
     let cancelled = false;
-    fetchReach(me.id).then(
+    fetchReach(cid, me.id, session).then(
       (ids) => !cancelled && setReach(ids),
       () => {},
     );
@@ -370,22 +374,24 @@ function YourEndorsements(props: { me: Person }) {
   );
 }
 
-// Signed in but not in the tree: join with an invite, or (unless joining is
-// invite-only) at a free spot.
+// Signed in but not in the community: join with an invite, or (unless joining
+// is invite-only) at a free spot. An empty tree can be restarted.
 function JoinOptions() {
-  const { graph, session, reload, notify } = useApp();
+  const { graph, cid, session, reload, notify } = useApp();
   const [busy, setBusy] = useState(false);
-  if (!graph || !session) return null;
-  const inviteOnly = graph.config?.inviteOnly ?? false;
+  if (!graph || !session || !cid) return null;
+  const { community } = graph;
+  const inviteOnly = community.joinPolicy === "invite";
+  const empty = members(graph).length === 0;
   // free spots, highest in the tree first
   const open = members(graph)
     .filter((p) => p.recTreeVotes.length < 2)
     .sort((a, b) => a.depth - b.depth || rep(b) - rep(a))
     .slice(0, 5);
-  const join = async (recipient: string) => {
+  const join = async (action: Action) => {
     setBusy(true);
     try {
-      await act(session, { fn: "joinTree", args: { name: session.user.name, recipient } });
+      await act(session, cid, action);
       reload();
     } catch (e) {
       notify((e as Error).message);
@@ -396,13 +402,27 @@ function JoinOptions() {
   return (
     <div className="mx-auto max-w-xl space-y-5">
       <Card>
-        <h1 className="text-xl font-semibold tracking-tight">Join the tree, {session.user.name}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Join {community.name}, {session.user.name}</h1>
+        {community.description && <p className="mt-2 text-sm text-slate-600">{community.description}</p>}
         <p className="mt-2 text-sm text-slate-600">
-          The best way in is an invite link from someone you know: you start right under them,
-          next to people who can vouch for you.
+          {inviteOnly
+            ? "Joining is by invite: ask someone in the community for an invite link. You'll start right under them."
+            : "The best way in is an invite link from someone you know: you start right under them, next to people who can vouch for you."}
         </p>
       </Card>
-      {!inviteOnly && (
+      {empty && (inviteOnly ? community.isFounder : true) && (
+        <Card>
+          <CardTitle hint="Everyone has left. Whoever joins first starts at the top.">Nobody's here yet</CardTitle>
+          <Button
+            variant="primary"
+            disabled={busy}
+            onClick={() => join({ fn: "joinTreeAsRoot", args: { name: session.user.name } })}
+          >
+            Start the tree
+          </Button>
+        </Card>
+      )}
+      {!inviteOnly && !empty && (
         <Card>
           <CardTitle hint="Or take a free spot now. You can move later.">Free spots</CardTitle>
           <div className="divide-y divide-slate-50">
@@ -412,7 +432,11 @@ function JoinOptions() {
                 person={p}
                 detail={`Level ${level(p)} · ${2 - p.recTreeVotes.length} free`}
                 right={
-                  <Button size="sm" disabled={busy} onClick={() => join(p.id)}>
+                  <Button
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => join({ fn: "joinTree", args: { name: session.user.name, recipient: p.id } })}
+                  >
                     Join under {p.name}
                   </Button>
                 }

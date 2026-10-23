@@ -17,12 +17,32 @@ import {
   rep,
 } from "../model";
 import { useApp } from "../state";
+import { RowsSkeleton, Skeleton } from "../components/Skeletons";
 import { AppLink, Avatar, Badge, Button, Card, CardTitle, Empty, PersonRow } from "../ui";
 
 export function PersonPage() {
   const { id = "" } = useParams();
   const { graph, viewer, session } = useApp();
-  if (!graph) return <p className="text-slate-500">Loading the tree…</p>;
+  if (!graph) {
+    return (
+      <div className="space-y-5">
+        <Card>
+          <div className="flex items-center gap-4">
+            <Skeleton round className="h-[60px] w-[60px] shrink-0" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-5 w-40" />
+              <Skeleton className="h-5 w-56" />
+            </div>
+            <Skeleton className="h-8 w-20" />
+          </div>
+        </Card>
+        <Card>
+          <Skeleton className="mb-4 h-4 w-40" />
+          <RowsSkeleton rows={3} />
+        </Card>
+      </div>
+    );
+  }
   const them = graph.nodes[id.toLowerCase()];
   if (!them) {
     return (

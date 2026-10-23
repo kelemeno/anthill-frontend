@@ -29,6 +29,19 @@ const graph: Graph = {
   version: 1,
   rootId: "a",
   maxRelRootDepth: 6,
+  community: {
+    id: "commons",
+    name: "Commons",
+    description: "",
+    visibility: "public",
+    joinPolicy: "open",
+    createdAt: "",
+    founder: null,
+    members: 5,
+    rootName: "a",
+    isFounder: false,
+    you: null,
+  },
   nodes: {
     "0x0000000000000000000000000000000000000001": person("0x0000000000000000000000000000000000000001", -1, "", ["a"]),
     a: person("a", 0, "0x0000000000000000000000000000000000000001", ["b", "c"], {

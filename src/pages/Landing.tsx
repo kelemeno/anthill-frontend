@@ -1,32 +1,48 @@
-// For visitors who aren't signed in: what Anthill is, the top of the live
-// tree, and a way to look around as a member (read-only preview).
-import { ArrowUpRight, Heart, TrendingUp, UserPlus } from "lucide-react";
+// A community's front page for visitors who aren't signed in: what it is, the
+// top of its live tree, and a way to look around as a member (read-only
+// preview). Also how Anthill works, shared with the home page.
+import { ArrowUpRight, Heart, Lock, TrendingUp, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import type { Graph } from "../api";
 import { colorOf, formatRep, initials, members, rep } from "../model";
 import { useApp } from "../state";
-import { AppLink, Button, Card, CardTitle, PersonRow } from "../ui";
+import { GhostTree, Skeleton } from "../components/Skeletons";
+import { AppLink, Button, Card, CardTitle, PersonRow, useAppNavigate } from "../ui";
 
+// Renders at once: the community's name and description come from the
+// communities list while its tree loads.
 export function Landing() {
-  const { graph, openAuth } = useApp();
-  if (!graph) return null;
-  const people = members(graph);
+  const { graph, cid, communities, openAuth } = useApp();
+  const community = graph?.community ?? communities?.find((c) => c.id === cid);
+  const people = graph ? members(graph) : [];
   const endorsements = people.reduce((n, p) => n + p.sentDagVotes.length, 0);
-  const levels = Math.max(0, ...people.map((p) => p.depth)) + 1;
+  const levels = people.length === 0 ? 0 : Math.max(0, ...people.map((p) => p.depth)) + 1;
 
   return (
     <div className="space-y-6">
       <section className="grid items-center gap-8 pt-4 lg:grid-cols-[1.1fr_1fr] lg:pt-10">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-            Reputation that comes from the people around you
-          </h1>
+          {community ? (
+            <>
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600">
+                {community.visibility === "private" && <Lock size={13} />}
+                An Anthill community · {community.joinPolicy === "open" ? "open to join" : "invite only"}
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+                {community.name}
+              </h1>
+            </>
+          ) : (
+            <>
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="mt-3 h-9 w-72 max-w-full" />
+            </>
+          )}
           <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-slate-600">
-            Anthill is a tree of people. You join next to someone you know, endorse people
-            above you, and climb when your reputation passes your parent's. No wallet, no
-            password: you sign in with a passkey.
+            {community?.description ||
+              "A tree of people. You join next to someone you know, endorse people above you, and climb when your reputation passes your parent's."}{" "}
+            No wallet, no password: you sign in with a passkey.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             <Button variant="primary" onClick={() => openAuth("signin")}>
@@ -40,40 +56,55 @@ export function Landing() {
             </AppLink>
           </div>
           <dl className="mt-8 flex gap-8">
-            <Stat label="people" value={people.length} />
-            <Stat label="endorsements" value={endorsements} />
-            <Stat label="levels" value={levels} />
+            <Stat label="people" value={graph && people.length} />
+            <Stat label="endorsements" value={graph && endorsements} />
+            <Stat label="levels" value={graph && levels} />
           </dl>
         </div>
-        <Card className="p-3">
-          <TopOfTree graph={graph} />
-        </Card>
+        {!graph ? (
+          <Card className="p-3">
+            <GhostTree />
+          </Card>
+        ) : (
+          people.length > 0 && (
+            <Card className="fade-in p-3">
+              <TopOfTree graph={graph} />
+            </Card>
+          )
+        )}
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <Point icon={<UserPlus size={18} />} title="Join next to people you know">
-          Someone in the tree sends you an invite link, and you start right under them.
-        </Point>
-        <Point icon={<Heart size={18} />} title="Endorse people above you">
-          Up to 6 levels up in your part of the tree. Your reputation is split between everyone
-          you endorse.
-        </Point>
-        <Point icon={<TrendingUp size={18} />} title="Climb">
-          Endorsements from below raise your reputation. Once it's higher than your parent's,
-          you can swap places with them.
-        </Point>
-      </section>
-
-      <MemberPreview />
+      <HowItWorks />
+      {people.length > 0 && <MemberPreview />}
     </div>
   );
 }
 
-function Stat(props: { label: string; value: number }) {
+export function HowItWorks() {
+  return (
+    <section className="grid gap-4 sm:grid-cols-3">
+      <Point icon={<UserPlus size={18} />} title="Join next to people you know">
+        Someone in the tree sends you an invite link, and you start right under them.
+      </Point>
+      <Point icon={<Heart size={18} />} title="Endorse people above you">
+        Up to 6 levels up in your part of the tree. Your reputation is split between everyone
+        you endorse.
+      </Point>
+      <Point icon={<TrendingUp size={18} />} title="Climb">
+        Endorsements from below raise your reputation. Once it's higher than your parent's,
+        you can swap places with them.
+      </Point>
+    </section>
+  );
+}
+
+function Stat(props: { label: string; value: number | undefined }) {
   return (
     <div>
       <dt className="text-[13px] text-slate-500">{props.label}</dt>
-      <dd className="num text-2xl font-semibold tracking-tight">{props.value}</dd>
+      <dd className="num text-2xl font-semibold tracking-tight">
+        {props.value === undefined ? <Skeleton className="mt-1 h-7 w-10" /> : props.value}
+      </dd>
     </div>
   );
 }
@@ -90,10 +121,13 @@ function Point(props: { icon: ReactNode; title: string; children: ReactNode }) {
   );
 }
 
-// The first four levels of the live tree; click anyone to open their page.
-function TopOfTree(props: { graph: Graph }) {
+// The first four levels of the live tree; click anyone to open their page
+// (in `cid`, when shown outside the community).
+export function TopOfTree(props: { graph: Graph; cid?: string }) {
   const { graph } = props;
-  const navigate = useNavigate();
+  const navigate = useAppNavigate();
+  const open = (id: string) =>
+    props.cid ? navigate(`/c/${props.cid}/p/${id}`, { global: true }) : navigate(`/p/${id}`);
   const LEVELS = 4;
   const W = 480;
   const pos = new Map<string, { x: number; y: number }>();
@@ -133,7 +167,7 @@ function TopOfTree(props: { graph: Graph }) {
             key={p.id}
             transform={`translate(${at.x} ${at.y})`}
             className="cursor-pointer"
-            onClick={() => navigate(`/p/${p.id}`)}
+            onClick={() => open(p.id)}
           >
             <title>{`${p.name}: ${formatRep(rep(p))} reputation`}</title>
             <circle r={r(p.id)} fill={colorOf(p.id)} />

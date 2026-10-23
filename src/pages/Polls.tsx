@@ -7,7 +7,11 @@ import { useCallback, useEffect, useState } from "react";
 import { closePoll, createPoll, fetchPolls, type Poll, votePoll } from "../api";
 import { formatRep, toNumber } from "../model";
 import { useApp } from "../state";
+import { Skeleton } from "../components/Skeletons";
 import { AppLink, Avatar, Badge, Button, Card, cx, Empty, Field, Modal } from "../ui";
+
+// the polls each community last showed, for coming back without a wait
+const shown = new Map<string, Poll[]>();
 
 function ago(iso: string): string {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -18,14 +22,20 @@ function ago(iso: string): string {
 }
 
 export function PollsPage() {
-  const { graph, session, viewer, previewing, notify, openAuth } = useApp();
-  const [polls, setPolls] = useState<Poll[]>();
+  const { graph, cid = "", session, viewer, previewing, notify, openAuth } = useApp();
+  const [polls, setPolls] = useState<Poll[] | undefined>(() => shown.get(cid));
   const [creating, setCreating] = useState(false);
   const isMember = session !== undefined && viewer !== undefined && !previewing;
 
   const refresh = useCallback(() => {
-    fetchPolls(session).then(setPolls, (e: Error) => notify(e.message));
-  }, [session, notify]);
+    fetchPolls(cid, session).then(
+      (list) => {
+        shown.set(cid, list);
+        setPolls(list);
+      },
+      (e: Error) => notify(e.message),
+    );
+  }, [cid, session, notify]);
 
   // refresh on reputation changes, and every 15 s for others' votes
   // biome-ignore lint/correctness/useExhaustiveDependencies: graph.version triggers it
@@ -60,7 +70,15 @@ export function PollsPage() {
         ) : null}
       </div>
 
-      {polls === undefined && <p className="text-slate-500">Loading polls…</p>}
+      {polls === undefined &&
+        [0, 1].map((i) => (
+          <Card key={i}>
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="mt-2 h-3 w-1/3" />
+            <Skeleton className="mt-5 h-9 w-full rounded-lg" />
+            <Skeleton className="mt-2 h-9 w-full rounded-lg" />
+          </Card>
+        ))}
       {polls?.length === 0 && (
         <Card>
           <Empty>No polls yet.{isMember ? " Ask the first question." : ""}</Empty>
@@ -72,11 +90,11 @@ export function PollsPage() {
           poll={p}
           canVote={isMember}
           canClose={isMember && p.by === session?.user.id}
-          onVote={(i) => session && run(() => votePoll(session, p.id, i))()}
+          onVote={(i) => session && run(() => votePoll(session, cid, p.id, i))()}
           onClose={() =>
             session &&
             confirm("Close this poll? The result is frozen at the current reputations.") &&
-            run(() => closePoll(session, p.id))()
+            run(() => closePoll(session, cid, p.id))()
           }
         />
       ))}
@@ -91,7 +109,7 @@ export function PollsPage() {
         <NewPollModal
           onClose={() => setCreating(false)}
           onCreate={async (question, options) => {
-            await createPoll(session, question, options);
+            await createPoll(session, cid, question, options);
             setCreating(false);
             refresh();
           }}

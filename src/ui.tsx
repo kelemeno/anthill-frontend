@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { type ComponentProps, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { Person } from "./api";
 import { colorOf, formatRep, initials, rep } from "./model";
@@ -12,12 +12,34 @@ export function cx(...classes: (string | false | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-// A Link that keeps the ?as= preview parameter.
-export function AppLink(props: ComponentProps<typeof Link> & { to: string }) {
+// A path inside a community: "/" is its overview, "/explore" its tree, ...
+export function communityPath(cid: string, path: string): string {
+  return `/c/${encodeURIComponent(cid)}${path === "/" ? "" : path}`;
+}
+
+// Where a path inside the app leads: within the current community unless
+// `global`, keeping the ?as= preview parameter.
+function useAppPath() {
   const [params] = useSearchParams();
   const as = params.get("as");
-  const to = as ? `${props.to}${props.to.includes("?") ? "&" : "?"}as=${as}` : props.to;
-  return <Link {...props} to={to} />;
+  const cid = useMatch("/c/:cid/*")?.params.cid;
+  return (path: string, global?: boolean) => {
+    const to = cid && !global ? communityPath(cid, path) : path;
+    return as ? `${to}${to.includes("?") ? "&" : "?"}as=${as}` : to;
+  };
+}
+
+export function AppLink(props: ComponentProps<typeof Link> & { to: string; global?: boolean }) {
+  const { global, ...rest } = props;
+  const appPath = useAppPath();
+  return <Link {...rest} to={appPath(props.to, global)} />;
+}
+
+// navigate() with the same rules as AppLink.
+export function useAppNavigate() {
+  const navigate = useNavigate();
+  const appPath = useAppPath();
+  return (path: string, options?: { global?: boolean }) => navigate(appPath(path, options?.global));
 }
 
 export function Button(
@@ -240,7 +262,11 @@ export function Field(props: {
 }
 
 // A dropdown menu under its button; closes on outside click or Escape.
-export function Menu(props: { button: (toggle: () => void) => ReactNode; children: (close: () => void) => ReactNode }) {
+export function Menu(props: {
+  button: (toggle: () => void) => ReactNode;
+  children: (close: () => void) => ReactNode;
+  align?: "left" | "right";
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -258,7 +284,12 @@ export function Menu(props: { button: (toggle: () => void) => ReactNode; childre
     <div ref={ref} className="relative">
       {props.button(() => setOpen((o) => !o))}
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl">
+        <div
+          className={cx(
+            "absolute z-40 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl",
+            props.align === "left" ? "left-0" : "right-0",
+          )}
+        >
           {props.children(() => setOpen(false))}
         </div>
       )}
