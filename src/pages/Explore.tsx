@@ -128,6 +128,8 @@ export function ExplorePage() {
   const [showReach, setShowReach] = useState(params.get("reach") === "1");
   const [reach, setReach] = useState<Set<string>>(new Set());
   const [query, setQuery] = useState("");
+  // whoever the pointer is on: their name shows even when zoomed out
+  const [hovered, setHovered] = useState<string>();
 
   // the replay
   const [replaying, setReplaying] = useState(params.get("replay") === "1");
@@ -330,20 +332,23 @@ export function ExplorePage() {
     ? people.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
     : [];
   const showLabels = t.k > 0.55;
+  // names that show whatever the zoom: whoever is hovered, and in the replay
+  // whoever acted (drawn on top, at a readable size)
+  const zoomFix = Math.min(1, t.k);
+  const shownNodes = (shown ?? graph).nodes;
 
   // endorsement arcs for the selected person, or the endorsement being
   // replayed
-  // (thicker for more weight)
-  const arcs: { from: string; to: string; kind: "in" | "out"; weight: number }[] = [];
+  const arcs: { from: string; to: string; kind: "in" | "out" }[] = [];
   if (sel) {
-    for (const v of sel.recDagVotes) arcs.push({ from: v.id, to: sel.id, kind: "in", weight: Number(v.weight) });
-    for (const v of sel.sentDagVotes) arcs.push({ from: sel.id, to: v.id, kind: "out", weight: Number(v.weight) });
+    for (const v of sel.recDagVotes) arcs.push({ from: v.id, to: sel.id, kind: "in" });
+    for (const v of sel.sentDagVotes) arcs.push({ from: sel.id, to: v.id, kind: "out" });
   }
   const acting = current ? actors(current) : undefined;
-  if (acting?.endorsement && acting.recipient) {
-    arcs.push({ from: acting.voter, to: acting.recipient, kind: "in", weight: 1 });
-  }
-  const maxWeight = Math.max(1, ...arcs.map((a) => a.weight || 1));
+  if (acting?.endorsement && acting.recipient) arcs.push({ from: acting.voter, to: acting.recipient, kind: "in" });
+  const emphasised = new Set(
+    [hovered, acting?.voter, acting?.recipient].filter((id): id is string => id !== undefined),
+  );
   const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}c/${encodeURIComponent(cid)}/explore?replay=1`;
 
   return (
@@ -372,7 +377,7 @@ export function ExplorePage() {
             );
           })}
           {/* endorsement arcs */}
-          {arcs.map(({ from, to, kind, weight }) => {
+          {arcs.map(({ from, to, kind }) => {
             const a = display.get(from);
             const b = display.get(to);
             if (!a || !b) return null;
@@ -382,7 +387,7 @@ export function ExplorePage() {
                 key={`e-${kind}-${from}-${to}`}
                 d={`M ${a.x} ${a.y} Q ${(a.x + b.x) / 2 + bend} ${(a.y + b.y) / 2}, ${b.x} ${b.y}`}
                 className={cx("fill-none", kind === "in" ? "stroke-emerald-500" : "stroke-indigo-500")}
-                strokeWidth={1.5 + (3 * (weight || 1)) / maxWeight}
+                strokeWidth={2}
                 strokeDasharray="5 4"
                 markerEnd={`url(#arrow-${kind})`}
               />
@@ -415,6 +420,8 @@ export function ExplorePage() {
                   e.stopPropagation();
                   if (!replaying) choose(p.id);
                 }}
+                onMouseEnter={() => setHovered(p.id)}
+                onMouseLeave={() => setHovered((h) => (h === p.id ? undefined : h))}
               >
                 {inReach && <circle r={r + 7} className="fill-amber-200/70" />}
                 {isActor && (
@@ -422,6 +429,9 @@ export function ExplorePage() {
                     <circle key={`ping-${current?.index}`} r={r + 4} className="replay-ping fill-amber-300" />
                     <circle r={r + 4} className="fill-none stroke-amber-400" strokeWidth={2.5} />
                   </>
+                )}
+                {p.id === hovered && !isMe && !isSel && !isActor && (
+                  <circle r={r + 3} className="fill-none stroke-slate-400" strokeWidth={2} />
                 )}
                 {(isMe || isSel) && (
                   <circle
@@ -434,19 +444,41 @@ export function ExplorePage() {
                 <text y={4} textAnchor="middle" className="pointer-events-none fill-white text-[10px] font-semibold">
                   {initials(p.name)}
                 </text>
-                {(showLabels || isActor) && (
+                {showLabels && !emphasised.has(p.id) && (
                   <text
                     y={r + 14}
                     textAnchor="middle"
                     className={cx(
                       "pointer-events-none text-[11px]",
-                      isMe || isSel || isActor ? "fill-slate-900 font-semibold" : "fill-slate-500",
+                      isMe || isSel ? "fill-slate-900 font-semibold" : "fill-slate-500",
                     )}
                   >
                     {p.name.length > 12 ? `${p.name.slice(0, 11)}…` : p.name}
                   </text>
                 )}
               </g>
+            );
+          })}
+          {/* names that show whatever the zoom */}
+          {[...emphasised].map((id) => {
+            const at = display.get(id);
+            const p = shownNodes[id];
+            if (!at || !p) return null;
+            return (
+              <text
+                key={`name-${id}`}
+                x={at.x}
+                y={at.y + at.r + 15 / zoomFix}
+                textAnchor="middle"
+                paintOrder="stroke"
+                stroke="white"
+                strokeWidth={4 / zoomFix}
+                strokeLinejoin="round"
+                className="pointer-events-none fill-slate-900 font-semibold"
+                style={{ fontSize: 12 / zoomFix }}
+              >
+                {p.name}
+              </text>
             );
           })}
         </g>
