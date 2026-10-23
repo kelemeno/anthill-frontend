@@ -1,0 +1,463 @@
+// "You": your place in the tree at a glance. Your reputation and rank, what
+// you could do next (swap with your parent, endorse people in reach, invite),
+// where your reputation comes from, who you endorse, and your neighbourhood.
+import { ArrowLeftRight, Heart, Link2, Sparkles, UserPlus, Users } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+
+import { type Action, act, createInviteLink, fetchReach, type Person, signIn } from "../api";
+import { Neighbourhood } from "../components/Neighbourhood";
+import {
+  BASE_REPUTATION,
+  endorsementsIn,
+  endorsementsOut,
+  formatRep,
+  level,
+  members,
+  parentOf,
+  rankOf,
+  rep,
+} from "../model";
+import { useApp } from "../state";
+import { AppLink, Avatar, Badge, Button, Card, CardTitle, cx, Empty, PersonRow } from "../ui";
+
+export function YouPage() {
+  const { graph, viewer, session } = useApp();
+  if (!graph) return <p className="text-slate-500">Loading the tree…</p>;
+  if (!viewer) return <Welcome signedInOutside={session !== undefined} />;
+  return <Dashboard me={viewer} />;
+}
+
+// Runs an action as the signed-in user; disabled in preview mode.
+function useAct() {
+  const { session, reload } = useApp();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const run = async (action: Action) => {
+    if (!session) return;
+    setBusy(true);
+    setError("");
+    try {
+      await act(session, action);
+      reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { run, busy, error, canAct: session !== undefined };
+}
+
+function Dashboard(props: { me: Person }) {
+  const { graph, session, previewing } = useApp();
+  const me = props.me;
+  if (!graph) return null;
+  const { rank, of } = rankOf(graph, me.id);
+  const parent = parentOf(graph, me);
+
+  return (
+    <div className="space-y-5">
+      {previewing && <PreviewBanner name={me.name} />}
+      <Card>
+        <div className="flex flex-wrap items-center gap-4">
+          <Avatar person={me} size={60} />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-xl font-semibold tracking-tight">{me.name}</h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <Badge tone="indigo">
+                #{rank} of {of}
+              </Badge>
+              <Badge>Level {level(me)}</Badge>
+              {parent && (
+                <Badge>
+                  Under{" "}
+                  <AppLink to={`/p/${parent.id}`} className="font-semibold hover:underline">
+                    {parent.name}
+                  </AppLink>
+                </Badge>
+              )}
+            </div>
+            {me.bio && <p className="mt-2 text-sm text-slate-600">{me.bio}</p>}
+          </div>
+          <div className="text-right">
+            <div className="num text-3xl font-semibold tracking-tight">{formatRep(rep(me))}</div>
+            <div className="text-[13px] text-slate-500">reputation</div>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <AppLink to={`/explore?focus=${me.id}`}>
+            <Button size="sm">
+              <Users size={15} /> See my spot in the tree
+            </Button>
+          </AppLink>
+          {session && !previewing && <InviteButton />}
+        </div>
+      </Card>
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-5">
+          <NextSteps me={me} />
+          <ReputationSources me={me} />
+          <YourEndorsements me={me} />
+        </div>
+        <aside className="space-y-5">
+          <Card>
+            <CardTitle hint="Click anyone to see their page.">Your neighbourhood</CardTitle>
+            <Neighbourhood graph={graph} person={me} viewerId={me.id} />
+          </Card>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function PreviewBanner(props: { name: string }) {
+  const { setPreviewAs, setSession } = useApp();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      <span>
+        Previewing the app as <strong>{props.name}</strong>. Read-only: sign in to act as
+        yourself.
+      </span>
+      <span className="flex gap-2">
+        <Button size="sm" variant="ghost" onClick={() => setPreviewAs(undefined)}>
+          Stop preview
+        </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() =>
+            signIn().then(
+              (s) => {
+                setSession(s);
+                setPreviewAs(undefined);
+              },
+              () => {},
+            )
+          }
+        >
+          Sign in
+        </Button>
+      </span>
+    </div>
+  );
+}
+
+function InviteButton() {
+  const { session } = useApp();
+  const [status, setStatus] = useState("");
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Button
+        size="sm"
+        onClick={async () => {
+          if (!session) return;
+          try {
+            const link = await createInviteLink(session);
+            await navigator.clipboard.writeText(link);
+            setStatus("Invite link copied: it works once, for 14 days.");
+          } catch (e) {
+            setStatus((e as Error).message);
+          }
+        }}
+      >
+        <Link2 size={15} /> Copy invite link
+      </Button>
+      {status && <span className="text-[13px] text-slate-500">{status}</span>}
+    </span>
+  );
+}
+
+function Step(props: { icon: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <li className="flex gap-3 py-3">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+        {props.icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium text-slate-900">{props.title}</p>
+          {props.action}
+        </div>
+        {props.children && <div className="mt-1 text-[13px] text-slate-500">{props.children}</div>}
+      </div>
+    </li>
+  );
+}
+
+function NextSteps(props: { me: Person }) {
+  const { graph, previewing } = useApp();
+  const me = props.me;
+  const { run, busy, error, canAct } = useAct();
+  const [reach, setReach] = useState<string[] | undefined>();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetch on every graph change
+  useEffect(() => {
+    let cancelled = false;
+    fetchReach(me.id).then(
+      (ids) => !cancelled && setReach(ids),
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [me.id, graph?.version]);
+
+  if (!graph) return null;
+  const parent = parentOf(graph, me);
+  const myRep = rep(me);
+  const parentRep = rep(parent);
+  const freeSpots = 2 - me.recTreeVotes.length;
+  const reachPeople = (reach ?? [])
+    .map((id) => graph.nodes[id])
+    .filter(Boolean)
+    .sort((a, b) => rep(b) - rep(a));
+  const disabled = !canAct || previewing || busy;
+
+  return (
+    <Card>
+      <CardTitle hint="What would move you forward right now.">Next steps</CardTitle>
+      <ul className="divide-y divide-slate-100">
+        {parent &&
+          (myRep > parentRep ? (
+            <Step
+              icon={<ArrowLeftRight size={16} />}
+              title={`You can swap places with ${parent.name}`}
+              action={
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={disabled}
+                  onClick={() => run({ fn: "switchPositionWithParent", args: {} })}
+                >
+                  Swap places
+                </Button>
+              }
+            >
+              Your reputation ({formatRep(myRep)}) is higher than theirs ({formatRep(parentRep)}).
+            </Step>
+          ) : (
+            <Step
+              icon={<ArrowLeftRight size={16} />}
+              title={`${formatRep(parentRep - myRep)} more reputation to swap with ${parent.name}`}
+            >
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-indigo-500"
+                  style={{ width: `${Math.min(100, (myRep / Math.max(parentRep, 0.01)) * 100)}%` }}
+                />
+              </div>
+              <p className="mt-1.5">
+                You {formatRep(myRep)}, {parent.name} {formatRep(parentRep)}. Once yours is higher, you
+                can swap places and move up a level.
+              </p>
+            </Step>
+          ))}
+        <Step
+          icon={<Heart size={16} />}
+          title={
+            reach === undefined
+              ? "Finding people you can endorse…"
+              : reachPeople.length === 0
+                ? "There's no one new you can endorse right now"
+                : `You can endorse ${reachPeople.length} more ${reachPeople.length === 1 ? "person" : "people"}`
+          }
+          action={
+            reachPeople.length > 3 ? (
+              <AppLink to={`/explore?focus=${me.id}&reach=1`} className="text-[13px] font-medium text-indigo-600 hover:underline">
+                See them all
+              </AppLink>
+            ) : undefined
+          }
+        >
+          <p>People above you, up to 6 levels up in your part of the tree. Here are the ones with the most reputation:</p>
+          <div className="mt-1 divide-y divide-slate-50">
+            {reachPeople.slice(0, 3).map((p) => (
+              <PersonRow
+                key={p.id}
+                person={p}
+                right={
+                  <Button
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() => run({ fn: "addDagVote", args: { recipient: p.id, weight: "1" } })}
+                  >
+                    <Heart size={14} /> Endorse
+                  </Button>
+                }
+              />
+            ))}
+          </div>
+        </Step>
+        {freeSpots > 0 && (
+          <Step icon={<UserPlus size={16} />} title={`You have ${freeSpots} free ${freeSpots === 1 ? "spot" : "spots"} under you`}>
+            Invite someone you know: they start right under you, and people under you can endorse you.
+          </Step>
+        )}
+        {me.recDagVotes.length === 0 && (
+          <Step icon={<Sparkles size={16} />} title="Nobody endorses you yet">
+            Endorsements come from people below you in your part of the tree. Inviting people is
+            the quickest way to get them.
+          </Step>
+        )}
+      </ul>
+      {error && <p className="mt-2 text-[13px] text-red-600">{error}</p>}
+    </Card>
+  );
+}
+
+function ReputationSources(props: { me: Person }) {
+  const { graph } = useApp();
+  const sources = useMemo(() => (graph ? endorsementsIn(graph, props.me) : []), [graph, props.me]);
+  if (!graph) return null;
+  const total = rep(props.me);
+  const parts = [{ label: "Everyone starts with", value: BASE_REPUTATION }, ...sources.map((s) => ({ label: s.from.name, value: s.adds }))];
+  return (
+    <Card>
+      <CardTitle hint="Each endorsement adds a share of the endorser's reputation, split between everyone they endorse.">
+        Where your reputation comes from
+      </CardTitle>
+      <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-slate-100">
+        {parts.map((part, i) => (
+          <div
+            key={part.label}
+            className={cx(i === 0 ? "bg-slate-300" : i % 2 ? "bg-indigo-500" : "bg-indigo-400", "border-r border-white last:border-0")}
+            style={{ width: `${(part.value / Math.max(total, 0.01)) * 100}%` }}
+            title={`${part.label}: +${formatRep(part.value)}`}
+          />
+        ))}
+      </div>
+      <div className="flex items-center justify-between py-2 text-sm">
+        <span className="text-slate-600">Everyone starts with</span>
+        <span className="num font-medium">{formatRep(BASE_REPUTATION)}</span>
+      </div>
+      <div className="divide-y divide-slate-50">
+        {sources.map((s) => (
+          <PersonRow
+            key={s.from.id}
+            person={s.from}
+            detail={`${formatRep(rep(s.from))} reputation, endorses ${s.from.sentDagVotes.length}`}
+            right={<span className="num text-sm font-medium text-emerald-600">+{formatRep(s.adds)}</span>}
+          />
+        ))}
+      </div>
+      {sources.length === 0 && <Empty>No endorsements yet.</Empty>}
+    </Card>
+  );
+}
+
+function YourEndorsements(props: { me: Person }) {
+  const { graph, previewing } = useApp();
+  const { run, busy, canAct } = useAct();
+  if (!graph) return null;
+  const out = endorsementsOut(graph, props.me);
+  return (
+    <Card>
+      <CardTitle hint="Your reputation is split between the people you endorse.">
+        You endorse {out.length} {out.length === 1 ? "person" : "people"}
+      </CardTitle>
+      <div className="divide-y divide-slate-50">
+        {out.map((e) => (
+          <PersonRow
+            key={e.to.id}
+            person={e.to}
+            detail={`gets ${Math.round(e.share * 100)}% of your support (+${formatRep(e.gives)})`}
+            right={
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!canAct || previewing || busy}
+                onClick={() => run({ fn: "removeDagVote", args: { recipient: e.to.id } })}
+              >
+                Remove
+              </Button>
+            }
+          />
+        ))}
+      </div>
+      {out.length === 0 && <Empty>You don't endorse anyone yet.</Empty>}
+    </Card>
+  );
+}
+
+// Not signed in (or signed in but not in the tree): sign in, or preview the app
+// as any member.
+function Welcome(props: { signedInOutside: boolean }) {
+  const { graph, setSession, setPreviewAs } = useApp();
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  if (!graph) return null;
+  const everyone = members(graph).sort((a, b) => a.name.localeCompare(b.name));
+  // a few interesting people to try: those with the most endorsements received
+  const suggested = [...everyone]
+    .sort((a, b) => b.recDagVotes.length - a.recDagVotes.length || a.depth - b.depth)
+    .filter((p) => p.depth >= 2)
+    .slice(0, 4);
+  const matches = query.trim()
+    ? everyone.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 6)
+    : [];
+
+  return (
+    <div className="mx-auto max-w-xl space-y-5">
+      <Card>
+        <h1 className="text-xl font-semibold tracking-tight">Your place in the tree</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          {props.signedInOutside
+            ? "You're signed in but not in the tree yet. Join with an invite link from someone you know, or pick a free spot in Explore."
+            : "Sign in to see your reputation, who endorses you and what you could do next. New here? You join with an invite link from someone in the tree."}
+        </p>
+        {!props.signedInOutside && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="primary"
+              onClick={() =>
+                signIn().then(setSession, (e: Error) => e.name !== "NotAllowedError" && setError(e.message))
+              }
+            >
+              Sign in with passkey
+            </Button>
+            <AppLink to="/explore">
+              <Button>Explore the tree</Button>
+            </AppLink>
+          </div>
+        )}
+        {error && <p className="mt-2 text-[13px] text-red-600">{error}</p>}
+      </Card>
+
+      <Card>
+        <CardTitle hint="See this screen as any member. Read-only.">Preview as a member</CardTitle>
+        <div className="divide-y divide-slate-50">
+          {suggested.map((p) => (
+            <PersonRow
+              key={p.id}
+              person={p}
+              detail={`${formatRep(rep(p))} reputation · ${p.recDagVotes.length} endorsements`}
+              right={
+                <Button size="sm" onClick={() => setPreviewAs(p.id)}>
+                  Preview
+                </Button>
+              }
+            />
+          ))}
+        </div>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Or search by name…"
+          className="mt-3 h-9 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+        />
+        {matches.map((p) => (
+          <PersonRow
+            key={p.id}
+            person={p}
+            right={
+              <Button size="sm" onClick={() => setPreviewAs(p.id)}>
+                Preview
+              </Button>
+            }
+          />
+        ))}
+      </Card>
+    </div>
+  );
+}
