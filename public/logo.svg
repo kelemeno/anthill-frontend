@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Anthill logo: a geometric ant, seen from above, on the accent colour -->
+  <rect width="32" height="32" rx="8" fill="#4f46e5"/>
+  <g fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round">
+    <!-- antennae -->
+    <path d="M14.9 6.6 C 14.2 4.9, 12.9 4.1, 11.4 3.9"/>
+    <path d="M17.1 6.6 C 17.8 4.9, 19.1 4.1, 20.6 3.9"/>
+    <!-- legs -->
+    <path d="M14.1 12.4 L 10.6 10.6 L 9 8.6"/>
+    <path d="M13.9 14 L 9.3 14.6"/>
+    <path d="M14.1 15.6 L 10.8 18.4 L 10.2 20.8"/>
+    <path d="M17.9 12.4 L 21.4 10.6 L 23 8.6"/>
+    <path d="M18.1 14 L 22.7 14.6"/>
+    <path d="M17.9 15.6 L 21.2 18.4 L 21.8 20.8"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="16" cy="8.6" r="2.5"/>
+    <ellipse cx="16" cy="14" rx="2.2" ry="2.6"/>
+    <ellipse cx="16" cy="21.9" rx="3.7" ry="5"/>
+  </g>
+</svg>

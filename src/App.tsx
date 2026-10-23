@@ -89,7 +89,7 @@ export function App() {
       <header className="sticky top-0 z-30 h-[57px] border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex h-full max-w-6xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <AppLink to="/" className="flex items-center gap-2">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="h-7 w-7 mix-blend-multiply" />
+            <img src="/logo.svg" alt="" className="h-7 w-7" />
             <span className="text-[17px] font-semibold tracking-tight">Anthill</span>
           </AppLink>
           <nav className="ml-4 hidden gap-1 sm:flex" data-tour="nav">
