@@ -64,6 +64,19 @@ export function caption(step: HistoryStep, before: HistoryStep | undefined): str
   }
 }
 
+// Steps worth lingering on: the tree changing shape, or support moving.
+const DRAMATIC = new Set([
+  "SwitchPositionWithParentEvent",
+  "MoveTreeVoteEvent",
+  "LeaveTreeEvent",
+  "RemoveDagVoteEvent",
+]);
+
+// How long to stay on a step, relative to an ordinary one.
+export function dwell(step: HistoryStep | undefined): number {
+  return step && DRAMATIC.has(step.eventName) ? 2.5 : 1;
+}
+
 // The people a step is about, to highlight: who acted, and who it was aimed at.
 export function actors(step: HistoryStep): { voter: string; recipient?: string; endorsement: boolean } {
   const endorsement = step.eventName === "AddDagVoteEvent" || step.eventName === "RemoveDagVoteEvent";

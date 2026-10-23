@@ -53,3 +53,12 @@ describe("replay", () => {
     expect(actors(step(2, "LeaveTreeEvent", "b", "", []))).toEqual({ voter: "b", recipient: undefined, endorsement: false });
   });
 });
+
+describe("replay pacing", () => {
+  it("lingers on climbs, moves, departures and withdrawn endorsements", async () => {
+    const { dwell } = await import("./replay");
+    expect(dwell(joined)).toBe(1);
+    expect(dwell(step(5, "SwitchPositionWithParentEvent", "b", "", []))).toBeGreaterThan(1);
+    expect(dwell(undefined)).toBe(1);
+  });
+});

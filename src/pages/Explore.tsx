@@ -18,7 +18,7 @@ import { ReplayBar } from "../components/ReplayBar";
 import { GhostTree } from "../components/Skeletons";
 import { PersonActions } from "../components/PersonActions";
 import { colorOf, formatRep, initials, level, members, rankOf, relation, rep } from "../model";
-import { actors, caption, graphAt } from "../replay";
+import { actors, caption, dwell, graphAt } from "../replay";
 import { useApp } from "../state";
 import { AppLink, Avatar, Badge, Button, cx } from "../ui";
 
@@ -143,7 +143,8 @@ export function ExplorePage() {
   const current = replaying && history && graph ? history[step] : undefined;
   const shown = useMemo(() => (current && graph ? graphAt(current, graph) : graph), [current, graph]);
   const target = useMemo(() => (shown ? targetsOf(shown) : new Map<string, Pt>()), [shown]);
-  const tween = playing ? Math.min(600, (STEP_MS / speed) * 0.8) : 350;
+  // climbs, moves and the like play slower than people joining
+  const tween = playing ? Math.min(900, (STEP_MS / speed) * 0.8 * dwell(current)) : 350;
   const display = useTweened(target, (id) => shown?.nodes[id]?.sentTreeVote, tween);
 
   // pan & zoom (the svg only exists once the graph has loaded)
@@ -217,6 +218,8 @@ export function ExplorePage() {
         if (cancelled) return;
         setHistory(steps);
         setStep(0);
+        // a long history starts faster (the interesting steps still linger)
+        setSpeed(steps.length > 100 ? 4 : 2);
         follow.current = true;
         setPlaying(steps.length > 1);
       },
@@ -234,7 +237,7 @@ export function ExplorePage() {
       setPlaying(false);
       return;
     }
-    const timer = setTimeout(() => setStep((s) => s + 1), STEP_MS / speed);
+    const timer = setTimeout(() => setStep((s) => s + 1), (STEP_MS / speed) * dwell(history[step]));
     return () => clearTimeout(timer);
   }, [playing, step, history, speed]);
 
@@ -338,14 +341,17 @@ export function ExplorePage() {
   const shownNodes = (shown ?? graph).nodes;
 
   // endorsement arcs for the selected person, or the endorsement being
-  // replayed
-  const arcs: { from: string; to: string; kind: "in" | "out" }[] = [];
+  // replayed (made, or withdrawn: "gone")
+  const arcs: { from: string; to: string; kind: "in" | "out" | "gone" }[] = [];
   if (sel) {
     for (const v of sel.recDagVotes) arcs.push({ from: v.id, to: sel.id, kind: "in" });
     for (const v of sel.sentDagVotes) arcs.push({ from: sel.id, to: v.id, kind: "out" });
   }
   const acting = current ? actors(current) : undefined;
-  if (acting?.endorsement && acting.recipient) arcs.push({ from: acting.voter, to: acting.recipient, kind: "in" });
+  if (acting?.endorsement && acting.recipient) {
+    const kind = current?.eventName === "RemoveDagVoteEvent" ? "gone" : "in";
+    arcs.push({ from: acting.voter, to: acting.recipient, kind });
+  }
   const emphasised = new Set(
     [hovered, acting?.voter, acting?.recipient].filter((id): id is string => id !== undefined),
   );
@@ -386,7 +392,10 @@ export function ExplorePage() {
               <path
                 key={`e-${kind}-${from}-${to}`}
                 d={`M ${a.x} ${a.y} Q ${(a.x + b.x) / 2 + bend} ${(a.y + b.y) / 2}, ${b.x} ${b.y}`}
-                className={cx("fill-none", kind === "in" ? "stroke-emerald-500" : "stroke-indigo-500")}
+                className={cx(
+                  "fill-none",
+                  kind === "in" ? "stroke-emerald-500" : kind === "out" ? "stroke-indigo-500" : "stroke-rose-400 opacity-70",
+                )}
                 strokeWidth={2}
                 strokeDasharray="5 4"
                 markerEnd={`url(#arrow-${kind})`}
@@ -394,9 +403,12 @@ export function ExplorePage() {
             );
           })}
           <defs>
-            {(["in", "out"] as const).map((kind) => (
+            {(["in", "out", "gone"] as const).map((kind) => (
               <marker key={kind} id={`arrow-${kind}`} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" className={kind === "in" ? "fill-emerald-500" : "fill-indigo-500"} />
+                <path
+                  d="M 0 0 L 10 5 L 0 10 z"
+                  className={kind === "in" ? "fill-emerald-500" : kind === "out" ? "fill-indigo-500" : "fill-rose-400"}
+                />
               </marker>
             ))}
           </defs>

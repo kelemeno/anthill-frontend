@@ -79,14 +79,15 @@ export function App() {
     if (tourRequested > 0) setTouring(true);
   }, [tourRequested]);
 
-  // and once by itself on a first visit to a community
+  // and once by itself on a first visit to a community (not when a shared
+  // replay link opens: that's what they came to see)
   // biome-ignore lint/correctness/useExhaustiveDependencies: only on first load
   useEffect(() => {
     let seen = true;
     try {
       seen = localStorage.getItem(TOUR_SEEN) !== null;
     } catch {}
-    if (seen || !location.pathname.startsWith("/c/")) return;
+    if (seen || !location.pathname.startsWith("/c/") || location.search.includes("replay=1")) return;
     const t = setTimeout(() => setTouring(true), 1200);
     return () => clearTimeout(t);
   }, []);
