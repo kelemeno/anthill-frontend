@@ -17,10 +17,10 @@ import { fetchHistory, fetchReach, type Graph, type HistoryStep, type Person } f
 import { ReplayBar } from "../components/ReplayBar";
 import { GhostTree } from "../components/Skeletons";
 import { PersonActions } from "../components/PersonActions";
-import { colorOf, formatRep, initials, level, members, rankOf, relation, rep } from "../model";
-import { actors, caption, dwell, graphAt } from "../replay";
+import { colorOf, formatRep, initials, level, members, person, rankOf, relation, rep } from "../model";
+import { actors, caption, compact, dwell, graphAt } from "../replay";
 import { useApp } from "../state";
-import { AppLink, Avatar, Badge, Button, cx } from "../ui";
+import { AppLink, Avatar, Badge, Button, cx, opensOnKey } from "../ui";
 
 const SLOT = 64; // horizontal space per leaf
 const LEVEL = 96; // vertical space per level
@@ -117,9 +117,20 @@ function useTweened(target: Map<string, Pt>, parentOf: (id: string) => string | 
 }
 
 const STEP_MS = 1100; // one step at 1×
+const SM = 640; // Tailwind's sm: the person panel is a side card from here, a sheet below
 
+// Full-bleed under the header: cancel main's padding (its bottom padding too,
+// or the page scrolls by the difference), and leave the phone tab bar room.
+const BLEED = "-mx-4 -mt-5 -mb-24 h-[calc(100dvh-57px)] bg-slate-50 sm:-mx-6 sm:-mb-8 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]";
+
+// A fresh view for each community: camera, selection and replay start over.
 export function ExplorePage() {
-  const { graph, cid = "", session, viewer, notify } = useApp();
+  const { cid = "" } = useApp();
+  return <Explore key={cid} />;
+}
+
+function Explore() {
+  const { graph, cid = "", session, viewer } = useApp();
   const [params, setParams] = useSearchParams();
   const svgRef = useRef<SVGSVGElement>(null);
   const zoomRef = useRef<ZoomBehavior<SVGSVGElement, unknown>>(null);
@@ -134,6 +145,8 @@ export function ExplorePage() {
   // the replay
   const [replaying, setReplaying] = useState(params.get("replay") === "1");
   const [history, setHistory] = useState<HistoryStep[]>();
+  const [historyError, setHistoryError] = useState<string>();
+  const [historyTry, setHistoryTry] = useState(0);
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(2);
@@ -147,19 +160,30 @@ export function ExplorePage() {
   const tween = playing ? Math.min(900, (STEP_MS / speed) * 0.8 * dwell(current)) : 350;
   const display = useTweened(target, (id) => shown?.nodes[id]?.sentTreeVote, tween);
 
-  // pan & zoom (the svg only exists once the graph has loaded)
-  const loaded = graph !== undefined;
+  // pan & zoom, bound whenever the tree's svg is on the page (not while
+  // loading, nor while nobody's here, unless that's being replayed)
+  const drawn = graph !== undefined && (replaying || members(graph).length > 0);
+  // the community the first view was centred for
+  const centredFor = useRef<string>(undefined);
   useEffect(() => {
-    if (!loaded || !svgRef.current) return;
+    const svg = svgRef.current;
+    if (!drawn || !svg) return;
     const z = zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.05, 3])
       .on("zoom", (e) => {
         setT(e.transform);
         if (e.sourceEvent) follow.current = false;
       });
-    select(svgRef.current).call(z).on("dblclick.zoom", null);
+    select(svg).call(z).on("dblclick.zoom", null);
     zoomRef.current = z;
-  }, [loaded]);
+    // a new svg starts at the identity: draw it so, and centre it again
+    setT(zoomIdentity);
+    return () => {
+      select(svg).on(".zoom", null);
+      zoomRef.current = null;
+      centredFor.current = undefined;
+    };
+  }, [drawn]);
 
   // fit the whole tree in view (above the replay bar, if it's open)
   const fit = useCallback((targets: Map<string, Pt>, duration: number, bar = true) => {
@@ -171,7 +195,8 @@ export function ExplorePage() {
     const maxX = Math.max(...xs.map((p) => p.x)) + 50;
     const minY = Math.min(...xs.map((p) => p.y)) - 40;
     const maxY = Math.max(...xs.map((p) => p.y)) + 50;
-    const room = height - (bar ? 130 : 20);
+    // (the bar is taller on phones: its timeline has a row of its own)
+    const room = height - (bar ? (width < SM ? 150 : 130) : 20);
     const k = Math.max(0.05, Math.min(1.3, width / (maxX - minX), room / (maxY - minY)));
     const to = zoomIdentity
       .translate(width / 2 - (k * (minX + maxX)) / 2, room / 2 - (k * (minY + maxY)) / 2)
@@ -186,11 +211,11 @@ export function ExplorePage() {
       if (!svg || !p || !zoomRef.current) return;
       const { width, height } = svg.getBoundingClientRect();
       const k = Math.max(t.k, 0.9);
-      // leave room for the side panel on wide screens
-      const panel = width > 900 ? 360 : 0;
+      // leave room for the side panel (340px at right-3, from sm up)
+      const panel = width >= SM ? 360 : 0;
       const to = zoomIdentity
         // on phones the sheet covers the bottom, so keep the person near the top
-        .translate((width - panel) / 2 - p.x * k, (width < 640 ? 0.22 : 0.38) * height - p.y * k)
+        .translate((width - panel) / 2 - p.x * k, (width < SM ? 0.22 : 0.38) * height - p.y * k)
         .scale(k);
       const sel = select(svg);
       if (animate) sel.transition().duration(450).call(zoomRef.current.transform, to);
@@ -199,13 +224,15 @@ export function ExplorePage() {
     [target, t.k],
   );
 
-  // first view: centre on the focus (or you, or the root)
-  const centred = useRef(false);
+  // first view: centre on the focus (or you), or the root when they aren't in
+  // the tree (a stale link, someone who left)
   useEffect(() => {
-    if (!graph || centred.current || target.size === 0 || !zoomRef.current) return;
-    centred.current = true;
-    centreOn(selected ?? graph.rootId, false);
-  }, [graph, target, selected, centreOn]);
+    if (!graph || centredFor.current === graph.community.id || target.size === 0 || !zoomRef.current) return;
+    centredFor.current = graph.community.id;
+    const start = selected && target.has(selected) ? selected : graph.rootId;
+    if (target.has(start)) centreOn(start, false);
+    else fit(target, 0, replaying);
+  }, [graph, target, selected, centreOn, fit, replaying]);
 
   // replay: load the history when it opens, then play from the start
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per opening
@@ -213,9 +240,12 @@ export function ExplorePage() {
     if (!replaying) return;
     let cancelled = false;
     setHistory(undefined);
+    setHistoryError(undefined);
     fetchHistory(cid, session).then(
-      (steps) => {
+      (loaded) => {
         if (cancelled) return;
+        // (one copy of each unchanged person, not one per step)
+        const steps = compact(loaded);
         setHistory(steps);
         setStep(0);
         // a long history starts faster (the interesting steps still linger)
@@ -223,12 +253,12 @@ export function ExplorePage() {
         follow.current = true;
         setPlaying(steps.length > 1);
       },
-      (e: Error) => notify(e.message),
+      (e: Error) => !cancelled && setHistoryError(e.message),
     );
     return () => {
       cancelled = true;
     };
-  }, [replaying, cid]);
+  }, [replaying, cid, historyTry]);
 
   // the next step, at the chosen speed
   useEffect(() => {
@@ -258,6 +288,7 @@ export function ExplorePage() {
     setReplaying(false);
     setPlaying(false);
     setHistory(undefined);
+    setHistoryError(undefined);
     const next = new URLSearchParams(params);
     next.delete("replay");
     setParams(next, { replace: true });
@@ -268,21 +299,34 @@ export function ExplorePage() {
     setPlaying(true);
   };
 
-  // space plays or pauses, arrows step
+  // stepping by hand pauses, as the bar's buttons do
+  const seek = (i: number) => {
+    setPlaying(false);
+    setStep(Math.max(0, Math.min((history?.length ?? 1) - 1, i)));
+  };
+
+  // space plays or pauses, arrows step. A focused field keeps its keys, and a
+  // focused button its space (which presses it).
+  const onKey = useRef<(e: KeyboardEvent) => void>(undefined);
+  onKey.current = (e) => {
+    const el = e.target as HTMLElement | null;
+    if (!history || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (el?.closest?.("input, textarea, select, [contenteditable]")) return;
+    if (e.key === " ") {
+      if (el?.closest?.("button, a, [role=button], [role=link]")) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      if (playing) setPlaying(false);
+      else play();
+    } else if (e.key === "ArrowRight") seek(step + 1);
+    else if (e.key === "ArrowLeft") seek(step - 1);
+  };
   useEffect(() => {
     if (!replaying) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (!history || (e.target as HTMLElement)?.closest?.("input, textarea")) return;
-      if (e.key === " ") {
-        e.preventDefault();
-        if (playing) setPlaying(false);
-        else play();
-      } else if (e.key === "ArrowRight") setStep((s) => Math.min(history.length - 1, s + 1));
-      else if (e.key === "ArrowLeft") setStep((s) => Math.max(0, s - 1));
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
+    const listener = (e: KeyboardEvent) => onKey.current?.(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, [replaying]);
 
   // who the viewer can endorse
   useEffect(() => {
@@ -300,6 +344,12 @@ export function ExplorePage() {
     };
   }, [showReach, viewer, graph?.version, cid, session]);
 
+  const zoomBy = (k: number) => {
+    if (!svgRef.current || !zoomRef.current) return;
+    follow.current = false;
+    select(svgRef.current).transition().duration(200).call(zoomRef.current.scaleBy, k);
+  };
+
   const choose = (id: string | undefined) => {
     setSelected(id);
     const next = new URLSearchParams(params);
@@ -310,16 +360,16 @@ export function ExplorePage() {
 
   if (!graph) {
     return (
-      <div className="-mx-4 -my-5 flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 px-6 sm:-mx-6 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]">
+      <div className={cx(BLEED, "flex items-center justify-center px-6")}>
         <GhostTree className="max-w-md" />
       </div>
     );
   }
 
   const people = members(shown ?? graph);
-  if (members(graph).length === 0) {
+  if (!drawn) {
     return (
-      <div className="-mx-4 -my-5 flex h-[calc(100dvh-57px)] items-center justify-center bg-slate-50 px-6 sm:-mx-6 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]">
+      <div className={cx(BLEED, "flex items-center justify-center px-6")}>
         <div className="text-center">
           <h1 className="text-[15px] font-semibold">Nobody's here yet</h1>
           <p className="mt-1 text-sm text-slate-600">The tree appears once someone starts it.</p>
@@ -330,7 +380,8 @@ export function ExplorePage() {
       </div>
     );
   }
-  const sel = selected && !replaying ? graph.nodes[selected] : undefined;
+  // (person() never returns the sentinel above the root)
+  const sel = selected && !replaying ? person(graph, selected) : undefined;
   const matches = query.trim()
     ? people.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
     : [];
@@ -358,8 +409,82 @@ export function ExplorePage() {
   const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}c/${encodeURIComponent(cid)}/explore?replay=1`;
 
   return (
-    // full-bleed under the header: cancel the page padding
-    <div className="relative -mx-4 -my-5 h-[calc(100dvh-57px)] overflow-hidden bg-slate-50 sm:-mx-6 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]">
+    <div className={cx(BLEED, "relative overflow-hidden")}>
+
+      {/* search + toggles, and the zoom (before the tree, so they come first
+          for the keyboard) */}
+      {!replaying && (
+        // on phones, short of the zoom buttons at the top right
+        <div className="absolute top-3 left-3 w-[min(320px,calc(100%-24px))] max-sm:w-[calc(100%-72px)]" data-tour="explore-search">
+          <div className="relative">
+            <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Find someone…"
+              aria-label="Find someone"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+          </div>
+          {matches.length > 0 && (
+            <div className="mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+              {matches.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setQuery("");
+                    choose(p.id);
+                    centreOn(p.id);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                >
+                  <Avatar person={p} size={26} />
+                  <span className="flex-1 truncate">{p.name}</span>
+                  <span className="num text-[12px] text-slate-400">{formatRep(rep(p))}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              data-tour="explore-replay"
+              onClick={openReplay}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              <Play size={14} className="text-indigo-600" /> Watch it grow
+            </button>
+            {viewer && (
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 shadow-sm">
+                <input type="checkbox" checked={showReach} onChange={(e) => setShowReach(e.target.checked)} className="accent-indigo-600" />
+                Highlight who I can endorse
+              </label>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* zoom */}
+      <div
+        className={cx(
+          "absolute right-3 flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
+          replaying ? "top-3" : "bottom-3 max-sm:bottom-auto max-sm:top-3",
+        )}
+      >
+        {[
+          // zooming by hand stops the replay following the tree; fitting resumes it
+          { label: "Zoom in", icon: <Plus size={16} />, run: () => zoomBy(1.3) },
+          { label: "Zoom out", icon: <Minus size={16} />, run: () => zoomBy(1 / 1.3) },
+          { label: "Fit the whole tree", icon: <Maximize size={15} />, run: () => { follow.current = true; fit(target, 450, replaying); } },
+          ...(viewer && !replaying ? [{ label: "Go to me", icon: <Crosshair size={16} />, run: () => { choose(viewer.id); centreOn(viewer.id); } }] : []),
+        ].map((b) => (
+          <button key={b.label} type="button" title={b.label} aria-label={b.label} onClick={b.run} className="flex h-9 w-9 items-center justify-center text-slate-600 hover:bg-slate-50 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-slate-100">
+            {b.icon}
+          </button>
+        ))}
+      </div>
+
       <svg
         ref={svgRef}
         data-tour="explore-tree"
@@ -428,6 +553,11 @@ export function ExplorePage() {
                 transform={`translate(${at.x} ${at.y})`}
                 className={replaying ? undefined : "cursor-pointer"}
                 opacity={dim ? 0.35 : 1}
+                // focusable and opened with Enter or Space, except in the replay
+                tabIndex={replaying ? undefined : 0}
+                role={replaying ? undefined : "button"}
+                aria-label={replaying ? undefined : p.name}
+                onKeyDown={(e) => !replaying && opensOnKey(e, () => choose(p.id))}
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!replaying) choose(p.id);
@@ -496,76 +626,6 @@ export function ExplorePage() {
         </g>
       </svg>
 
-      {/* search + toggles */}
-      {!replaying && (
-        <div className="absolute top-3 left-3 w-[min(320px,calc(100%-24px))]" data-tour="explore-search">
-          <div className="relative">
-            <Search size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Find someone…"
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-            />
-          </div>
-          {matches.length > 0 && (
-            <div className="mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-              {matches.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    choose(p.id);
-                    centreOn(p.id);
-                  }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-slate-50"
-                >
-                  <Avatar person={p} size={26} />
-                  <span className="flex-1 truncate">{p.name}</span>
-                  <span className="num text-[12px] text-slate-400">{formatRep(rep(p))}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="mt-2 flex flex-wrap gap-2">
-            <button
-              type="button"
-              data-tour="explore-replay"
-              onClick={openReplay}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              <Play size={14} className="text-indigo-600" /> Watch it grow
-            </button>
-            {viewer && (
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 shadow-sm">
-                <input type="checkbox" checked={showReach} onChange={(e) => setShowReach(e.target.checked)} className="accent-indigo-600" />
-                Highlight who I can endorse
-              </label>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* zoom */}
-      <div
-        className={cx(
-          "absolute right-3 flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
-          replaying ? "top-3" : "bottom-3 max-sm:bottom-auto max-sm:top-3",
-        )}
-      >
-        {[
-          { label: "Zoom in", icon: <Plus size={16} />, run: () => svgRef.current && zoomRef.current && select(svgRef.current).transition().duration(200).call(zoomRef.current.scaleBy, 1.3) },
-          { label: "Zoom out", icon: <Minus size={16} />, run: () => svgRef.current && zoomRef.current && select(svgRef.current).transition().duration(200).call(zoomRef.current.scaleBy, 1 / 1.3) },
-          { label: "Fit the whole tree", icon: <Maximize size={15} />, run: () => fit(target, 450, replaying) },
-          ...(viewer && !replaying ? [{ label: "Go to me", icon: <Crosshair size={16} />, run: () => { choose(viewer.id); centreOn(viewer.id); } }] : []),
-        ].map((b) => (
-          <button key={b.label} type="button" title={b.label} aria-label={b.label} onClick={b.run} className="flex h-9 w-9 items-center justify-center text-slate-600 hover:bg-slate-50 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-slate-100">
-            {b.icon}
-          </button>
-        ))}
-      </div>
-
       {/* legend */}
       <div className={cx("absolute bottom-3 left-3 hidden gap-3 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[12px] text-slate-500 shadow-sm", !replaying && "sm:flex")}>
         <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full ring-2 ring-indigo-500" /> You</span>
@@ -574,11 +634,13 @@ export function ExplorePage() {
         <span className="text-slate-400">Bigger = more reputation</span>
       </div>
 
-      {sel && <PersonPanel graph={graph} person={sel} viewer={viewer} onClose={() => choose(undefined)} />}
+      {sel && <PersonPanel key={sel.id} graph={graph} person={sel} viewer={viewer} onClose={() => choose(undefined)} />}
 
       {replaying && (
         <ReplayBar
           steps={history?.length}
+          error={historyError}
+          onRetry={() => setHistoryTry((n) => n + 1)}
           step={step}
           playing={playing}
           speed={speed}
@@ -586,10 +648,7 @@ export function ExplorePage() {
           shareUrl={shareUrl}
           onPlay={play}
           onPause={() => setPlaying(false)}
-          onSeek={(i) => {
-            setPlaying(false);
-            setStep(Math.max(0, Math.min((history?.length ?? 1) - 1, i)));
-          }}
+          onSeek={seek}
           onSpeed={setSpeed}
           onClose={closeReplay}
         />
@@ -599,7 +658,17 @@ export function ExplorePage() {
 }
 
 function PersonPanel(props: { graph: Graph; person: Person; viewer: Person | undefined; onClose: () => void }) {
-  const { graph, person: p, viewer } = props;
+  const { graph, person: p, viewer, onClose } = props;
+  // Escape closes it (unless a field or dialog has the key)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if ((e.target as HTMLElement | null)?.closest?.("input, textarea, [role=dialog]")) return;
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   const { rank, of } = rankOf(graph, p.id);
   const rel = relation(graph, viewer, p);
   return (

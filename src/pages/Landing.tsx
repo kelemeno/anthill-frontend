@@ -8,7 +8,7 @@ import { DEFAULT_COMMUNITY, DEMO_COMMUNITY, type Graph } from "../api";
 import { colorOf, formatRep, initials, members, rep } from "../model";
 import { useApp } from "../state";
 import { GhostTree, Skeleton } from "../components/Skeletons";
-import { AppLink, Button, Card, CardTitle, communityPath, PersonRow, useAppNavigate } from "../ui";
+import { AppLink, Button, Card, CardTitle, communityPath, opensOnKey, PersonRow, useAppNavigate } from "../ui";
 
 // Renders at once: the community's name and description come from the
 // communities list while its tree loads.
@@ -102,9 +102,15 @@ export function Landing() {
           <Card className="fade-in py-10 text-center">
             <h2 className="text-[15px] font-semibold">Nobody's here yet</h2>
             <p className="mx-auto mt-1 max-w-xs text-sm text-slate-600">
-              {community?.founder
-                ? `${community.founder.name || "Its founder"} starts the tree; then anyone can join.`
-                : "Whoever joins first starts at the top of the tree."}
+              {community?.joinPolicy === "closed"
+                ? "It isn't taking new members."
+                : community?.founder
+                  ? `${community.founder.name || "Its founder"} starts the tree; then ${
+                      community.joinPolicy === "invite" ? "members invite people in" : "anyone can join"
+                    }.`
+                  : community?.joinPolicy === "invite"
+                    ? "Joining is by invite."
+                    : "Whoever joins first starts at the top of the tree."}
             </p>
             <AppLink to={communityPath(DEMO_COMMUNITY, "/")} global className="mt-4 inline-block">
               <Button size="sm">See how it works in the demo</Button>
@@ -187,7 +193,7 @@ export function TopOfTree(props: { graph: Graph; cid?: string }) {
   const shown = [...pos.keys()].map((id) => graph.nodes[id]);
   const r = (id: string) => (id === graph.rootId ? 18 : 14);
   return (
-    <svg viewBox={`0 0 ${W} ${30 + (LEVELS - 1) * 72 + 40}`} className="w-full" role="img" aria-label="The top of the tree">
+    <svg viewBox={`0 0 ${W} ${30 + (LEVELS - 1) * 72 + 40}`} className="w-full" role="group" aria-label="The top of the tree">
       {shown.map((p) => {
         const a = pos.get(p.sentTreeVote);
         const b = pos.get(p.id);
@@ -211,6 +217,10 @@ export function TopOfTree(props: { graph: Graph; cid?: string }) {
             transform={`translate(${at.x} ${at.y})`}
             className="cursor-pointer"
             onClick={() => open(p.id)}
+            onKeyDown={(e) => opensOnKey(e, () => open(p.id))}
+            tabIndex={0}
+            role="link"
+            aria-label={`${p.name}: ${formatRep(rep(p))} reputation`}
           >
             <title>{`${p.name}: ${formatRep(rep(p))} reputation`}</title>
             <circle r={r(p.id)} fill={colorOf(p.id)} />
@@ -245,6 +255,7 @@ function MemberPreview() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search by name…"
+        aria-label="Search members by name"
         className="h-9 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
       />
       <div className="mt-1 divide-y divide-slate-50">

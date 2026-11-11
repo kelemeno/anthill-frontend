@@ -7,6 +7,7 @@ import { ArrowLeftRight, Heart, Link2, Sparkles, UserPlus, Users } from "lucide-
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { type Action, act, createInviteLink, fetchReach, type Person } from "../api";
+import { InviteModal } from "../components/AccountMenu";
 import { Neighbourhood } from "../components/Neighbourhood";
 import { DashboardSkeleton } from "../components/Skeletons";
 import { Landing } from "./Landing";
@@ -139,28 +140,22 @@ function PreviewBanner(props: { name: string }) {
   );
 }
 
+// Opens the invite dialog: the link is made first, then copied with a click
+// of its own (Safari only lets a click write to the clipboard, not the
+// network answer that follows it).
 function InviteButton() {
-  const { session, cid } = useApp();
-  const [status, setStatus] = useState("");
+  const { session, cid, graph } = useApp();
+  const [open, setOpen] = useState(false);
+  if (!session || !cid || !graph) return null;
   return (
-    <span className="inline-flex items-center gap-2">
-      <Button
-        size="sm"
-        onClick={async () => {
-          if (!session || !cid) return;
-          try {
-            const link = await createInviteLink(session, cid);
-            await navigator.clipboard.writeText(link);
-            setStatus("Invite link copied: it works once, for 14 days.");
-          } catch (e) {
-            setStatus((e as Error).message);
-          }
-        }}
-      >
-        <Link2 size={15} /> Copy invite link
+    <>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        <Link2 size={15} /> Invite someone
       </Button>
-      {status && <span className="text-[13px] text-slate-500">{status}</span>}
-    </span>
+      {open && (
+        <InviteModal session={session} cid={cid} communityName={graph.community.name} onClose={() => setOpen(false)} />
+      )}
+    </>
   );
 }
 
@@ -205,6 +200,8 @@ function NextSteps(props: { me: Person }) {
   const myRep = rep(me);
   const parentRep = rep(parent);
   const freeSpots = 2 - me.recTreeVotes.length;
+  // nobody new gets in, so there's no one to invite
+  const closed = graph.community.joinPolicy === "closed";
   const reachPeople = (reach ?? [])
     .map((id) => graph.nodes[id])
     .filter(Boolean)
@@ -286,15 +283,15 @@ function NextSteps(props: { me: Person }) {
             ))}
           </div>
         </Step>
-        {freeSpots > 0 && (
+        {freeSpots > 0 && !closed && (
           <Step icon={<UserPlus size={16} />} title={`You have ${freeSpots} free ${freeSpots === 1 ? "spot" : "spots"} under you`}>
             Invite someone you know: they start right under you, and people under you can endorse you.
           </Step>
         )}
         {me.recDagVotes.length === 0 && (
           <Step icon={<Sparkles size={16} />} title="Nobody endorses you yet">
-            Endorsements come from people below you in your part of the tree. Inviting people is
-            the quickest way to get them.
+            Endorsements come from people below you in your part of the tree.
+            {!closed && " Inviting people is the quickest way to get them."}
           </Step>
         )}
       </ul>
@@ -308,7 +305,11 @@ function ReputationSources(props: { me: Person }) {
   const sources = useMemo(() => (graph ? endorsementsIn(graph, props.me) : []), [graph, props.me]);
   if (!graph) return null;
   const total = rep(props.me);
-  const parts = [{ label: "Everyone starts with", value: BASE_REPUTATION }, ...sources.map((s) => ({ label: s.from.name, value: s.adds }))];
+  // keyed by id: names aren't unique
+  const parts = [
+    { key: "base", label: "Everyone starts with", value: BASE_REPUTATION },
+    ...sources.map((s) => ({ key: s.from.id, label: s.from.name, value: s.adds })),
+  ];
   return (
     <Card data-tour="sources">
       <CardTitle hint="Each endorsement adds a share of the endorser's reputation, split between everyone they endorse.">
@@ -317,7 +318,7 @@ function ReputationSources(props: { me: Person }) {
       <div className="mb-3 flex h-2.5 overflow-hidden rounded-full bg-slate-100">
         {parts.map((part, i) => (
           <div
-            key={part.label}
+            key={part.key}
             className={cx(i === 0 ? "bg-slate-300" : i % 2 ? "bg-indigo-500" : "bg-indigo-400", "border-r border-white last:border-0")}
             style={{ width: `${(part.value / Math.max(total, 0.01)) * 100}%` }}
             title={`${part.label}: +${formatRep(part.value)}`}
@@ -414,7 +415,13 @@ function JoinOptions() {
           {empty
             ? canStart
               ? "Nobody's here yet. Start the tree: you'll be at the top, and everyone you invite joins below you."
-              : `Nobody's here yet. ${community.founder?.name || "Its founder"} starts the tree; then you can join.`
+              : `Nobody's here yet. ${community.founder?.name || "Its founder"} starts the tree; ${
+                  community.joinPolicy === "open"
+                    ? "then you can join."
+                    : community.joinPolicy === "invite"
+                      ? "then you can join with an invite from a member."
+                      : "it isn't taking new members."
+                }`
             : inviteOnly
               ? "Joining is by invite: ask someone in the community for an invite link. You'll start right under them."
               : "The best way in is an invite link from someone you know: you start right under them, next to people who can vouch for you."}

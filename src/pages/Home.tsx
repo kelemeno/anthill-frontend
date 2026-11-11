@@ -3,7 +3,7 @@
 import { ArrowRight, Lock, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { type Community, DEMO_COMMUNITY, fetchGraph, type Graph } from "../api";
+import { ApiError, type Community, DEMO_COMMUNITY, fetchGraph, type Graph, retryDelay } from "../api";
 import { readCache, writeCache } from "../cache";
 import { CommunityMark } from "../components/CommunitySwitcher";
 import { CardGridSkeleton, GhostTree } from "../components/Skeletons";
@@ -12,23 +12,46 @@ import { useApp } from "../state";
 import { AppLink, Badge, Button, Card, communityPath, Empty } from "../ui";
 import { HowItWorks, TopOfTree } from "./Landing";
 
-// The demo's tree for the front page, loaded in the background.
+// The demo's tree for the front page, loaded in the background (and asked
+// for again while the server starts, or can't be reached).
 function useDemoTree() {
   const key = `graph.${DEMO_COMMUNITY}`;
   const [graph, setGraph] = useState<Graph | undefined>(() => readCache(key));
   useEffect(() => {
-    fetchGraph(DEMO_COMMUNITY).then((g) => {
-      writeCache(key, g);
-      setGraph(g);
-    }, () => {});
+    let attempt = 0;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let gone = false;
+    const load = () =>
+      fetchGraph(DEMO_COMMUNITY).then(
+        (g) => {
+          if (gone) return;
+          writeCache(key, g);
+          setGraph(g);
+        },
+        (e: Error) => {
+          // (a starting server answers 503)
+          if (gone || (e instanceof ApiError && e.status < 500)) return;
+          retry = setTimeout(load, retryDelay(attempt++));
+        },
+      );
+    load();
+    return () => {
+      gone = true;
+      clearTimeout(retry);
+    };
   }, [key]);
   return graph;
 }
 
 export function HomePage() {
-  const { session, communities, createCommunity, openAuth } = useApp();
+  const { session, communities, communitiesFresh, communitiesError, createCommunity, openAuth, reload } = useApp();
+  // without the server's answer, say why instead of loading for ever (or
+  // showing the device's copy as if it were current)
+  const failed = communitiesError && !communitiesFresh ? { message: communitiesError, retry: reload } : undefined;
   const demo = useDemoTree();
   const yours = communities?.filter((c) => c.you !== null) ?? [];
+  // the device's copy leaves out private communities: it can't say you're in none
+  const yoursShown = communitiesFresh || yours.length > 0 ? yours : undefined;
   const others = communities?.filter((c) => c.you === null) ?? [];
 
   if (!session) {
@@ -78,7 +101,7 @@ export function HomePage() {
           </Card>
         </section>
         <HowItWorks />
-        <CommunityGrid title="Public communities" list={communities} />
+        <CommunityGrid title="Public communities" list={communities} failed={failed} />
       </div>
     );
   }
@@ -96,7 +119,7 @@ export function HomePage() {
           <Plus size={15} /> Start a community
         </Button>
       </div>
-      {communities && yours.length === 0 ? (
+      {communitiesFresh && yours.length === 0 ? (
         <Card>
           <Empty>
             You're not in any community yet. Join a public one below, open an invite link
@@ -104,25 +127,46 @@ export function HomePage() {
           </Empty>
         </Card>
       ) : (
-        <CommunityGrid list={communities && yours} />
+        <CommunityGrid list={yoursShown} failed={failed} />
       )}
       {others.length > 0 && <CommunityGrid title="Discover" list={others} />}
     </div>
   );
 }
 
-function CommunityGrid(props: { title?: string; list: Community[] | undefined }) {
+function CommunityGrid(props: {
+  title?: string;
+  list: Community[] | undefined;
+  failed?: { message: string; retry: () => void };
+}) {
   return (
     <section>
       {props.title && <h2 className="mb-3 text-[15px] font-semibold text-slate-900">{props.title}</h2>}
-      {props.list === undefined ? (
+      {props.list === undefined && props.failed ? (
+        <Card>
+          <p className="text-sm text-slate-600">Couldn't load the communities: {props.failed.message}</p>
+          <Button size="sm" className="mt-3" onClick={props.failed.retry}>
+            Try again
+          </Button>
+        </Card>
+      ) : props.list === undefined ? (
         <CardGridSkeleton />
       ) : (
-        <div className="fade-in grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {props.list.map((c) => (
-            <CommunityCard key={c.id} community={c} />
-          ))}
-        </div>
+        <>
+          <div className="fade-in grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {props.list.map((c) => (
+              <CommunityCard key={c.id} community={c} />
+            ))}
+          </div>
+          {props.failed && (
+            <p className="mt-3 text-sm text-slate-500">
+              Couldn't refresh the communities: {props.failed.message}{" · "}
+              <button type="button" onClick={props.failed.retry} className="font-medium text-indigo-600 hover:underline">
+                Try again
+              </button>
+            </p>
+          )}
+        </>
       )}
     </section>
   );

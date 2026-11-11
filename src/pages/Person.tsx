@@ -12,6 +12,7 @@ import {
   formatRep,
   level,
   parentOf,
+  person,
   rankOf,
   relation,
   rep,
@@ -43,7 +44,8 @@ export function PersonPage() {
       </div>
     );
   }
-  const them = graph.nodes[id.toLowerCase()];
+  // (never the sentinel above the root)
+  const them = person(graph, id.toLowerCase());
   if (!them) {
     return (
       <Card>
@@ -125,7 +127,7 @@ export function PersonPage() {
               >
                 What you can do
               </CardTitle>
-              <PersonActions them={them} />
+              <PersonActions key={them.id} them={them} />
             </Card>
           )}
           <Card>

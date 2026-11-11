@@ -60,9 +60,26 @@ export function ranked(graph: Graph): Person[] {
   });
 }
 
+// Ties share a rank, as on the server: 1 + how many have strictly more
+// reputation. 0 for someone not in the tree.
 export function rankOf(graph: Graph, id: string): { rank: number; of: number } {
+  const list = members(graph);
+  const me = person(graph, id);
+  if (!me) return { rank: 0, of: list.length };
+  const mine = BigInt(me.currentRep);
+  return { rank: 1 + list.filter((p) => BigInt(p.currentRep) > mine).length, of: list.length };
+}
+
+// Everyone by reputation with their rank (ties share one, like rankOf).
+export function rankedWithRank(graph: Graph): { p: Person; rank: number }[] {
   const list = ranked(graph);
-  return { rank: list.findIndex((p) => p.id === id) + 1, of: list.length };
+  const out: { p: Person; rank: number }[] = [];
+  list.forEach((p, i) => {
+    const prev = out[i - 1];
+    const tied = prev && BigInt(prev.p.currentRep) === BigInt(p.currentRep);
+    out.push({ p, rank: tied ? prev.rank : i + 1 });
+  });
+  return out;
 }
 
 // The tree level, counting the root as level 1.
@@ -134,9 +151,10 @@ export function colorOf(id: string): string {
   return `hsl(${(h >>> 0) % 360} 60% 52%)`;
 }
 
+// (by code point, so a name starting with an emoji keeps it whole)
 export function initials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const parts = name.trim().split(/\s+/).filter(Boolean).map((w) => Array.from(w));
   if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).join("").toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }

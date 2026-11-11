@@ -1,7 +1,7 @@
 // The replay: a community's history step by step. Each step is the whole tree
 // right after one action; this turns it into a graph the tree view can draw
 // and says in words what happened.
-import type { Graph, HistoryStep, Person } from "./api";
+import type { Graph, HistoryNode, HistoryStep, Person } from "./api";
 
 const SENTINEL = "0x0000000000000000000000000000000000000001";
 
@@ -27,6 +27,37 @@ export function graphAt(step: HistoryStep, live: Graph): Graph {
   }
   const root = step.nodes.find((n) => n.sentTreeVote === SENTINEL) ?? step.nodes.find((n) => n.depth === 0);
   return { ...live, version: step.index, rootId: root?.id ?? "", nodes };
+}
+
+// The history holds the whole tree for every step, though each step changes
+// only a few people. Share whoever didn't change with the step before, so a
+// long history keeps one copy of each version of a person instead of one per
+// step.
+export function compact(steps: HistoryStep[]): HistoryStep[] {
+  let before = new Map<string, HistoryNode>();
+  return steps.map((step) => {
+    const now = new Map<string, HistoryNode>();
+    const nodes = step.nodes.map((n) => {
+      const old = before.get(n.id);
+      const kept = old && sameNode(old, n) ? old : n;
+      now.set(n.id, kept);
+      return kept;
+    });
+    before = now;
+    return { ...step, nodes };
+  });
+}
+
+function sameNode(a: HistoryNode, b: HistoryNode): boolean {
+  const same = (x: string[], y: string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
+  return (
+    a.name === b.name &&
+    a.currentRep === b.currentRep &&
+    a.depth === b.depth &&
+    a.sentTreeVote === b.sentTreeVote &&
+    same(a.recTreeVotes, b.recTreeVotes) &&
+    same(a.dagVotes, b.dagVotes)
+  );
 }
 
 // What happened in `step`, in words. `before` is the step before it (for

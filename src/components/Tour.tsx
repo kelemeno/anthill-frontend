@@ -42,6 +42,13 @@ function rectOf(name: string | undefined): Rect | null {
   return { top, left: r.left - PAD, width: r.width + 2 * PAD, height: Math.max(bottom - top, 0) };
 }
 
+// The page a step shows, keeping only ?as= (preview): replay, focus and
+// reach belong to the page they were set on.
+function destination(path: string): { pathname: string; search: string } {
+  const as = new URLSearchParams(window.location.search).get("as");
+  return { pathname: path, search: as ? `?${new URLSearchParams({ as })}` : "" };
+}
+
 export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onClose: () => void }) {
   const { steps, navigate, onClose } = props;
   const [index, setIndex] = useState(0);
@@ -49,7 +56,15 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
   const [cardHeight, setCardHeight] = useState(220);
   const cardRef = useRef<HTMLDivElement>(null);
   const direction = useRef(1);
-  const step = steps[index];
+  // the steps can change under the tour (signing out, leaving, preview
+  // ending), so stay within them
+  const at = Math.min(index, steps.length - 1);
+  const step = steps[at] as TourStep | undefined;
+
+  useEffect(() => {
+    if (steps.length === 0) onClose();
+    else if (index >= steps.length) setIndex(steps.length - 1);
+  }, [index, steps.length, onClose]);
 
   // Read through refs so this runs only when the step changes (not on every
   // re-render of the app, which would navigate in a loop).
@@ -57,21 +72,23 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
   latest.current = { steps, navigate, onClose };
 
   // switch page, scroll the target into view, skip missing optional steps
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the step's identity is its index, title and page
   useEffect(() => {
     const { steps, navigate, onClose } = latest.current;
-    const step = steps[index];
+    const step = steps[at];
+    if (!step) return;
     const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     const here = window.location.pathname.replace(/\/$/, "") || "/";
-    if (step.path && here !== (base + step.path).replace(/\/$/, "")) {
-      // keep ?as= (preview) when switching pages
-      navigate({ pathname: step.path, search: window.location.search });
+    if (step.path) {
+      const to = destination(step.path);
+      if (here !== (base + step.path).replace(/\/$/, "") || window.location.search !== to.search) navigate(to);
     }
     const scroll = setTimeout(() => {
       visible(step.target)?.scrollIntoView({ block: "center", behavior: "smooth" });
     }, 150);
     const skip = setTimeout(() => {
       if (step.optional && !rectOf(step.target)) {
-        const next = index + direction.current;
+        const next = at + direction.current;
         if (next >= 0 && next < steps.length) setIndex(next);
         else onClose();
       }
@@ -80,10 +97,10 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
       clearTimeout(scroll);
       clearTimeout(skip);
     };
-  }, [index]);
+  }, [at, step?.title, step?.path]);
 
   useEffect(() => {
-    const update = () => setRect(rectOf(step.target));
+    const update = () => setRect(rectOf(step?.target));
     update();
     const timer = setInterval(update, 120);
     window.addEventListener("resize", update);
@@ -100,12 +117,12 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
   const go = useCallback(
     (delta: number) => {
       direction.current = delta;
-      const next = index + delta;
+      const next = at + delta;
       if (next < 0) return;
       if (next >= steps.length) onClose();
       else setIndex(next);
     },
-    [index, steps.length, onClose],
+    [at, steps.length, onClose],
   );
 
   useEffect(() => {
@@ -118,6 +135,7 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
     return () => window.removeEventListener("keydown", onKey);
   }, [go, onClose]);
 
+  if (!step) return null;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const width = Math.min(360, vw - 2 * MARGIN);
@@ -154,16 +172,16 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
           <X size={16} />
         </button>
         <p className="text-[12px] font-semibold text-indigo-600">
-          {index + 1} of {steps.length}
+          {at + 1} of {steps.length}
         </p>
         <h2 className="mt-1 pr-6 text-[16px] font-semibold text-slate-900">{step.title}</h2>
         <div className="mt-1.5 text-sm leading-relaxed text-slate-600">{step.body}</div>
         <div className="mt-4 flex justify-between gap-2">
-          <Button size="sm" variant="ghost" disabled={index === 0} onClick={() => go(-1)}>
+          <Button size="sm" variant="ghost" disabled={at === 0} onClick={() => go(-1)}>
             Back
           </Button>
           <Button size="sm" variant="primary" onClick={() => go(1)}>
-            {index === steps.length - 1 ? "Finish" : "Next"}
+            {at === steps.length - 1 ? "Finish" : "Next"}
           </Button>
         </div>
       </div>

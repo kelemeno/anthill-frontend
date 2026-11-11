@@ -313,15 +313,36 @@ export function MenuItem(props: { icon?: ReactNode; children: ReactNode; onClick
   );
 }
 
+// For a clickable shape that isn't a link or button (an svg <g>): Enter, or
+// Space, does what a click does.
+export function opensOnKey(e: { key: string; preventDefault: () => void }, open: () => void) {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  e.preventDefault();
+  open();
+}
+
+// Copies text, saying whether it worked (the clipboard can be denied, or
+// missing outside https).
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const COPY_FAILED = "Couldn't copy: select it and copy it yourself.";
+
 // The recovery code, shown once after creating or recovering an account.
 export function RecoveryCodeModal(props: { code: string; onDone: () => void }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean>();
   return (
     <Modal
       title="Save your recovery code"
       footer={
         <>
-          <Button onClick={() => navigator.clipboard.writeText(props.code).then(() => setCopied(true))}>
+          <Button onClick={async () => setCopied(await copyText(props.code))}>
             {copied ? "Copied" : "Copy"}
           </Button>
           <Button variant="primary" onClick={props.onDone}>
@@ -337,6 +358,7 @@ export function RecoveryCodeModal(props: { code: string; onDone: () => void }) {
       <code className="mt-4 block rounded-xl bg-slate-100 px-4 py-3 text-center font-mono text-base tracking-wider text-slate-900 select-all">
         {props.code}
       </code>
+      {copied === false && <p className="mt-2 text-[13px] text-red-600">{COPY_FAILED}</p>}
     </Modal>
   );
 }

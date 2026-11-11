@@ -11,10 +11,20 @@ import {
   fetchCommunities,
   fetchGraph,
   fetchPolls,
+  loadSession,
+  newRecoveryCode,
   saveProfile,
+  saveSession,
   slugify,
   votePoll,
+  whenSessionRejected,
 } from "./api";
+
+// the browser's passkey sheet, answered at once
+vi.mock("@simplewebauthn/browser", () => ({
+  startAuthentication: vi.fn(async () => ({ id: "cred" })),
+  startRegistration: vi.fn(async () => ({ id: "cred" })),
+}));
 
 const session = { token: "tok", user: { id: "0xaa", name: "Ada" } };
 const fetchMock = vi.fn();
@@ -103,5 +113,60 @@ describe("api", () => {
     respond({ profile: {} });
     await saveProfile(session, "hi", "https://example.com");
     expect(last().body).toEqual({ bio: "hi", link: "https://example.com" });
+  });
+
+  it("sends a body type only with a body, so anonymous reads need no CORS preflight", async () => {
+    respond({ nodes: {} });
+    await fetchGraph("commons");
+    expect(fetchMock.mock.calls.at(-1)![1].headers).toEqual({});
+    respond({ ok: true });
+    await act(session, "club", { fn: "leaveTree", args: {} });
+    expect(fetchMock.mock.calls.at(-1)![1].headers).toMatchObject({ "Content-Type": "application/json" });
+  });
+
+  it("never keeps the recovery code with the session", () => {
+    saveSession({ ...session, recoveryCode: "AAAA-BBBB" } as typeof session);
+    expect(localStorage.getItem("anthill.session")).not.toContain("AAAA");
+    // and cleans up what older versions kept
+    localStorage.setItem("anthill.session", JSON.stringify({ ...session, recoveryCode: "AAAA-BBBB" }));
+    expect(loadSession()).toEqual(session);
+    expect(localStorage.getItem("anthill.session")).not.toContain("AAAA");
+  });
+
+  it("reports a rejected session token, and only that", async () => {
+    const rejected = vi.fn();
+    whenSessionRejected(rejected);
+    respond({ error: "passkey not verified" }, 401);
+    await expect(act(session, "club", { fn: "leaveTree", args: {} })).rejects.toThrow();
+    expect(rejected).not.toHaveBeenCalled();
+    respond({ error: "session expired" }, 401);
+    await expect(act(session, "club", { fn: "leaveTree", args: {} })).rejects.toThrow();
+    expect(rejected).toHaveBeenCalledWith("tok");
+    whenSessionRejected(undefined);
+  });
+
+  it("signs in again when an account change needs a recent sign-in, then retries", async () => {
+    const replies = (...data: [unknown, number][]) => {
+      for (const [body, status] of data) {
+        fetchMock.mockImplementationOnce(async () => new Response(JSON.stringify(body), { status }));
+      }
+    };
+    const reauth = [{ error: "Please sign in again first, to confirm it's you.", code: "reauth" }, 401] as [unknown, number];
+    const kept = vi.fn();
+    replies(
+      reauth,
+      [{ flowId: "f", options: {} }, 200],
+      [{ token: "tok2", user: session.user }, 200],
+      [{ recoveryCode: "CODE" }, 200],
+    );
+    await expect(newRecoveryCode(session, kept)).resolves.toBe("CODE");
+    expect(kept).toHaveBeenCalledWith({ token: "tok2", user: session.user });
+    expect(last()).toMatchObject({ url: expect.stringMatching(/auth\/recovery-code$/), auth: "Bearer tok2" });
+
+    // a passkey of another account doesn't count
+    kept.mockReset();
+    replies(reauth, [{ flowId: "f", options: {} }, 200], [{ token: "tok3", user: { id: "0xbb", name: "Bo" } }, 200]);
+    await expect(newRecoveryCode(session, kept)).rejects.toThrow(/another account/);
+    expect(kept).not.toHaveBeenCalled();
   });
 });

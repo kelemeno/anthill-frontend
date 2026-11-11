@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { fetchReach } from "../api";
-import { formatRep, level, ranked, relation, rep } from "../model";
+import { formatRep, level, rankedWithRank, relation, rep } from "../model";
 import { useApp } from "../state";
 import { RowsSkeleton } from "../components/Skeletons";
 import { AppLink, Avatar, Badge, Card, cx, Empty } from "../ui";
@@ -21,10 +21,9 @@ export function PeoplePage() {
     fetchReach(cid, viewer.id, session).then((ids) => setReach(new Set(ids)), () => {});
   }, [filter, viewer, graph?.version, cid, session]);
 
-  const all = graph ? ranked(graph) : [];
+  const all = graph ? rankedWithRank(graph) : [];
   const q = query.trim().toLowerCase();
   const shown = all
-    .map((p, i) => ({ p, rank: i + 1 }))
     .filter(({ p }) => !q || p.name.toLowerCase().includes(q))
     .filter(({ p }) =>
       filter === "free" ? p.recTreeVotes.length < 2 : filter === "reach" ? (reach?.has(p.id) ?? false) : true,
@@ -47,6 +46,7 @@ export function PeoplePage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name…"
+          aria-label="Search people by name"
           className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
         />
         <div className="flex rounded-xl bg-slate-100 p-1">

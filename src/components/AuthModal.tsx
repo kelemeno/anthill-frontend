@@ -1,7 +1,7 @@
 // Signing in: with a passkey, by creating an account, or by recovering one
 // with the recovery code. All three live in one dialog.
 import { KeyRound } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { createAccount, isCancel, type Session, recoverAccount, signIn } from "../api";
 import { Button, Field, Modal } from "../ui";
@@ -10,6 +10,8 @@ export type AuthMode = "signin" | "create" | "recover";
 
 export function AuthModal(props: {
   mode: AuthMode;
+  // why they're asked to sign in, if it's for something (shown when creating)
+  intro?: string;
   onClose: () => void;
   // the recovery code is set for new and recovered accounts
   onSession: (session: Session, recoveryCode?: string) => void;
@@ -18,8 +20,12 @@ export function AuthModal(props: {
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // one passkey sheet at a time: a second one (Enter pressed twice) aborts the first
+  const inFlight = useRef(false);
 
   const run = async (work: () => Promise<void>) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError("");
     try {
@@ -27,6 +33,7 @@ export function AuthModal(props: {
     } catch (e) {
       if (!isCancel(e)) setError((e as Error).message);
     } finally {
+      inFlight.current = false;
       setBusy(false);
     }
   };
@@ -59,6 +66,7 @@ export function AuthModal(props: {
           </>
         }
       >
+        {props.intro && <p className="mb-2 font-medium text-slate-900">{props.intro}</p>}
         <p>
           You sign in with a passkey: Face ID, Touch ID or your phone. No password, no wallet.
           Got an invite link? Open it instead, so you start next to the person who sent it.

@@ -55,6 +55,9 @@ export type CommunitySettings = Pick<Community, "name" | "description" | "visibi
 
 export type Graph = {
   version: number;
+  // the websocket says "update:<updateKey>" after changes here (private
+  // communities get a key that isn't their id)
+  updateKey?: string;
   rootId: string;
   maxRelRootDepth: number;
   community: Community;
@@ -64,26 +67,49 @@ export type Graph = {
 export type Session = { token: string; user: { id: string; name: string } };
 
 // A failed request; status 404 means the community doesn't exist or is private.
+// `code` is the server's, when it gives one ("reauth": see withFreshSignIn).
 export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: string,
   ) {
     super(message);
   }
 }
 
+// The server is still starting (it answers 503 until its data is loaded):
+// worth asking again shortly, and no sign that anything is gone.
+export const isStarting = (e: unknown) => e instanceof ApiError && e.status === 503;
+
+// asking a starting server again: 1 s, 2 s, 4 s, ... up to 15 s
+export const retryDelay = (attempt: number) => Math.min(15_000, 1000 * 2 ** attempt);
+
+// What the server says when it no longer accepts a session token.
+const SESSION_REJECTED = /^(session expired|bad session token|unknown user|not signed in)$/i;
+let onSessionRejected: ((token: string) => void) | undefined;
+
+// Called with the token whenever the server rejects it, from any request.
+export function whenSessionRejected(handler: ((token: string) => void) | undefined) {
+  onSessionRejected = handler;
+}
+
 async function request<T>(path: string, body?: unknown, token?: string): Promise<T> {
   const res = await fetch(backendUrl + path, {
     method: body === undefined ? "GET" : "POST",
+    // a GET without a body or a token is a simple request: no CORS preflight
     headers: {
-      "Content-Type": "application/json",
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError(data.error ?? `${path} failed (${res.status})`, res.status);
+  if (!res.ok) {
+    const message = data.error ?? `${path} failed (${res.status})`;
+    if (res.status === 401 && token && SESSION_REJECTED.test(message)) onSessionRejected?.(token);
+    throw new ApiError(message, res.status, typeof data.code === "string" ? data.code : undefined);
+  }
   return data as T;
 }
 
@@ -158,10 +184,19 @@ export function slugify(name: string): string {
 
 const SESSION_KEY = "anthill.session";
 
+// Just the token and the user: a new account's recovery code (NewSession) is
+// shown once and never kept.
+export const sessionOf = (s: Session): Session => ({ token: s.token, user: { id: s.user.id, name: s.user.name } });
+
 export function loadSession(): Session | undefined {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as Session) : undefined;
+    if (!raw) return undefined;
+    const stored = JSON.parse(raw) as Session;
+    const session = sessionOf(stored);
+    // older versions kept the recovery code too
+    if ("recoveryCode" in stored) saveSession(session);
+    return session;
   } catch {
     return undefined;
   }
@@ -169,7 +204,7 @@ export function loadSession(): Session | undefined {
 
 export function saveSession(session: Session | undefined) {
   try {
-    if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(sessionOf(session)));
     else localStorage.removeItem(SESSION_KEY);
   } catch {}
 }
@@ -205,22 +240,40 @@ export async function recoverAccount(code: string): Promise<NewSession> {
   return request<NewSession>("auth/recover/verify", { flowId, response });
 }
 
-// Another passkey (this device) for the signed-in account.
-export async function addPasskey(session: Session): Promise<void> {
-  const { flowId, options } = await request<{ flowId: string; options: any }>(
-    "auth/passkeys/options",
-    {},
-    session.token,
-  );
-  const response = await startRegistration({ optionsJSON: options });
-  await request("auth/passkeys/verify", { flowId, response }, session.token);
+// Account changes need a recent sign-in. When the server asks for one
+// ("reauth"), sign in again with a passkey and retry once with that session,
+// which `onSession` gets to keep.
+async function withFreshSignIn<T>(
+  session: Session,
+  onSession: (s: Session) => void,
+  run: (s: Session) => Promise<T>,
+): Promise<T> {
+  try {
+    return await run(session);
+  } catch (e) {
+    if (!(e instanceof ApiError && e.code === "reauth")) throw e;
+    const fresh = await signIn();
+    if (fresh.user.id !== session.user.id) {
+      throw new ApiError("That passkey is for another account: sign in with one of this account's.", 401);
+    }
+    onSession(fresh);
+    return run(fresh);
+  }
 }
 
-export async function newRecoveryCode(session: Session): Promise<string> {
-  const { recoveryCode } = await request<{ recoveryCode: string }>(
-    "auth/recovery-code",
-    {},
-    session.token,
+// Another passkey (this device) for the signed-in account.
+export async function addPasskey(session: Session, onSession: (s: Session) => void): Promise<void> {
+  const { flowId, options, token } = await withFreshSignIn(session, onSession, async (s) => ({
+    ...(await request<{ flowId: string; options: any }>("auth/passkeys/options", {}, s.token)),
+    token: s.token,
+  }));
+  const response = await startRegistration({ optionsJSON: options });
+  await request("auth/passkeys/verify", { flowId, response }, token);
+}
+
+export async function newRecoveryCode(session: Session, onSession: (s: Session) => void): Promise<string> {
+  const { recoveryCode } = await withFreshSignIn(session, onSession, (s) =>
+    request<{ recoveryCode: string }>("auth/recovery-code", {}, s.token),
   );
   return recoveryCode;
 }
@@ -296,6 +349,9 @@ export type Poll = {
   closedAt?: string;
   tally: { weight: string; voters: number }[];
   myVote?: number;
+  // whether the viewer may close it (its creator, or once they've left the
+  // founder); missing from older backends
+  canClose?: boolean;
 };
 
 export const fetchPolls = (cid: string, session?: Session) =>

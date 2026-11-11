@@ -3,7 +3,7 @@
 // plus the profile and invite dialogs it opens. The account and profile are
 // the same in every community.
 import { CircleHelp, KeyRound, Link2, LogOut, RefreshCw, User, UserPen } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   act,
@@ -17,7 +17,7 @@ import {
   type Session,
 } from "../api";
 import { useApp } from "../state";
-import { Avatar, Button, Field, Menu, MenuItem, Modal, useAppNavigate } from "../ui";
+import { Avatar, Button, COPY_FAILED, copyText, Field, Menu, MenuItem, Modal, useAppNavigate } from "../ui";
 
 export function AccountMenu(props: { session: Session }) {
   const { graph, cid, setSession, notify, showRecoveryCode, startTour } = useApp();
@@ -70,7 +70,7 @@ export function AccountMenu(props: { session: Session }) {
                 icon={<KeyRound size={16} />}
                 onClick={safely(async () => {
                   close();
-                  await addPasskey(props.session);
+                  await addPasskey(props.session, setSession);
                   notify("Passkey added: you can sign in with it too.");
                 })}
               >
@@ -81,7 +81,7 @@ export function AccountMenu(props: { session: Session }) {
                 onClick={safely(async () => {
                   close();
                   if (confirm("Make a new recovery code? Your current one stops working.")) {
-                    showRecoveryCode(await newRecoveryCode(props.session));
+                    showRecoveryCode(await newRecoveryCode(props.session, setSession));
                   }
                 })}
               >
@@ -116,21 +116,33 @@ export function InviteModal(props: { session: Session; cid: string; communityNam
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  // each click would make another invite, and they count against the limit
+  const [busy, setBusy] = useState(false);
+  const create = () => {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    createInviteLink(props.session, props.cid)
+      .then(setLink, (e: Error) => setError(e.message))
+      .finally(() => setBusy(false));
+  };
+  const copy = async () => {
+    const ok = await copyText(link);
+    setCopied(ok);
+    setError(ok ? "" : COPY_FAILED);
+  };
   return (
     <Modal
       title="Invite someone"
       onClose={props.onClose}
       footer={
         link ? (
-          <Button variant="primary" onClick={() => navigator.clipboard.writeText(link).then(() => setCopied(true))}>
+          <Button variant="primary" onClick={copy}>
             <Link2 size={15} /> {copied ? "Copied" : "Copy link"}
           </Button>
         ) : (
-          <Button
-            variant="primary"
-            onClick={() => createInviteLink(props.session, props.cid).then(setLink, (e: Error) => setError(e.message))}
-          >
-            Create invite link
+          <Button variant="primary" disabled={busy} onClick={create}>
+            {busy ? "Creating…" : "Create invite link"}
           </Button>
         )
       }
@@ -154,6 +166,7 @@ export function InviteModal(props: { session: Session; cid: string; communityNam
 
 function ProfileModal(props: { session: Session; onClose: () => void }) {
   const { graph, cid, notify, reload, setSession } = useApp();
+  const navigate = useAppNavigate();
   const me = graph?.nodes[props.session.user.id];
   const [name, setName] = useState(props.session.user.name);
   const [bio, setBio] = useState("");
@@ -161,17 +174,28 @@ function ProfileModal(props: { session: Session; onClose: () => void }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // what they've typed isn't replaced by a late answer
+  const edited = useRef(false);
+  const edit = (set: (value: string) => void) => (value: string) => {
+    edited.current = true;
+    set(value);
+  };
 
+  // once per account (a rename changes the session, not the token)
+  const token = props.session.token;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: token triggers it
   useEffect(() => {
     fetchProfile(props.session).then(
       (p) => {
-        setBio(p.bio);
-        setLink(p.link);
+        if (!edited.current) {
+          setBio(p.bio);
+          setLink(p.link);
+        }
         setLoaded(true);
       },
       (e: Error) => setError(e.message),
     );
-  }, [props.session]);
+  }, [token]);
 
   const save = async () => {
     setBusy(true);
@@ -195,12 +219,15 @@ function ProfileModal(props: { session: Session; onClose: () => void }) {
   const leave = async () => {
     if (!cid || !graph) return;
     const where = graph.community.name;
+    const isPrivate = graph.community.visibility === "private";
     if (!confirm(`Leave ${where}? Your endorsements there (given and received) are removed, and the people under you move up.`)) return;
     try {
       await act(props.session, cid, { fn: "leaveTree", args: {} });
       reload();
       notify(`You left ${where}.`);
       props.onClose();
+      // a private community isn't there for you any more
+      if (isPrivate) navigate("/", { global: true });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -223,8 +250,8 @@ function ProfileModal(props: { session: Session; onClose: () => void }) {
     >
       <p>Shown on your page and your card in every community you're in.</p>
       <Field label="Name" value={name} onChange={setName} maxLength={40} />
-      <Field label="About you" value={bio} onChange={setBio} maxLength={280} multiline hint={`${bio.length}/280`} />
-      <Field label="Link (optional)" value={link} onChange={setLink} placeholder="https://" maxLength={200} />
+      <Field label="About you" value={bio} onChange={edit(setBio)} maxLength={280} multiline hint={`${bio.length}/280`} />
+      <Field label="Link (optional)" value={link} onChange={edit(setLink)} placeholder="https://" maxLength={200} />
       {error && <p className="mt-2 text-[13px] text-red-600">{error}</p>}
       {me && graph && (
         <div className="mt-6 rounded-xl border border-red-100 bg-red-50/50 p-3">

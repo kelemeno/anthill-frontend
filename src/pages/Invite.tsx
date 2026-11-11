@@ -4,7 +4,7 @@ import { Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { act, type Community, createAccount, fetchInvite, isCancel, type Session, signIn } from "../api";
+import { act, type Community, createAccount, fetchInvite, isCancel, isStarting, type Session, signIn } from "../api";
 import { CommunityMark } from "../components/CommunitySwitcher";
 import { Skeleton } from "../components/Skeletons";
 import { useApp } from "../state";
@@ -22,7 +22,24 @@ export function InvitePage() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch when signing in (are you in it already?)
   useEffect(() => {
-    fetchInvite(code, session).then(setInvite, (e: Error) => setInvalid(e.message));
+    let live = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let attempt = 0;
+    const load = () =>
+      fetchInvite(code, session).then(
+        (found) => live && setInvite(found),
+        (e: Error) => {
+          if (!live) return;
+          // a starting server says nothing about the invite: ask again shortly
+          if (isStarting(e)) retry = setTimeout(load, Math.min(15_000, 1000 * 2 ** attempt++));
+          else setInvalid(e.message);
+        },
+      );
+    load();
+    return () => {
+      live = false;
+      clearTimeout(retry);
+    };
   }, [code, session?.token]);
 
   const home = invite ? communityPath(invite.community.id, "/") : "/";
@@ -141,8 +158,9 @@ export function InvitePage() {
             onClick={run(async () => {
               const s = await createAccount(name.trim());
               setSession(s);
-              await join(s, name.trim());
+              // the code exists only in this answer: show it even if joining fails
               showRecoveryCode(s.recoveryCode);
+              await join(s, name.trim());
             })}
           >
             Create passkey and join

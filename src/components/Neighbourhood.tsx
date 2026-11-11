@@ -3,7 +3,7 @@
 // them. Click anyone to open their page.
 import type { Graph, Person } from "../api";
 import { childrenOf, colorOf, initials, parentOf, siblingsOf } from "../model";
-import { useAppNavigate } from "../ui";
+import { opensOnKey, useAppNavigate } from "../ui";
 
 const W = 300;
 const ROW = 74;
@@ -56,7 +56,8 @@ export function Neighbourhood(props: { graph: Graph; person: Person; viewerId?: 
   const placed = rows.flat();
 
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} className="w-full" role="img" aria-label="Neighbourhood in the tree">
+    // a group, not an image: the people in it are links
+    <svg viewBox={`0 0 ${W} ${height}`} className="w-full" role="group" aria-label="Neighbourhood in the tree">
       {edges.map(([a, b]) => (
         <path
           key={`${a.p.id}-${b.p.id}`}
@@ -73,6 +74,8 @@ export function Neighbourhood(props: { graph: Graph; person: Person; viewerId?: 
             key={p.id}
             className="cursor-pointer"
             onClick={() => open(p.id)}
+            onKeyDown={(e) => opensOnKey(e, () => open(p.id))}
+            tabIndex={0}
             role="link"
             aria-label={p.name}
           >

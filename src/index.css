@@ -58,3 +58,13 @@ body {
     opacity: 0;
   }
 }
+
+/* people in the tree diagrams, reached with the keyboard */
+svg g[tabindex]:focus {
+  outline: none;
+}
+svg g[tabindex]:focus-visible {
+  outline: 2px solid var(--color-indigo-500);
+  outline-offset: 3px;
+  border-radius: 9999px;
+}

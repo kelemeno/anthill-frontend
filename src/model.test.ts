@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Graph, Person } from "./api";
-import { colorOf, endorsementsIn, endorsementsOut, rankOf, relation, rep } from "./model";
+import { colorOf, endorsementsIn, endorsementsOut, initials, rankedWithRank, rankOf, relation, rep } from "./model";
 
 const E18 = 10n ** 18n;
 const r = (n: number) => (BigInt(Math.round(n * 100)) * E18 / 100n).toString();
@@ -74,6 +74,25 @@ describe("model", () => {
     expect(rankOf(graph, "a")).toEqual({ rank: 1, of: 5 });
     expect(rankOf(graph, "b").rank).toBe(2);
     expect(rep(graph.nodes.b)).toBe(2);
+    expect(rankOf(graph, "0x0000000000000000000000000000000000000001").rank).toBe(0);
+  });
+
+  it("gives ties the same rank, as the server does", () => {
+    // c, d and e all have 1: each is #3 (two people have more)
+    expect(["c", "d", "e"].map((id) => rankOf(graph, id).rank)).toEqual([3, 3, 3]);
+    expect(rankedWithRank(graph).map(({ p, rank }) => [p.id, rank])).toEqual([
+      ["a", 1],
+      ["b", 2],
+      ["c", 3],
+      ["d", 3],
+      ["e", 3],
+    ]);
+  });
+
+  it("takes initials by character, not UTF-16 unit", () => {
+    expect(initials("🐜 Ant")).toBe("🐜A");
+    expect(initials("🐜")).toBe("🐜");
+    expect(initials("ada lovelace")).toBe("AL");
   });
 
   it("describes how two people relate", () => {

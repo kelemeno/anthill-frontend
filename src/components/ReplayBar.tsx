@@ -3,12 +3,15 @@
 import { ChevronLeft, ChevronRight, Link2, Pause, Play, RotateCcw, X } from "lucide-react";
 import { useState } from "react";
 
-import { cx } from "../ui";
+import { copyText, cx } from "../ui";
 
 export const SPEEDS = [1, 2, 4];
 
 export function ReplayBar(props: {
   steps: number | undefined; // undefined while loading
+  // why the history couldn't be loaded, if it couldn't
+  error?: string;
+  onRetry: () => void;
   step: number;
   playing: boolean;
   speed: number;
@@ -20,7 +23,7 @@ export function ReplayBar(props: {
   onSpeed: (speed: number) => void;
   onClose: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<boolean>();
   const { steps, step } = props;
   const atEnd = steps !== undefined && step >= steps - 1;
   const iconButton =
@@ -32,16 +35,33 @@ export function ReplayBar(props: {
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-baseline justify-between gap-3 px-1">
-        <p className="min-w-0 truncate text-sm font-medium text-slate-900" aria-live="polite">
-          {steps === undefined ? "Loading the history…" : steps === 0 ? "Nothing has happened here yet." : props.caption}
+        {/* announced only while paused: at 4× it would be a step every 275 ms */}
+        <p className="min-w-0 truncate text-sm font-medium text-slate-900" aria-live={props.playing ? "off" : "polite"}>
+          {props.error ? (
+            <span className="text-red-600" title={props.error}>Couldn't load the history: {props.error}</span>
+          ) : steps === undefined ? (
+            "Loading the history…"
+          ) : steps === 0 ? (
+            "Nothing has happened here yet."
+          ) : (
+            props.caption
+          )}
         </p>
-        {steps !== undefined && steps > 0 && (
-          <span className="num shrink-0 text-[12px] text-slate-400">
-            {step + 1} / {steps}
-          </span>
+        {props.error ? (
+          <button type="button" onClick={props.onRetry} className="shrink-0 text-[13px] font-medium text-indigo-600 hover:underline">
+            Try again
+          </button>
+        ) : (
+          steps !== undefined &&
+          steps > 0 && (
+            <span className="num shrink-0 text-[12px] text-slate-400">
+              {step + 1} / {steps}
+            </span>
+          )
         )}
       </div>
-      <div className="mt-2 flex items-center gap-1">
+      {/* on phones the timeline gets a row of its own */}
+      <div className="mt-2 flex flex-wrap items-center gap-1">
         <button
           type="button"
           aria-label={props.playing ? "Pause" : atEnd ? "Play again" : "Play"}
@@ -66,22 +86,22 @@ export function ReplayBar(props: {
           value={step}
           disabled={!steps}
           onChange={(e) => props.onSeek(Number(e.target.value))}
-          className="mx-2 h-1.5 min-w-0 flex-1 cursor-pointer accent-indigo-600"
+          className="mx-2 h-1.5 min-w-0 flex-1 cursor-pointer accent-indigo-600 max-sm:order-last max-sm:mx-1 max-sm:my-2 max-sm:basis-full"
         />
         <button
           type="button"
           title="Speed"
           onClick={() => props.onSpeed(SPEEDS[(SPEEDS.indexOf(props.speed) + 1) % SPEEDS.length])}
-          className="num h-9 shrink-0 rounded-lg px-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-100"
+          className="num h-9 shrink-0 rounded-lg px-2 text-[13px] font-semibold text-slate-600 hover:bg-slate-100 max-sm:ml-auto"
         >
           {props.speed}×
         </button>
         <button
           type="button"
           aria-label="Copy a link to this replay"
-          title={copied ? "Link copied" : "Copy a link to this replay"}
-          onClick={() => navigator.clipboard.writeText(props.shareUrl).then(() => setCopied(true))}
-          className={cx(iconButton, copied && "text-emerald-600")}
+          title={copied ? "Link copied" : copied === false ? `Couldn't copy: ${props.shareUrl}` : "Copy a link to this replay"}
+          onClick={async () => setCopied(await copyText(props.shareUrl))}
+          className={cx(iconButton, copied && "text-emerald-600", copied === false && "text-red-600")}
         >
           <Link2 size={17} />
         </button>

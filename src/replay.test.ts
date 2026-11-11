@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Graph, HistoryNode, HistoryStep } from "./api";
-import { actors, caption, graphAt } from "./replay";
+import { actors, caption, compact, graphAt } from "./replay";
 
 const SENTINEL = "0x0000000000000000000000000000000000000001";
 const node = (id: string, name: string, parent: string, kids: string[] = [], dagVotes: string[] = []): HistoryNode => ({
@@ -46,6 +46,16 @@ describe("replay", () => {
     const climbed = step(2, "SwitchPositionWithParentEvent", "b", "", [node("b", "Bo", SENTINEL, ["a"]), node("a", "Ada", "b")]);
     expect(caption(climbed, endorsed)).toBe("Bo climbed above Ada");
     expect(caption(step(0, "joinTreeAsRoot", "a", "", [ada], "Ada"), undefined)).toBe("Ada started the tree");
+  });
+
+  it("shares unchanged people between steps", () => {
+    // as parsed from JSON: equal, but separate objects
+    const parsed = JSON.parse(JSON.stringify([joined, endorsed])) as HistoryStep[];
+    const [a, b] = compact(parsed);
+    expect(b.nodes[0]).toBe(a.nodes[0]); // Ada didn't change
+    expect(b.nodes[1]).not.toBe(a.nodes[1]); // Bo endorsed her
+    expect(b.nodes[1].dagVotes).toEqual(["a"]);
+    expect(compact(parsed)).toEqual(parsed);
   });
 
   it("highlights who acted and who it was aimed at", () => {

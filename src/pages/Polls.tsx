@@ -2,16 +2,18 @@
 // the people who chose it. Members create polls and vote (and can change their
 // vote while it's open); whoever asked can close it, freezing the result.
 import { Check, Lock, Plus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { closePoll, createPoll, fetchPolls, type Poll, votePoll } from "../api";
+import { closePoll, createPoll, fetchPolls, isStarting, type Poll, votePoll } from "../api";
+import { memory, viewerKey } from "../cache";
 import { formatRep, toNumber } from "../model";
 import { useApp } from "../state";
 import { Skeleton } from "../components/Skeletons";
 import { AppLink, Avatar, Badge, Button, Card, cx, Empty, Field, Modal } from "../ui";
 
-// the polls each community last showed, for coming back without a wait
-const shown = new Map<string, Poll[]>();
+// the polls each community last showed each viewer (their votes are in it),
+// for coming back without a wait
+const shown = memory<Poll[]>();
 
 function ago(iso: string): string {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -23,19 +25,27 @@ function ago(iso: string): string {
 
 export function PollsPage() {
   const { graph, cid = "", session, viewer, previewing, notify, openAuth } = useApp();
-  const [polls, setPolls] = useState<Poll[] | undefined>(() => shown.get(cid));
+  const key = `${viewerKey(session)}|${cid}`;
+  // the list is kept with whose it is, so another viewer's never shows
+  const [loaded, setLoaded] = useState<{ key: string; polls: Poll[] }>();
+  const polls = loaded?.key === key ? loaded.polls : shown.get(key);
   const [creating, setCreating] = useState(false);
   const isMember = session !== undefined && viewer !== undefined && !previewing;
 
+  // only the latest request's answer counts
+  const seq = useRef(0);
   const refresh = useCallback(() => {
+    const n = ++seq.current;
     fetchPolls(cid, session).then(
       (list) => {
-        shown.set(cid, list);
-        setPolls(list);
+        if (n !== seq.current) return;
+        shown.set(key, list);
+        setLoaded({ key, polls: list });
       },
-      (e: Error) => notify(e.message),
+      // a starting server is asked again at the next refresh
+      (e: Error) => n === seq.current && !isStarting(e) && notify(e.message),
     );
-  }, [cid, session, notify]);
+  }, [cid, session, key, notify]);
 
   // refresh on reputation changes, and every 15 s for others' votes
   // biome-ignore lint/correctness/useExhaustiveDependencies: graph.version triggers it
@@ -89,7 +99,7 @@ export function PollsPage() {
           key={p.id}
           poll={p}
           canVote={isMember}
-          canClose={isMember && p.by === session?.user.id}
+          canClose={session !== undefined && !previewing && (p.canClose ?? (isMember && p.by === session.user.id))}
           onVote={(i) => session && run(() => votePoll(session, cid, p.id, i))()}
           onClose={() =>
             session &&
