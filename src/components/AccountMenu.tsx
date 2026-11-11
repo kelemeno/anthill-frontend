@@ -61,7 +61,7 @@ export function AccountMenu(props: { session: Session }) {
               <MenuItem icon={<UserPen size={16} />} onClick={() => (close(), setDialog("profile"))}>
                 Edit profile
               </MenuItem>
-              {me && cid && (
+              {me && cid && graph?.community.joinPolicy !== "closed" && (
                 <MenuItem icon={<Link2 size={16} />} onClick={() => (close(), setDialog("invite"))}>
                   Invite someone here
                 </MenuItem>

@@ -31,7 +31,7 @@ export const DEFAULT_COMMUNITY = "commons";
 export const DEMO_COMMUNITY = "demo";
 
 export type Visibility = "public" | "private";
-export type JoinPolicy = "open" | "invite";
+export type JoinPolicy = "open" | "invite" | "closed";
 
 export type Community = {
   id: string;
@@ -39,7 +39,8 @@ export type Community = {
   description: string;
   // private: only members can see it, and joining needs an invite
   visibility: Visibility;
-  // open: anyone signed in can take a free spot; invite: invite links only
+  // open: anyone signed in can take a free spot; invite: invite links only;
+  // closed: nobody new (like the demo)
   joinPolicy: JoinPolicy;
   createdAt: string;
   founder: { id: string; name: string } | null;

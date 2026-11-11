@@ -30,7 +30,7 @@ export function YouPage() {
   if (viewer) return <Dashboard me={viewer} />;
   // signed in but not a member: how to join, unless only an invite will do
   // (then the community's front page, to look around)
-  const inviteOnly = graph.community.joinPolicy === "invite";
+  const inviteOnly = graph.community.joinPolicy !== "open";
   if (session && (!inviteOnly || members(graph).length === 0)) return <JoinOptions />;
   return <Landing />;
 }
@@ -98,7 +98,7 @@ function Dashboard(props: { me: Person }) {
               <Users size={15} /> See my spot in the tree
             </Button>
           </AppLink>
-          {session && !previewing && <InviteButton />}
+          {session && !previewing && graph.community.joinPolicy !== "closed" && <InviteButton />}
         </div>
       </Card>
 
@@ -384,7 +384,7 @@ function JoinOptions() {
   const [busy, setBusy] = useState(false);
   if (!graph || !session || !cid) return null;
   const { community } = graph;
-  const inviteOnly = community.joinPolicy === "invite";
+  const inviteOnly = community.joinPolicy !== "open";
   const empty = members(graph).length === 0;
   // an empty tree is started by its founder, or without one by anyone
   // (unless it's invite only)

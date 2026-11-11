@@ -4,7 +4,7 @@
 import { ArrowUpRight, Heart, Lock, Play, TrendingUp, UserPlus } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
-import { DEMO_COMMUNITY, type Graph } from "../api";
+import { DEFAULT_COMMUNITY, DEMO_COMMUNITY, type Graph } from "../api";
 import { colorOf, formatRep, initials, members, rep } from "../model";
 import { useApp } from "../state";
 import { GhostTree, Skeleton } from "../components/Skeletons";
@@ -28,7 +28,12 @@ export function Landing() {
             <>
               <p className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600">
                 {community.visibility === "private" && <Lock size={13} />}
-                An Anthill community · {community.joinPolicy === "open" ? "open to join" : "invite only"}
+                An Anthill community ·{" "}
+                {community.joinPolicy === "open"
+                  ? "open to join"
+                  : community.joinPolicy === "invite"
+                    ? "invite only"
+                    : "not taking new members"}
               </p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
                 {community.name}
@@ -47,7 +52,17 @@ export function Landing() {
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-2">
             {session ? (
-              <p className="mr-2 text-sm text-slate-600">Joining is by invite: ask a member for a link.</p>
+              community?.joinPolicy === "closed" ? (
+                <p className="mr-2 text-sm text-slate-600">
+                  It isn't taking new members.{" "}
+                  <AppLink to={communityPath(DEFAULT_COMMUNITY, "/")} global className="font-medium text-indigo-600 hover:underline">
+                    Join the Commons
+                  </AppLink>{" "}
+                  or start your own community.
+                </p>
+              ) : (
+                <p className="mr-2 text-sm text-slate-600">Joining is by invite: ask a member for a link.</p>
+              )
             ) : (
               <>
                 <Button variant="primary" onClick={() => openAuth("signin")}>

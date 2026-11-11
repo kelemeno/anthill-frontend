@@ -154,7 +154,7 @@ function CommunityCard(props: { community: Community }) {
               <span className="num text-[13px] text-slate-500">{formatRep(toNumber(c.you.reputation))} reputation</span>
             </>
           ) : (
-            <Badge>{c.joinPolicy === "open" ? "Open to join" : "Invite only"}</Badge>
+            <Badge>{c.joinPolicy === "open" ? "Open to join" : c.joinPolicy === "invite" ? "Invite only" : "Closed"}</Badge>
           )}
           {c.isFounder && <Badge tone="amber">Founder</Badge>}
         </div>

@@ -164,30 +164,31 @@ function SettingsFields(props: {
         </Choice>
         <Choice
           selected={settings.visibility === "private"}
-          onSelect={() => set({ visibility: "private", joinPolicy: "invite" })}
+          onSelect={() => set({ visibility: "private", joinPolicy: settings.joinPolicy === "closed" ? "closed" : "invite" })}
           icon={<Lock size={16} />}
           title="Private"
         >
           Only members can see it. People join with an invite link from a member.
         </Choice>
       </div>
-      {settings.visibility === "public" && (
-        <>
-          <p className="mt-4 mb-1 text-[13px] font-medium text-slate-700">Who can join</p>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Choice selected={settings.joinPolicy === "open"} onSelect={() => set({ joinPolicy: "open" })} title="Anyone">
-              Anyone signed in can take a free spot in the tree.
-            </Choice>
-            <Choice
-              selected={settings.joinPolicy === "invite"}
-              onSelect={() => set({ joinPolicy: "invite" })}
-              title="Invited people"
-            >
-              Joining needs an invite link from a member.
-            </Choice>
-          </div>
-        </>
-      )}
+      <p className="mt-4 mb-1 text-[13px] font-medium text-slate-700">Who can join</p>
+      <div className={cx("grid gap-2", settings.visibility === "public" ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+        {settings.visibility === "public" && (
+          <Choice selected={settings.joinPolicy === "open"} onSelect={() => set({ joinPolicy: "open" })} title="Anyone">
+            Anyone signed in can take a free spot in the tree.
+          </Choice>
+        )}
+        <Choice
+          selected={settings.joinPolicy === "invite"}
+          onSelect={() => set({ joinPolicy: "invite" })}
+          title="Invited people"
+        >
+          Joining needs an invite link from a member.
+        </Choice>
+        <Choice selected={settings.joinPolicy === "closed"} onSelect={() => set({ joinPolicy: "closed" })} title="Nobody new">
+          Closed for now: no joining, and invite links stop working.
+        </Choice>
+      </div>
     </>
   );
 }
