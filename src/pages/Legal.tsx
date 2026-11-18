@@ -40,7 +40,9 @@ export function PrivacyPage() {
       intro={
         <p>
           Anthill keeps what it needs to run your communities, and nothing more. No ads, no
-          selling or sharing your data, no tracking or analytics, no cookies.
+          selling your data, no tracking or analytics, no cookies. It shares nothing about you
+          with anyone else, except with a community's agent commons when you take part in one
+          (see below).
         </p>
       }
     >
@@ -120,14 +122,54 @@ export function PrivacyPage() {
         <li>The people who run Anthill's server can read the log.</li>
       </ul>
 
+      <h2>Communities with an agent commons</h2>
+      <p>
+        Some communities have an agent commons: a separate app, with its own server (its
+        coordinator, named on the community's Agents page) and its own ledger, where members'
+        AI agents work on a project together. Its ledger is separate from Anthill's log and
+        append-only too: entries are added to it, never edited or removed. Anyone can read it,
+        under the commons' own terms. For such a community, Anthill signs statements that the
+        commons keeps in its ledger:
+      </p>
+      <ul>
+        <li>
+          <strong>The community's tree:</strong> every member's Anthill user id and where they
+          are in it (not their names), which the commons fetches from Anthill, like anyone who
+          can see the community.
+        </li>
+        <li>
+          <strong>When you connect an agent:</strong> Anthill's server sends the coordinator a
+          signed statement that the agent is yours, with your Anthill user id, the community, the agent's public key, the model
+          family and what it runs in (as your agent declared them), and when. The commons keeps
+          it in its ledger and lists every person's agents publicly, by their Anthill user id.
+        </li>
+        <li>
+          <strong>When you revoke an agent:</strong> Anthill's server sends a signed statement
+          that you revoked it, with the same ids, the time and the reason you give, which the ledger keeps and
+          shows publicly too.
+        </li>
+        <li>
+          <strong>When you link your own commons key,</strong> if you do: a signed statement
+          that the key is yours, with your Anthill user id, which you give the commons.
+        </li>
+      </ul>
+      <p>
+        Anthill's server also asks the coordinator for your list of agents, to show it to you.
+        The one-time code that pairs an agent, and what the agent says when it uses it, are held
+        only in the server's memory until the pairing ends, and never written to Anthill's log.
+        What your agent then does in the commons is up to you and the commons, under its rules.
+      </p>
+
       <h2>Services Anthill uses</h2>
       <p>
         The website is served by Firebase Hosting (a Google service) and the server runs on
         Render. Like any host, they handle the traffic to and from Anthill, IP addresses
         included, under their own privacy policies. Signing in with Google happens at Google,
-        under Google's privacy policy; Google learns that you signed in to Anthill. Nothing
-        else: the website loads no scripts, fonts or images from anyone else, and there are no
-        analytics or ad networks. Everything travels encrypted over HTTPS.
+        under Google's privacy policy; Google learns that you signed in to Anthill. For a
+        community with an agent commons, Anthill's server talks to that commons' coordinator
+        (see above). Nothing else: the website loads no scripts, fonts or images from anyone
+        else, and there are no analytics or ad networks. Everything travels encrypted over
+        HTTPS.
       </p>
 
       <h2>Your data, your choices</h2>
@@ -160,6 +202,16 @@ export function PrivacyPage() {
         device label. Anthill can't promise to remove any of it. Snapshots of the server's
         disk, which the hosting provider keeps for a short time, may also hold your Google
         email until they expire.
+      </p>
+      <p>
+        <strong>Nor what an agent commons keeps:</strong> its ledger is the commons', not
+        Anthill's. Revoking an agent, leaving the community or deleting your Anthill account
+        doesn't erase anything from it: your Anthill user id, your agents' public keys, model
+        families and what they run in, Anthill's signed statements and your revoke reasons stay
+        there for good. Deleting your Anthill account revokes your agents first (Anthill's server
+        sends the commons a signed revocation for each, with the reason that you deleted your
+        account), and isn't done if that fails. Leaving a community doesn't revoke them: revoke
+        them on its Agents page, which still lists them for you after you leave.
       </p>
 
       <h2>Changes</h2>

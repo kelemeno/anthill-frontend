@@ -1,10 +1,11 @@
 // Layout and routes: a slim header with the community you're in and its four
 // places (a tab bar at the bottom on phones), the account, and the guided
-// tour. Each community lives under /c/<id>; / lists them all. The account
+// tour (and Agents, for a community with an agent commons). Each community
+// lives under /c/<id>; / lists them all. The account
 // page, Google's way back, and the privacy and terms pages are outside any
 // community.
-import { BarChart3, CircleHelp, Home, Network, Users } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { BarChart3, Bot, CircleHelp, Home, Network, Users } from "lucide-react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { DEMO_COMMUNITY } from "./api";
@@ -12,6 +13,7 @@ import { AccountMenu } from "./components/AccountMenu";
 import { CommunitySwitcher } from "./components/CommunitySwitcher";
 import { Tour, tourSteps } from "./components/Tour";
 import { AccountPage } from "./pages/Account";
+import { AgentsPage } from "./pages/Agents";
 import { ExplorePage } from "./pages/Explore";
 import { GoogleCallbackPage } from "./pages/GoogleCallback";
 import { HomePage } from "./pages/Home";
@@ -30,8 +32,12 @@ const tabs = [
   { to: "/polls", label: "Polls", icon: BarChart3 },
   { to: "/people", label: "People", icon: Users },
 ];
+// only where the community has an agent commons
+const agentsTab = { to: "/agents", label: "Agents", icon: Bot };
 
 const TOUR_SEEN = "anthill.tourSeen";
+// a community's home page, /c/<id> (where the tour starts by itself)
+const COMMUNITY_HOME = /^\/c\/[^/]+\/?$/;
 
 function TabLink(props: { cid: string; to: string; label: string; icon: typeof Home; mobile?: boolean }) {
   const [params] = useSearchParams();
@@ -65,6 +71,7 @@ export function App() {
     notFound,
     homeCid,
     communities,
+    graph,
     error,
     session,
     viewer,
@@ -75,6 +82,8 @@ export function App() {
   } = useApp();
   // the community whose tabs to show
   const cid = notFound ? undefined : urlCid;
+  const commons = graph?.community.commons ?? communities?.find((c) => c.id === cid)?.commons;
+  const shownTabs = cid && commons ? [...tabs, agentsTab] : tabs;
   const navigate = useNavigate();
   const location = useLocation();
   const [touring, setTouring] = useState(false);
@@ -84,18 +93,24 @@ export function App() {
     if (tourRequested > 0) setTouring(true);
   }, [tourRequested]);
 
-  // and once by itself on a first visit to a community (not when a shared
-  // replay link opens: that's what they came to see)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only on first load
+  // and once by itself on a first visit, on a community's home page: a link
+  // to any other page (an agents page, a person, a shared replay) is what they
+  // came to see, so the tour waits until they're on a community's home. Not
+  // at all in a visit that opened with a replay link.
+  const autoTour = useRef(!location.search.includes("replay=1"));
   useEffect(() => {
+    if (!autoTour.current || !COMMUNITY_HOME.test(location.pathname)) return;
     let seen = true;
     try {
       seen = localStorage.getItem(TOUR_SEEN) !== null;
     } catch {}
-    if (seen || !location.pathname.startsWith("/c/") || location.search.includes("replay=1")) return;
-    const t = setTimeout(() => setTouring(true), 1200);
+    if (seen) return;
+    const t = setTimeout(() => {
+      autoTour.current = false;
+      setTouring(true);
+    }, 1200);
     return () => clearTimeout(t);
-  }, []);
+  }, [location.pathname]);
 
   const endTour = useCallback(() => {
     setTouring(false);
@@ -131,7 +146,7 @@ export function App() {
           </div>
           {cid && (
             <nav className="ml-2 hidden gap-1 sm:flex" data-tour="nav">
-              {tabs.map((t) => (
+              {shownTabs.map((t) => (
                 <TabLink key={t.to} cid={cid} {...t} />
               ))}
             </nav>
@@ -170,6 +185,7 @@ export function App() {
             <Route path="/c/:cid/explore" element={<InCommunity page={<ExplorePage />} />} />
             <Route path="/c/:cid/polls" element={<InCommunity page={<PollsPage />} />} />
             <Route path="/c/:cid/people" element={<InCommunity page={<PeoplePage />} />} />
+            <Route path="/c/:cid/agents" element={<InCommunity page={<AgentsPage />} />} />
             <Route path="/c/:cid/p/:id" element={<InCommunity page={<PersonPage />} />} />
             <Route path="/invite/:code" element={<InvitePage />} />
             <Route path="/account" element={<AccountPage />} />
@@ -186,7 +202,7 @@ export function App() {
           data-tour="nav"
           className="fixed inset-x-0 bottom-0 z-30 flex h-[60px] border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden"
         >
-          {tabs.map((t) => (
+          {shownTabs.map((t) => (
             <TabLink key={t.to} cid={cid} {...t} mobile />
           ))}
         </nav>

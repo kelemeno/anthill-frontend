@@ -4,24 +4,31 @@
 // what this tab keeps before going to Google (and freeing what waited when the
 // browser brings the page Back), and the callback's checks (the state must be
 // the one this tab started; it goes back only to paths on this site; linking
-// and confirming finish with the signed-in session).
+// and confirming finish with the signed-in session). And pairing agents with a
+// community's agent commons, and the agents' list and revoking.
 // @vitest-environment jsdom
 import { startAuthentication } from "@simplewebauthn/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   act,
+  agentInstructionsUrl,
+  approvePairing,
+  backendUrl,
   browser,
   check,
   createCommunity,
   createInviteLink,
+  createPairing,
   deleteAccount,
   downloadMyData,
   endSession,
   fetchAccount,
+  fetchAgents,
   fetchAuthMethods,
   fetchCommunities,
   fetchGraph,
+  fetchPairing,
   fetchPasskeys,
   fetchPolls,
   fetchSessions,
@@ -30,7 +37,9 @@ import {
   linkGoogle,
   loadSession,
   newRecoveryCode,
+  rejectPairing,
   removePasskey,
+  revokeAgent,
   sameSitePath,
   saveProfile,
   saveSession,
@@ -575,5 +584,82 @@ describe("the Google callback", () => {
       fromSignIn: true,
       then: "create",
     });
+  });
+});
+
+describe("agents", () => {
+  const pairing = { id: "p1", code: "ABCD-EFGH", expiresAt: "2026-11-18T12:30:00.000Z", prompt: "Fetch it." };
+
+  it("starts a pairing with what the agent is, signed in", async () => {
+    respond({ ...pairing, loopPrompt: "Do a round." });
+    await expect(createPairing(session, "builders", { harness: "claude-code", modelFamily: "claude" })).resolves.toEqual({
+      ...pairing,
+      loopPrompt: "Do a round.",
+    });
+    expect(last()).toMatchObject({
+      method: "POST",
+      auth: "Bearer tok",
+      body: { harness: "claude-code", modelFamily: "claude" },
+    });
+    expect(last().url).toBe(`${backendUrl}c/builders/commons/pairings`);
+  });
+
+  it("writes the loop prompt itself when the server doesn't", async () => {
+    respond(pairing);
+    const made = await createPairing(session, "builders", { harness: "codex", modelFamily: "gpt" });
+    expect(agentInstructionsUrl("builders")).toBe(`${backendUrl}c/builders/commons/agent.md`);
+    expect(made.loopPrompt).toBe(`Read your instructions verbatim: run \`curl -fsSL ${backendUrl}c/builders/commons/agent.md\` in your shell and follow the page exactly as printed (not through a web-fetch or summarizing tool, which would reword its commands and rules), and do one iteration as it says.`);
+  });
+
+  it("asks where a pairing is, and approves or rejects it", async () => {
+    const claim = { modelFamily: "claude", harness: "claude-code", fingerprint: "3f2a-91bc-07de-55e1" };
+    respond({ id: "p1", status: "claimed", expiresAt: pairing.expiresAt, claim });
+    await expect(fetchPairing(session, "builders", "p1")).resolves.toMatchObject({ status: "claimed", claim });
+    expect(last()).toMatchObject({ method: "GET", auth: "Bearer tok" });
+    expect(last().url).toMatch(/\/c\/builders\/commons\/pairings\/p1$/);
+
+    respond({ agent: { keyId: "k1", modelFamily: "claude", harness: "claude-code" } });
+    await expect(approvePairing(session, "builders", "p1")).resolves.toEqual({
+      keyId: "k1",
+      modelFamily: "claude",
+      harness: "claude-code",
+    });
+    expect(last()).toMatchObject({ method: "POST", auth: "Bearer tok" });
+    expect(last().url).toMatch(/\/commons\/pairings\/p1\/approve$/);
+
+    respond({ ok: true });
+    await rejectPairing(session, "builders", "p1");
+    expect(last()).toMatchObject({ method: "POST", auth: "Bearer tok" });
+    expect(last().url).toMatch(/\/commons\/pairings\/p1\/reject$/);
+  });
+
+  it("says why an approval failed (the coordinator out of reach)", async () => {
+    respond({ error: "Couldn't reach the commons' coordinator." }, 502);
+    await expect(approvePairing(session, "builders", "p1")).rejects.toMatchObject({
+      status: 502,
+      message: "Couldn't reach the commons' coordinator.",
+    });
+  });
+
+  it("lists your agents and revokes one, with or without a reason", async () => {
+    const agent = {
+      keyId: "k/1",
+      modelFamily: "gpt",
+      harness: "codex",
+      active: true,
+      registeredAt: "2026-11-18T10:00:00.000Z",
+    };
+    respond({ agents: [agent] });
+    await expect(fetchAgents(session, "builders")).resolves.toEqual([agent]);
+    expect(last()).toMatchObject({ method: "GET", auth: "Bearer tok" });
+    expect(last().url).toMatch(/\/c\/builders\/commons\/agents$/);
+
+    respond({ ok: true });
+    await revokeAgent(session, "builders", "k/1", "key leaked");
+    expect(last()).toMatchObject({ method: "POST", auth: "Bearer tok", body: { reason: "key leaked" } });
+    // (a key id is one path segment, whatever it holds)
+    expect(last().url).toMatch(/\/commons\/agents\/k%2F1\/revoke$/);
+    await revokeAgent(session, "builders", "k/1");
+    expect(last().body).toEqual({});
   });
 });

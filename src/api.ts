@@ -1,7 +1,8 @@
 // Talking to the Anthill backend: accounts (passkeys, Google through the
 // backend, sessions, export and deletion), communities, and inside each
 // community its whole graph, tree actions and their dry runs, who someone can
-// endorse, invites and polls. Profiles belong to the account.
+// endorse, invites and polls, and for a community with an agent commons,
+// pairing agents with it. Profiles belong to the account.
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 
 export const backendUrl: string =
@@ -54,6 +55,10 @@ export type Community = {
   canChangeSettings?: boolean;
   // your standing, when you're a member
   you: { reputation: string; rank: number } | null;
+  // its agent commons, for a community that has one (operator config, never
+  // a founder's): the coordinator agents work through, and the commons' public
+  // site. Missing from older servers, like null.
+  commons?: Commons | null;
 };
 
 export type CommunitySettings = Pick<Community, "name" | "description" | "visibility" | "joinPolicy">;
@@ -693,3 +698,82 @@ export const votePoll = (session: Session, cid: string, id: string, option: numb
 
 export const closePoll = (session: Session, cid: string, id: string) =>
   request(inside(cid, `polls/${id}/close`), {}, session.token);
+
+//// agents: a community's agent commons. A member pairs their own agent (run
+//// in their own sandbox and account) with a one-time code from a prompt;
+//// Anthill vouches for the agent once the member approves it here.
+
+// repo: the target repository agents clone, when the operator named it.
+// modelFamilies: the model families the commons takes (its rules), when the
+// server says; an agent declaring another one is refused when it's approved.
+export type Commons = { coordinator: string; site: string; repo?: string; modelFamilies?: string[] };
+
+// What the agent says it is. harness: "claude-code", "codex", or the person's
+// words; modelFamily: a lowercase word ("claude", "gpt", ...), self-declared.
+export type AgentKind = { harness: string; modelFamily: string };
+
+// A new pairing: the prompt to give the agent (the server writes it, with the
+// right addresses and the code in it), and the one to run it on a loop with.
+export type Pairing = { id: string; code: string; expiresAt: string; prompt: string; loopPrompt: string };
+
+export type PairingStatus = "open" | "claimed" | "approved" | "rejected" | "expired";
+
+// Where a pairing is: claimed once an agent has used the code, and then what it
+// declared and its key's fingerprint, for the person to compare with what
+// their agent printed.
+export type PairingState = {
+  id: string;
+  status: PairingStatus;
+  expiresAt: string;
+  claim?: AgentKind & { fingerprint: string };
+};
+
+export type Agent = AgentKind & {
+  keyId: string;
+  active: boolean;
+  revokedReason?: string;
+  registeredAt: string;
+};
+
+// The instructions every agent of the commons reads (public).
+export const agentInstructionsUrl = (cid: string) => backendUrl + inside(cid, "commons/agent.md");
+
+// What an agent on a loop is told each time, when the server doesn't say.
+// (the server's own words: the agent reads the page verbatim with curl, not
+// through a web-fetch tool that summarizes it)
+export const loopPromptFor = (cid: string) =>
+  `Read your instructions verbatim: run \`curl -fsSL ${agentInstructionsUrl(cid)}\` in your shell and follow the page exactly as printed (not through a web-fetch or summarizing tool, which would reword its commands and rules), and do one iteration as it says.`;
+
+export const createPairing = (session: Session, cid: string, kind: AgentKind) =>
+  request<Omit<Pairing, "loopPrompt"> & { loopPrompt?: string }>(inside(cid, "commons/pairings"), kind, session.token).then(
+    (p): Pairing => ({ ...p, loopPrompt: p.loopPrompt || loopPromptFor(cid) }),
+  );
+
+const pairingPath = (cid: string, id: string, then = "") =>
+  inside(cid, `commons/pairings/${encodeURIComponent(id)}${then}`);
+
+export const fetchPairing = (session: Session, cid: string, id: string) =>
+  request<PairingState>(pairingPath(cid, id), undefined, session.token);
+
+// Anthill signs for the agent and tells the commons' coordinator. A failure to
+// reach it leaves the pairing approvable.
+export const approvePairing = (session: Session, cid: string, id: string) =>
+  request<{ agent: Pick<Agent, "keyId" | "modelFamily" | "harness"> }>(pairingPath(cid, id, "/approve"), {}, session.token).then(
+    (r) => r.agent,
+  );
+
+export const rejectPairing = (session: Session, cid: string, id: string) =>
+  request(pairingPath(cid, id, "/reject"), {}, session.token);
+
+// Your agents in this community's commons, revoked ones too.
+export const fetchAgents = (session: Session, cid: string) =>
+  request<{ agents: Agent[] }>(inside(cid, "commons/agents"), undefined, session.token).then((r) => r.agents);
+
+// Revoking is defensive (a leaked key, an agent gone wrong), so it needs no
+// fresh sign-in. The reason goes into the commons' public ledger.
+export const revokeAgent = (session: Session, cid: string, keyId: string, reason?: string) =>
+  request(
+    inside(cid, `commons/agents/${encodeURIComponent(keyId)}/revoke`),
+    reason ? { reason } : {},
+    session.token,
+  );
