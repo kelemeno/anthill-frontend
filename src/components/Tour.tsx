@@ -322,8 +322,9 @@ export function tourSteps(context: { member: boolean; signedIn: boolean }): Tour
           path: "/",
           body: (
             <p>
-              Invite someone, edit your profile, add a passkey on another device, or make a new
-              recovery code. You can replay this tour from here too.
+              Invite someone, edit your profile, or open your account: passkeys, Google, the
+              recovery code, where you're signed in, and your data. You can replay this tour
+              from here too.
             </p>
           ),
         }
@@ -333,8 +334,8 @@ export function tourSteps(context: { member: boolean; signedIn: boolean }): Tour
           path: "/",
           body: (
             <p>
-              Sign in with a passkey (Face ID, Touch ID or your phone). New? Open the invite link
-              someone sent you, so you start right next to them.
+              Sign in with a passkey (Face ID, Touch ID or your phone), or Google if it's offered.
+              New? Open the invite link someone sent you, so you start right next to them.
             </p>
           ),
         },

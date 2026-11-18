@@ -3,7 +3,8 @@
 // shown to the next, or kept with the recovery code; a starting server is
 // asked again; the websocket catches up after reconnecting and coalesces
 // bursts; a rejected session signs out; Start a community resumes after
-// signing up; and an invite's recovery code shows even when joining fails.
+// signing up; an invite's recovery code shows even when joining fails; and
+// the community menu offers settings to whoever may change them.
 // @vitest-environment jsdom
 import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -11,6 +12,7 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate } from "react-rou
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { act as postAction, type Graph } from "./api";
+import { CommunitySwitcher } from "./components/CommunitySwitcher";
 import { HomePage } from "./pages/Home";
 import { InvitePage } from "./pages/Invite";
 import { AppProvider, useApp } from "./state";
@@ -100,6 +102,7 @@ async function show(path: string, page?: ReactNode) {
             <Routes>
               <Route path="/invite/:code" element={page} />
               <Route path="/" element={page} />
+              <Route path="/c/:cid" element={page} />
               <Route path="*" element={null} />
             </Routes>
           </Shell>
@@ -408,6 +411,37 @@ describe("app state", () => {
     expect(text()).toContain("Community settings");
     await act(async () => go("/c/other"));
     expect(text()).not.toContain("Community settings");
+  });
+});
+
+describe("the community menu", () => {
+  // Opens the menu in a community whose graph says `community`, and says
+  // whether it offers that community's settings.
+  async function offersSettings(community: Partial<Graph["community"]>) {
+    localStorage.setItem("anthill.session", JSON.stringify(signedIn));
+    routes = [
+      [/c\/mine\/graph$/, () => ({ body: graphOf("mine", community) })],
+      [/auth\/me$/, () => ({ body: { user: signedIn.user } })],
+    ];
+    await show("/c/mine", <CommunitySwitcher />);
+    await until(() => app.graph !== undefined);
+    await click(document.querySelector('[data-tour="communities"]') as HTMLElement);
+    expect(text()).toContain("Start a community");
+    const offered = text().includes("Settings for MINE");
+    await act(async () => root?.unmount());
+    root = undefined;
+    document.body.innerHTML = "";
+    return offered;
+  }
+
+  it("offers settings to whoever the server says may change them, else to the founder", async () => {
+    // the root of a community whose founder deleted their account
+    expect(await offersSettings({ isFounder: false, canChangeSettings: true })).toBe(true);
+    // the server's answer wins over being the founder
+    expect(await offersSettings({ isFounder: true, canChangeSettings: false })).toBe(false);
+    // an older server, without canChangeSettings: the founder only
+    expect(await offersSettings({ isFounder: true })).toBe(true);
+    expect(await offersSettings({ isFounder: false })).toBe(false);
   });
 });
 

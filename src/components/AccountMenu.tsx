@@ -1,33 +1,20 @@
 // The signed-in account: an avatar button with a menu (your overview,
-// profile, invite to this community, passkeys, recovery code, tour, sign out),
-// plus the profile and invite dialogs it opens. The account and profile are
-// the same in every community.
-import { CircleHelp, KeyRound, Link2, LogOut, RefreshCw, User, UserPen } from "lucide-react";
+// profile, invite to this community, the account page, tour, sign out), plus
+// the profile and invite dialogs it opens. The account and profile are the
+// same in every community.
+import { CircleHelp, Link2, LogOut, ShieldCheck, User, UserPen } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  act,
-  addPasskey,
-  createInviteLink,
-  fetchProfile,
-  isCancel,
-  newRecoveryCode,
-  rename,
-  saveProfile,
-  type Session,
-} from "../api";
+import { act, createInviteLink, fetchProfile, rename, saveProfile, type Session, signOut } from "../api";
 import { useApp } from "../state";
 import { Avatar, Button, COPY_FAILED, copyText, Field, Menu, MenuItem, Modal, useAppNavigate } from "../ui";
 
 export function AccountMenu(props: { session: Session }) {
-  const { graph, cid, setSession, notify, showRecoveryCode, startTour } = useApp();
+  const { graph, cid, setSession, startTour } = useApp();
   const navigate = useAppNavigate();
   const [dialog, setDialog] = useState<"profile" | "invite">();
   const me = graph?.nodes[props.session.user.id];
   const person = me ?? { id: props.session.user.id, name: props.session.user.name };
-
-  const safely = (work: () => Promise<void>) => () =>
-    work().catch((e) => !isCancel(e) && notify((e as Error).message));
 
   return (
     <>
@@ -66,33 +53,23 @@ export function AccountMenu(props: { session: Session }) {
                   Invite someone here
                 </MenuItem>
               )}
-              <MenuItem
-                icon={<KeyRound size={16} />}
-                onClick={safely(async () => {
-                  close();
-                  await addPasskey(props.session, setSession);
-                  notify("Passkey added: you can sign in with it too.");
-                })}
-              >
-                Add a passkey on this device
-              </MenuItem>
-              <MenuItem
-                icon={<RefreshCw size={16} />}
-                onClick={safely(async () => {
-                  close();
-                  if (confirm("Make a new recovery code? Your current one stops working.")) {
-                    showRecoveryCode(await newRecoveryCode(props.session, setSession));
-                  }
-                })}
-              >
-                New recovery code
+              <MenuItem icon={<ShieldCheck size={16} />} onClick={() => (close(), navigate("/account", { global: true }))}>
+                Account and sign-in
               </MenuItem>
               <MenuItem icon={<CircleHelp size={16} />} onClick={() => (close(), navigate("/"), startTour())}>
                 Guided tour
               </MenuItem>
             </div>
             <div className="border-t border-slate-100 pt-1">
-              <MenuItem icon={<LogOut size={16} />} onClick={() => (close(), setSession(undefined))}>
+              <MenuItem
+                icon={<LogOut size={16} />}
+                onClick={() => {
+                  close();
+                  // ended on the server too, but forgotten here at once whatever it answers
+                  signOut(props.session).catch(() => {});
+                  setSession(undefined);
+                }}
+              >
                 Sign out
               </MenuItem>
             </div>
@@ -164,7 +141,7 @@ export function InviteModal(props: { session: Session; cid: string; communityNam
   );
 }
 
-function ProfileModal(props: { session: Session; onClose: () => void }) {
+export function ProfileModal(props: { session: Session; onClose: () => void }) {
   const { graph, cid, notify, reload, setSession } = useApp();
   const navigate = useAppNavigate();
   const me = graph?.nodes[props.session.user.id];

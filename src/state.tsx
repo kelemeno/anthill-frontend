@@ -4,6 +4,7 @@
 // preview the app as (?as=<id>, read-only). Also the things any screen can
 // open: the sign-in dialog, the recovery code, toasts, the tour, and the
 // dialogs for starting a community or changing its settings.
+import { X } from "lucide-react";
 import {
   createContext,
   type ReactNode,
@@ -80,12 +81,17 @@ type AppState = {
   viewer: Person | undefined;
   previewing: boolean;
   setPreviewAs: (id: string | undefined) => void;
-  notify: (message: string) => void;
+  // a toast; one that should `stay` (it says something to act on, or the page
+  // it was for is gone) stays until it's closed or another replaces it
+  notify: (message: string, options?: { stay?: boolean }) => void;
   openAuth: (mode?: AuthMode) => void;
   showRecoveryCode: (code: string) => void;
   tourRequested: number;
   startTour: () => void;
   createCommunity: () => void;
+  // opens what was asked for before signing in elsewhere (Google's page), now
+  // that `session` is signed in
+  resumeAfterSignIn: (then: "create") => void;
   editCommunity: () => void;
 };
 
@@ -112,7 +118,7 @@ export function AppProvider(props: { children: ReactNode }) {
   const [listed, setListed] = useState<{ who: string; list: Community[] }>();
   const [listFailed, setListFailed] = useState<{ who: string; message: string }>();
   const [params, setParams] = useSearchParams();
-  const [toast, setToast] = useState<string>();
+  const [toast, setToast] = useState<{ message: string; stay?: boolean }>();
   const [auth, setAuth] = useState<AuthMode>();
   const [recoveryCode, setRecoveryCode] = useState<string>();
   const [tourRequested, setTourRequested] = useState(0);
@@ -132,7 +138,7 @@ export function AppProvider(props: { children: ReactNode }) {
     if (kept) return kept;
     const last = lastPublic.current;
     if (last?.cid !== cid) return undefined;
-    return { ...last.graph, community: { ...last.graph.community, isFounder: false, you: null } };
+    return { ...last.graph, community: { ...last.graph.community, isFounder: false, canChangeSettings: false, you: null } };
   }, [slot]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: who triggers it
   const cachedList = useMemo(() => readCache<Community[]>(communitiesKey(who)), [who]);
@@ -299,9 +305,12 @@ export function AppProvider(props: { children: ReactNode }) {
     setDialog((d) => (d?.kind === "settings" ? undefined : d));
   }, [cid]);
 
-  const notify = useCallback((message: string) => setToast(message), []);
+  const notify = useCallback(
+    (message: string, options?: { stay?: boolean }) => setToast({ message, stay: options?.stay }),
+    [],
+  );
   useEffect(() => {
-    if (!toast) return;
+    if (!toast || toast.stay) return;
     const t = setTimeout(() => setToast(undefined), 3500);
     return () => clearTimeout(t);
   }, [toast]);
@@ -479,6 +488,7 @@ export function AppProvider(props: { children: ReactNode }) {
           setAfterAuth("create");
           setAuth("create");
         },
+        resumeAfterSignIn: (then) => setDialog({ kind: then }),
         editCommunity: () => graph && setDialog({ kind: "settings", community: graph.community }),
       }}
     >
@@ -495,6 +505,7 @@ export function AppProvider(props: { children: ReactNode }) {
         <AuthModal
           mode={auth}
           intro={afterAuth === "create" ? "First your account, then your community." : undefined}
+          then={afterAuth}
           onClose={() => {
             setAuth(undefined);
             setAfterAuth(undefined);
@@ -519,8 +530,21 @@ export function AppProvider(props: { children: ReactNode }) {
       )}
       {toast && (
         <div className="fixed inset-x-0 bottom-20 z-[60] flex justify-center px-4 sm:bottom-6">
-          <div role="status" className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-white shadow-lg">
-            {toast}
+          <div
+            role="status"
+            className="flex max-w-lg items-start gap-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-white shadow-lg"
+          >
+            <span>{toast.message}</span>
+            {toast.stay && (
+              <button
+                type="button"
+                aria-label="Close"
+                className="-mr-1 shrink-0 rounded p-0.5 text-slate-300 hover:text-white"
+                onClick={() => setToast(undefined)}
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -9,7 +9,7 @@ import { CommunityMark } from "../components/CommunitySwitcher";
 import { CardGridSkeleton, GhostTree } from "../components/Skeletons";
 import { formatRep, toNumber } from "../model";
 import { useApp } from "../state";
-import { AppLink, Badge, Button, Card, communityPath, Empty } from "../ui";
+import { AppLink, Badge, Button, Card, communityPath, Empty, SiteFooter } from "../ui";
 import { HowItWorks, TopOfTree } from "./Landing";
 
 // The demo's tree for the front page, loaded in the background (and asked
@@ -102,6 +102,7 @@ export function HomePage() {
         </section>
         <HowItWorks />
         <CommunityGrid title="Public communities" list={communities} failed={failed} />
+        <SiteFooter />
       </div>
     );
   }
@@ -130,6 +131,7 @@ export function HomePage() {
         <CommunityGrid list={yoursShown} failed={failed} />
       )}
       {others.length > 0 && <CommunityGrid title="Discover" list={others} />}
+      <SiteFooter />
     </div>
   );
 }

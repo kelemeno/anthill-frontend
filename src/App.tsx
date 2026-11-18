@@ -1,6 +1,8 @@
 // Layout and routes: a slim header with the community you're in and its four
 // places (a tab bar at the bottom on phones), the account, and the guided
-// tour. Each community lives under /c/<id>; / lists them all.
+// tour. Each community lives under /c/<id>; / lists them all. The account
+// page, Google's way back, and the privacy and terms pages are outside any
+// community.
 import { BarChart3, CircleHelp, Home, Network, Users } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { NavLink, Route, Routes, useLocation, useNavigate, useSearchParams } from "react-router-dom";
@@ -9,9 +11,12 @@ import { DEMO_COMMUNITY } from "./api";
 import { AccountMenu } from "./components/AccountMenu";
 import { CommunitySwitcher } from "./components/CommunitySwitcher";
 import { Tour, tourSteps } from "./components/Tour";
+import { AccountPage } from "./pages/Account";
 import { ExplorePage } from "./pages/Explore";
+import { GoogleCallbackPage } from "./pages/GoogleCallback";
 import { HomePage } from "./pages/Home";
 import { InvitePage } from "./pages/Invite";
+import { PrivacyPage, TermsPage } from "./pages/Legal";
 import { PeoplePage } from "./pages/People";
 import { PersonPage } from "./pages/Person";
 import { PollsPage } from "./pages/Polls";
@@ -167,6 +172,10 @@ export function App() {
             <Route path="/c/:cid/people" element={<InCommunity page={<PeoplePage />} />} />
             <Route path="/c/:cid/p/:id" element={<InCommunity page={<PersonPage />} />} />
             <Route path="/invite/:code" element={<InvitePage />} />
+            <Route path="/account" element={<AccountPage />} />
+            <Route path="/auth/google" element={<GoogleCallbackPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
             <Route path="*" element={<HomePage />} />
           </Routes>
         </div>

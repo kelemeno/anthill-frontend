@@ -1,11 +1,23 @@
 // An invite link (/invite/:code): who invited you to which community, and
-// joining its tree under them, creating a passkey first if you don't have one.
+// joining its tree under them, creating a passkey first if you don't have one
+// (or signing up with Google, which comes back here to join).
 import { Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { act, type Community, createAccount, fetchInvite, isCancel, isStarting, type Session, signIn } from "../api";
+import {
+  act,
+  type Community,
+  createAccount,
+  fetchInvite,
+  isCancel,
+  isStarting,
+  type Session,
+  signIn,
+  signInWithGoogle,
+} from "../api";
 import { CommunityMark } from "../components/CommunitySwitcher";
+import { GoogleButton, useGoogleSignIn } from "../components/GoogleButton";
 import { Skeleton } from "../components/Skeletons";
 import { useApp } from "../state";
 import { AppLink, Avatar, Button, Card, communityPath, Field, useAppNavigate } from "../ui";
@@ -19,6 +31,7 @@ export function InvitePage() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const google = useGoogleSignIn();
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: refetch when signing in (are you in it already?)
   useEffect(() => {
@@ -177,6 +190,19 @@ export function InvitePage() {
           >
             I already have a passkey
           </Button>
+          {google && (
+            <div className="mt-4 border-t border-slate-100 pt-4">
+              <GoogleButton
+                disabled={busy}
+                onClick={run(() => signInWithGoogle(`/invite/${encodeURIComponent(code)}`))}
+              />
+              <p className="mt-2 text-[13px] text-slate-500">
+                Google signs you in if it's linked to your Anthill account; otherwise it makes a new
+                account, with your first name on Google. Already have a passkey? Use "I already have
+                a passkey" above. Either way, you come back here to join.
+              </p>
+            </div>
+          )}
         </>
       )}
       {error && <p className="mt-3 text-[13px] text-red-600">{error}</p>}

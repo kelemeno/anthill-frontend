@@ -1,6 +1,6 @@
 // The community you're in, in the header: a menu to switch to another of yours
-// or a public one, see all communities, start one, or (as its founder) change
-// this one's settings.
+// or a public one, see all communities, start one, or (as its founder, or the
+// root of one without a founder) change this one's settings.
 import { ChevronDown, LayoutGrid, Lock, Plus, Settings } from "lucide-react";
 
 import type { Community } from "../api";
@@ -47,7 +47,7 @@ export function CommunitySwitcher() {
             <MenuItem icon={<Plus size={16} />} onClick={() => (close(), createCommunity())}>
               Start a community
             </MenuItem>
-            {here?.isFounder && (
+            {(here?.canChangeSettings ?? here?.isFounder) && (
               <MenuItem icon={<Settings size={16} />} onClick={() => (close(), editCommunity())}>
                 Settings for {here.name}
               </MenuItem>

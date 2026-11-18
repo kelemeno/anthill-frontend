@@ -1,10 +1,13 @@
-// Signing in: with a passkey, by creating an account, or by recovering one
-// with the recovery code. All three live in one dialog.
+// Signing in: with a passkey or Google, by creating an account (a passkey, or
+// Google), or by recovering one with the recovery code. All live in one
+// dialog. Google takes this tab to Google and back to where it was.
 import { KeyRound } from "lucide-react";
 import { useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
-import { createAccount, isCancel, type Session, recoverAccount, signIn } from "../api";
+import { createAccount, isCancel, type Session, recoverAccount, signIn, signInWithGoogle } from "../api";
 import { Button, Field, Modal } from "../ui";
+import { GoogleButton, useGoogleSignIn } from "./GoogleButton";
 
 export type AuthMode = "signin" | "create" | "recover";
 
@@ -12,6 +15,8 @@ export function AuthModal(props: {
   mode: AuthMode;
   // why they're asked to sign in, if it's for something (shown when creating)
   intro?: string;
+  // what to open once signed in, kept across the trip to Google
+  then?: "create";
   onClose: () => void;
   // the recovery code is set for new and recovered accounts
   onSession: (session: Session, recoveryCode?: string) => void;
@@ -22,6 +27,9 @@ export function AuthModal(props: {
   const [busy, setBusy] = useState(false);
   // one passkey sheet at a time: a second one (Enter pressed twice) aborts the first
   const inFlight = useRef(false);
+  const google = useGoogleSignIn();
+  // back here after Google
+  const location = useLocation();
 
   const run = async (work: () => Promise<void>) => {
     if (inFlight.current) return;
@@ -37,6 +45,13 @@ export function AuthModal(props: {
       setBusy(false);
     }
   };
+
+  // from the sign-in view, a new account made for an unlinked Google account
+  // is a surprise: the callback says so
+  const withGoogle = () =>
+    run(() =>
+      signInWithGoogle(location.pathname + location.search, { fromSignIn: mode === "signin", then: props.then }),
+    );
 
   const go = (next: AuthMode) => {
     setMode(next);
@@ -80,6 +95,14 @@ export function AuthModal(props: {
           onEnter={submit}
           error={error}
         />
+        {google && (
+          <div className="mt-5 border-t border-slate-100 pt-4">
+            <GoogleButton disabled={busy} onClick={withGoogle} />
+            <p className="mt-2 text-[13px] text-slate-500">
+              Your first name on Google becomes your name in the tree; you can change it later.
+            </p>
+          </div>
+        )}
       </Modal>
     );
   }
@@ -125,7 +148,7 @@ export function AuthModal(props: {
 
   return (
     <Modal title="Sign in to Anthill" onClose={props.onClose}>
-      <p>Use the passkey you created for Anthill.</p>
+      <p>{google ? "Use your passkey for Anthill, or the Google account you linked to it." : "Use the passkey you created for Anthill."}</p>
       <Button
         variant="primary"
         className="mt-4 w-full"
@@ -134,6 +157,15 @@ export function AuthModal(props: {
       >
         <KeyRound size={16} /> Continue with passkey
       </Button>
+      {google && (
+        <>
+          <GoogleButton className="mt-2" disabled={busy} onClick={withGoogle} />
+          <p className="mt-2 text-[13px] text-slate-500">
+            A Google account not linked to one yet makes a new Anthill account. Have a passkey?
+            Sign in with it, then link Google on your account page.
+          </p>
+        </>
+      )}
       {error && <p className="mt-2 text-[13px] text-red-600">{error}</p>}
       <div className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-[13px]">
         <p>

@@ -352,8 +352,9 @@ export function RecoveryCodeModal(props: { code: string; onDone: () => void }) {
       }
     >
       <p>
-        If you ever lose all your passkeys, this code gets you back into your account. It's
-        shown only once: put it in your password manager or write it down.
+        If you ever lose every way to sign in (your passkeys, and Google if you use it), this
+        code gets you back into your account: you add a new passkey with it. It's shown only
+        once: put it in your password manager or write it down.
       </p>
       <code className="mt-4 block rounded-xl bg-slate-100 px-4 py-3 text-center font-mono text-base tracking-wider text-slate-900 select-all">
         {props.code}
@@ -362,3 +363,25 @@ export function RecoveryCodeModal(props: { code: string; onDone: () => void }) {
     </Modal>
   );
 }
+
+// The foot of the front pages: what Anthill promises about your data, and its
+// terms.
+export function SiteFooter() {
+  return (
+    <footer className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-200 pt-4 text-[13px] text-slate-500">
+      <span>Anthill</span>
+      <Link to="/privacy" className="hover:text-slate-900 hover:underline">
+        Privacy
+      </Link>
+      <Link to="/terms" className="hover:text-slate-900 hover:underline">
+        Terms
+      </Link>
+      <a href={SOURCE_URL} className="hover:text-slate-900 hover:underline">
+        Source and contact
+      </a>
+    </footer>
+  );
+}
+
+// Where Anthill's code lives, and where to raise questions about it.
+export const SOURCE_URL = "https://github.com/kelemeno/anthill";

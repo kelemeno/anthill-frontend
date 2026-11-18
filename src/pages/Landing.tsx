@@ -8,7 +8,17 @@ import { DEFAULT_COMMUNITY, DEMO_COMMUNITY, type Graph } from "../api";
 import { colorOf, formatRep, initials, members, rep } from "../model";
 import { useApp } from "../state";
 import { GhostTree, Skeleton } from "../components/Skeletons";
-import { AppLink, Button, Card, CardTitle, communityPath, opensOnKey, PersonRow, useAppNavigate } from "../ui";
+import {
+  AppLink,
+  Button,
+  Card,
+  CardTitle,
+  communityPath,
+  opensOnKey,
+  PersonRow,
+  SiteFooter,
+  useAppNavigate,
+} from "../ui";
 
 // Renders at once: the community's name and description come from the
 // communities list while its tree loads.
@@ -125,6 +135,7 @@ export function Landing() {
 
       <HowItWorks />
       {people.length > 0 && <MemberPreview />}
+      <SiteFooter />
     </div>
   );
 }
