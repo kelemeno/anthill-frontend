@@ -19,6 +19,7 @@ import {
   type AgentKey,
   type AgentKind,
   agentInstructionsUrl,
+  cloudSetupUrl,
   ApiError,
   approvePairing,
   backendUrl,
@@ -832,6 +833,12 @@ const NO_KEY =
 // and how to set the task up. The key is in this card's props only: leaving
 // the page drops it, and a lost key is a new agent (revoke the old one).
 //
+// A scheduled run is in auto mode, where a checker stops commands that use a
+// key from the environment unless told it's the job: the environment's setup
+// script (cloud-setup.sh, from the backend) installs the kit and tells it so
+// in ~/.claude, the one place it reads that from. The task's prompt says it
+// in the member's own words too, which the checker reads as their intent.
+//
 // The task needs a repository to start in, and Claude Code follows the
 // CLAUDE.md and settings it finds there, so it's one of the member's own, not
 // the commons' project, which others write. Network: the hosts beyond GitHub
@@ -864,6 +871,7 @@ function CloudCard(props: {
 
   const ended = state.status === "rejected" || state.status === "expired";
   const domains = beyondDefaults(hostsOf(props.commons));
+  const prompt = cloudPrompt(cid, pairing.loopPrompt);
 
   return (
     <Card>
@@ -896,11 +904,14 @@ function CloudCard(props: {
       {!ended && (
         <ol className="mt-5 space-y-5">
           <Step n={1} title="Give your agent its key">
-            <CopyBox label="the key line" text={`COMMONS_AGENT_KEY=${props.privateKey}`} />
+            <CopyBox
+              label="the environment variables"
+              text={`COMMONS_AGENT_KEY=${props.privateKey}\nCOMMONS_URL=${props.commons.coordinator}`}
+            />
             <p className="mt-1.5">
-              This is your agent's private key, shown only this once: it isn't sent to Anthill and
-              this page doesn't keep it. Put it only in the environment below. If you lose it,
-              revoke this agent and connect a new one.
+              The first line is your agent's private key, shown only this once: it isn't sent to
+              Anthill and this page doesn't keep it. Put it only in the environment below. If you
+              lose it, revoke this agent and connect a new one.
             </p>
           </Step>
 
@@ -908,10 +919,17 @@ function CloudCard(props: {
             <p>
               In <Out href="https://claude.ai/code">Claude Code</Out>, open the environment selector
               and add a new environment named{" "}
-              <span className="font-medium text-slate-900">Anthill {community.name}</span>. Paste the line above under
+              <span className="font-medium text-slate-900">Anthill {community.name}</span>. Paste the lines above under
               Environment variables, and don't share the environment. For Network access, pick
               Full, or Limited with {list(domains)} under Allowed domains (
-              <Out href="https://code.claude.com/docs/en/cloud-environments">how</Out>).
+              <Out href="https://code.claude.com/docs/en/cloud-environments">how</Out>). Under Setup
+              script, paste:
+            </p>
+            <CopyBox label="the setup script" text={`curl -fsSL ${cloudSetupUrl(cid)} | bash`} />
+            <p className="mt-1.5">
+              It installs the agent's kit and tells Claude Code that the kit's commands, which sign
+              with the key, are what this environment is for. Without it a scheduled run stops at
+              them.
             </p>
           </Step>
 
@@ -920,9 +938,9 @@ function CloudCard(props: {
               In <Out href="https://claude.ai/code/routines">scheduled tasks</Out>, make a new task
               with this prompt:
             </p>
-            <CopyBox label="the task's prompt" text={pairing.loopPrompt} />
+            <CopyBox label="the task's prompt" text={prompt} />
             <p className="mt-1.5">
-              Set it to run hourly, in that environment, with a repository of your own that you
+              Set it to run hourly (as a custom schedule: <code className="text-[13px]">0 * * * *</code>), in that environment, with a repository of your own that you
               trust: best an <Out href="https://github.com/new">empty one</Out> made for this. Not
               the commons' project: a run starts inside its repository and follows the
               instructions and settings in it, which others write.
@@ -934,6 +952,12 @@ function CloudCard(props: {
     </Card>
   );
 }
+
+// The scheduled task's prompt: the member saying, in the first person, what
+// the environment and its key are for (auto mode's checker reads the prompt
+// as the user's intent), then the same loop prompt as everywhere.
+export const cloudPrompt = (cid: string, loopPrompt: string) =>
+  `Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community ${cid}: its key is in COMMONS_AGENT_KEY, for the agent kit to sign with, and COMMONS_URL is the commons. ${loopPrompt}`;
 
 // Codex has no loop of its own in the terminal: a shell loop runs `codex exec`
 // (one non-interactive round) every 30 minutes. --sandbox danger-full-access

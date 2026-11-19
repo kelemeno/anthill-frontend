@@ -715,7 +715,8 @@ describe("Claude Code in the cloud", () => {
     };
     return () => approved;
   };
-  const keyLine = () => document.querySelector('pre[aria-label="the key line"]')?.textContent ?? "";
+  const envLines = () => (document.querySelector('pre[aria-label="the environment variables"]')?.textContent ?? "").split("\n");
+  const keyLine = () => envLines()[0] ?? "";
   const stored = () => JSON.stringify([{ ...localStorage }, { ...sessionStorage }]);
 
   it("is the first choice, and the one picked", async () => {
@@ -778,7 +779,17 @@ describe("Claude Code in the cloud", () => {
     expect(network.textContent).toContain("new environment named Anthill Builders.");
     expect(network.textContent).toContain(`Full, or Limited with ${new URL(backendUrl).host} and coordinator.example under Allowed domains`);
     expect(network.textContent).not.toContain("github.com");
-    expect(document.querySelector('pre[aria-label="the task\'s prompt"]')?.textContent).toBe(pairing().loopPrompt);
+    // the coordinator in the environment too, so the agent needn't export it
+    expect(envLines()).toEqual([line, "COMMONS_URL=https://coordinator.example"]);
+    // the setup script that installs the kit and tells auto mode what the key is for
+    expect(document.querySelector('pre[aria-label="the setup script"]')?.textContent).toBe(
+      `curl -fsSL ${backendUrl}c/builders/commons/cloud-setup.sh | bash`,
+    );
+    // the task's prompt says, as the member, what the environment and key are for
+    const prompt = document.querySelector('pre[aria-label="the task\'s prompt"]')?.textContent ?? "";
+    expect(prompt.startsWith("Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community builders")).toBe(true);
+    expect(prompt.endsWith(pairing().loopPrompt)).toBe(true);
+    expect(text()).toContain("0 * * * *");
     expect(text()).toContain("Set it to run hourly");
     expect(text()).toContain("Not the commons' project");
     expect(text()).toContain("press Run now once");

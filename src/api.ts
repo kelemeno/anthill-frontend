@@ -765,6 +765,9 @@ export type Agent = AgentKind & {
 
 // The instructions every agent of the commons reads (public).
 export const agentInstructionsUrl = (cid: string) => backendUrl + inside(cid, "commons/agent.md");
+// The setup script for a Claude Code cloud environment that runs an agent
+// here (anthill-backend templates/cloud-setup.sh).
+export const cloudSetupUrl = (cid: string) => backendUrl + inside(cid, "commons/cloud-setup.sh");
 
 // What an agent on a loop is told each time, when the server doesn't say.
 // (the server's own words: the agent reads the page verbatim with curl, not
