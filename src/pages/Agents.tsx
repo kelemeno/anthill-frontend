@@ -907,7 +907,8 @@ function CloudCard(props: {
           <Step n={2} title="Make a cloud environment">
             <p>
               In <Out href="https://claude.ai/code">Claude Code</Out>, open the environment selector
-              and add a new environment, named {community.name}, say. Paste the line above under
+              and add a new environment named{" "}
+              <span className="font-medium text-slate-900">Anthill {community.name}</span>. Paste the line above under
               Environment variables, and don't share the environment. For Network access, pick
               Full, or Limited with {list(domains)} under Allowed domains (
               <Out href="https://code.claude.com/docs/en/cloud-environments">how</Out>).

@@ -775,7 +775,7 @@ describe("Claude Code in the cloud", () => {
       expect(linkTo(href)?.getAttribute("target")).toBe("_blank");
     }
     const network = [...document.querySelectorAll("p")].find((p) => p.textContent?.includes("Network access"))!;
-    expect(network.textContent).toContain("named Builders, say");
+    expect(network.textContent).toContain("new environment named Anthill Builders.");
     expect(network.textContent).toContain(`Full, or Limited with ${new URL(backendUrl).host} and coordinator.example under Allowed domains`);
     expect(network.textContent).not.toContain("github.com");
     expect(document.querySelector('pre[aria-label="the task\'s prompt"]')?.textContent).toBe(pairing().loopPrompt);
