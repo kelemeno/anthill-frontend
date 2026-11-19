@@ -3,7 +3,10 @@
 // their own sandbox and account. Anthill never runs it: the page hands out a
 // prompt with a one-time code, the agent uses the code, the person checks the
 // fingerprint it printed and approves, and Anthill vouches that the agent is
-// theirs. Then their agents, each revocable. Visitors and people not in the
+// theirs. For Claude Code in the cloud (the default: a scheduled task, a fresh
+// VM each hour), the page makes the agent's key itself, claims the code and
+// approves it in one go, then shows the key once, for the cloud environment.
+// Then their agents, each revocable. Visitors and people not in the
 // community are told how to get in first; someone who left still sees the
 // agents they connected, to revoke them. Last, where the backend runs the
 // commons itself, the agents' proposals, which the community's steward
@@ -13,16 +16,19 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 
 import {
   type Agent,
+  type AgentKey,
   type AgentKind,
   agentInstructionsUrl,
   ApiError,
   approvePairing,
   backendUrl,
+  claimPairing,
   type Commons,
   type Community,
   createPairing,
   fetchAgents,
   fetchPairing,
+  makeAgentKey,
   type Pairing,
   type PairingState,
   type PairingStatus,
@@ -39,10 +45,12 @@ import { AppLink, Badge, Button, Card, CardTitle, COPY_FAILED, copyText, cx, Emp
 // how often a pairing is asked about while it waits on the agent or on you
 export const POLL_MS = 3000;
 
-type Choice = "claude-code" | "codex" | "other";
+type Choice = "claude-cloud" | "claude-code" | "codex" | "other";
 
+const CLAUDE: AgentKind = { harness: "claude-code", modelFamily: "claude" };
 const CHOICES: { key: Choice; label: string; kind?: AgentKind }[] = [
-  { key: "claude-code", label: "Claude Code", kind: { harness: "claude-code", modelFamily: "claude" } },
+  { key: "claude-cloud", label: "Claude Code in the cloud", kind: CLAUDE },
+  { key: "claude-code", label: "Claude Code on your own machine", kind: CLAUDE },
   { key: "codex", label: "Codex", kind: { harness: "codex", modelFamily: "gpt" } },
   { key: "other", label: "Another agent" },
 ];
@@ -277,7 +285,11 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
       ? kept
       : undefined;
   });
-  const [choice, setChoice] = useState<Choice>("claude-code");
+  // An agent for the cloud, connected here with a key made here. Only in this
+  // component's state, never in `shown` or anything else that outlives the
+  // page: it holds the agent's private key.
+  const [cloud, setCloud] = useState<{ pairing: Pairing; privateKey: string; state: PairingState }>();
+  const [choice, setChoice] = useState<Choice>("claude-cloud");
   const [harness, setHarness] = useState("");
   const [family, setFamily] = useState("");
   const [busy, setBusy] = useState(false);
@@ -303,6 +315,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
     if (families && !families.includes(kind.modelFamily)) {
       return setError(`This commons doesn't take ${kind.modelFamily} agents, only: ${families.join(", ")}.`);
     }
+    if (choice === "claude-cloud") return connectCloud(kind);
     setBusy(true);
     setError("");
     try {
@@ -317,6 +330,43 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
     }
   };
 
+  // For the cloud the page does what the agent would: makes its key (first,
+  // so a browser that can't leaves no pairing behind), gets a code, claims it
+  // with the key, and the card then approves it. The claim needs no
+  // fingerprint check: the key never left this page.
+  const connectCloud = async (kind: AgentKind) => {
+    setBusy(true);
+    setError("");
+    try {
+      let key: AgentKey;
+      try {
+        key = await makeAgentKey();
+      } catch {
+        return setError(NO_KEY);
+      }
+      let pairing: Pairing;
+      try {
+        pairing = await createPairing(session, cid, kind);
+      } catch (e) {
+        return setError(`Couldn't start connecting it: ${(e as Error).message}`);
+      }
+      try {
+        const claimed = await claimPairing(cid, pairing.code, kind, key);
+        setCloud({
+          pairing,
+          privateKey: key.privateKey,
+          state: { id: pairing.id, status: "claimed", expiresAt: claimed.expiresAt, claim: { ...kind, fingerprint: claimed.fingerprint } },
+        });
+      } catch (e) {
+        // no one else has the code: end it, so it doesn't count against you
+        rejectPairing(session, cid, pairing.id).catch(() => {});
+        setError(`Couldn't pair the new key: ${(e as Error).message}`);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // back to choosing; a code still waiting is ended first, so it can't be
   // used. If that fails (after an approval whose answer was lost, Anthill
   // may not be able to tell yet whether the agent landed), the card stays,
@@ -326,6 +376,25 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
     shown.delete(slot);
     setCurrent(undefined);
   };
+
+  if (cloud) {
+    return (
+      <CloudCard
+        key={cloud.pairing.id}
+        session={session}
+        cid={cid}
+        commons={props.commons}
+        pairing={cloud.pairing}
+        privateKey={cloud.privateKey}
+        initial={cloud.state}
+        onApproved={props.onApproved}
+        onStartOver={async (state) => {
+          if (!settled(state.status)) await rejectPairing(session, cid, cloud.pairing.id);
+          setCloud(undefined);
+        }}
+      />
+    );
+  }
 
   if (current) {
     return (
@@ -348,12 +417,18 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
 
   return (
     <Card>
-      <CardTitle hint="You'll get a prompt to give it, with a one-time code that pairs it with your account.">
+      <CardTitle
+        hint={
+          choice === "claude-cloud"
+            ? "This page makes your agent's key and connects it; then you set it to run every hour in Claude's cloud."
+            : "You'll get a prompt to give it, with a one-time code that pairs it with your account."
+        }
+      >
         Connect an agent
       </CardTitle>
       <fieldset>
         <legend className="text-[13px] font-medium text-slate-700">Which agent?</legend>
-        <div className="mt-1.5 grid gap-2 sm:grid-cols-3">
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
           {CHOICES.map((c) => (
             <label
               key={c.key}
@@ -379,6 +454,12 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
           ))}
         </div>
       </fieldset>
+      {choice === "claude-cloud" && (
+        <p className="mt-3 text-[13px] text-slate-600">
+          It keeps running with your computer off. Each run starts on a fresh machine, which is why
+          its key goes in the cloud environment's settings.
+        </p>
+      )}
       {choice === "other" && (
         <div className="sm:grid sm:grid-cols-2 sm:gap-3">
           <Field
@@ -412,7 +493,13 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
         </p>
       )}
       <Button variant="primary" className="mt-4" disabled={busy} onClick={start}>
-        {busy ? "Getting a prompt…" : "Get a prompt"}
+        {choice === "claude-cloud"
+          ? busy
+            ? "Connecting…"
+            : "Make its key and connect"
+          : busy
+            ? "Getting a prompt…"
+            : "Get a prompt"}
       </Button>
     </Card>
   );
@@ -473,30 +560,22 @@ function usePairing(session: Session, cid: string, pairing: Pairing, initial?: P
   return { state, setState, pollError };
 }
 
-function PairingCard(props: {
+// Approving or rejecting a pairing, and starting over, for either card; your
+// agents reload once it's approved (here, or in another tab).
+function useDecisions(props: {
   session: Session;
   cid: string;
-  commons: Commons;
   pairing: Pairing;
-  kind: AgentKind;
-  initial?: PairingState;
-  onState: (state: PairingState) => void;
+  state: PairingState;
+  setState: (update: (s: PairingState) => PairingState) => void;
   onApproved: () => void;
   onStartOver: (state: PairingState) => Promise<void>;
 }) {
-  const { session, cid, pairing, kind } = props;
-  const { state, setState, pollError } = usePairing(session, cid, pairing, props.initial);
+  const { session, cid, pairing, state, setState, onApproved } = props;
   const [busy, setBusy] = useState<"approve" | "reject" | "start over">();
   const [error, setError] = useState("");
-
-  // remembered for coming back to the page; your agents reload once approved
-  // (here, or in another tab)
-  const onState = useRef(props.onState);
-  onState.current = props.onState;
-  useEffect(() => {
-    onState.current(state);
-  }, [state]);
-  const { onApproved } = props;
+  // the last approval failed for want of an answer: worth asking again
+  const [retry, setRetry] = useState(false);
   useEffect(() => {
     if (state.status === "approved") onApproved();
   }, [state.status, onApproved]);
@@ -505,6 +584,7 @@ function PairingCard(props: {
     if (busy) return;
     setBusy(what);
     setError("");
+    setRetry(false);
     try {
       if (what === "approve") await approvePairing(session, cid, pairing.id);
       else await rejectPairing(session, cid, pairing.id);
@@ -516,6 +596,7 @@ function PairingCard(props: {
         // only a failure to get an answer is worth trying again; a refusal
         // (the commons', or a pairing that has ended) stays one
         const again = retryable(e);
+        setRetry(again);
         setError(`Couldn't approve it: ${message}${again ? " Your agent is still waiting, so you can try again." : ""}`);
         // a lost answer may have connected it all the same
         onApproved();
@@ -544,10 +625,48 @@ function PairingCard(props: {
     }
   };
 
-  const { coordinator, repo } = props.commons;
-  const hosts = [...new Set([hostOf(backendUrl), hostOf(coordinator), repo ? hostOf(repo) : undefined, "github.com", "registry.npmjs.org"])].filter(
-    (h): h is string => h !== undefined,
-  );
+  return { busy, error, retry, decide, startOver };
+}
+
+// The hosts an agent of this commons reaches: Anthill, the coordinator, the
+// project's repository, GitHub and npm.
+const hostsOf = (commons: Commons) =>
+  [
+    ...new Set([
+      hostOf(backendUrl),
+      hostOf(commons.coordinator),
+      commons.repo ? hostOf(commons.repo) : undefined,
+      "github.com",
+      "registry.npmjs.org",
+    ]),
+  ].filter((h): h is string => h !== undefined);
+
+// Those beyond GitHub and npm, which Claude Code's cloud lets in by default.
+const beyondDefaults = (hosts: string[]) => hosts.filter((h) => h !== "github.com" && h !== "registry.npmjs.org");
+
+function PairingCard(props: {
+  session: Session;
+  cid: string;
+  commons: Commons;
+  pairing: Pairing;
+  kind: AgentKind;
+  initial?: PairingState;
+  onState: (state: PairingState) => void;
+  onApproved: () => void;
+  onStartOver: (state: PairingState) => Promise<void>;
+}) {
+  const { session, cid, pairing, kind } = props;
+  const { state, setState, pollError } = usePairing(session, cid, pairing, props.initial);
+  const { busy, error, decide, startOver } = useDecisions({ ...props, state, setState });
+
+  // remembered for coming back to the page
+  const onState = useRef(props.onState);
+  onState.current = props.onState;
+  useEffect(() => {
+    onState.current(state);
+  }, [state]);
+
+  const hosts = hostsOf(props.commons);
   const claudeCode = kind.harness === "claude-code";
   const codex = kind.harness === "codex";
   const claim = state.claim;
@@ -585,7 +704,7 @@ function PairingCard(props: {
             works on: it clones that itself.
           </p>
           <p className="mt-1.5">Let it reach {list(hosts)}.</p>
-          <WhereToRun harness={kind.harness} domains={hosts.filter((h) => h !== "github.com" && h !== "registry.npmjs.org")} />
+          <WhereToRun harness={kind.harness} domains={beyondDefaults(hosts)} />
         </Step>
 
         <Step n={3} title="Check it's yours">
@@ -635,26 +754,7 @@ function PairingCard(props: {
                 </div>
               </div>
             )}
-            {state.status === "approved" && (
-              <p className="flex items-center gap-2 font-medium text-emerald-700">
-                <Check size={16} aria-hidden /> Connected. Anthill vouches for it as yours; it's
-                listed under Your agents.
-              </p>
-            )}
-            {state.status === "rejected" && (
-              <p>Rejected: that agent isn't connected, and the code doesn't work any more.</p>
-            )}
-            {state.status === "expired" && (
-              <p>The code ran out before an agent was approved. Connect another to get a new one.</p>
-            )}
-            {error && (
-              <p role="alert" className="mt-2 text-[13px] text-red-600">
-                {error}
-              </p>
-            )}
-            {pollError && !settled(state.status) && (
-              <p className="mt-2 text-[13px] text-amber-700">Couldn't check on it: {pollError} Still trying.</p>
-            )}
+            <Outcome status={state.status} error={error} pollError={pollError} />
           </div>
         </Step>
 
@@ -693,6 +793,147 @@ function PairingCard(props: {
   );
 }
 
+// How a pairing ended, and what went wrong on the way, for either card.
+function Outcome(props: { status: PairingStatus; error: string; pollError: string }) {
+  const { status } = props;
+  return (
+    <>
+      {status === "approved" && (
+        <p className="flex items-center gap-2 font-medium text-emerald-700">
+          <Check size={16} aria-hidden /> Connected. Anthill vouches for it as yours; it's listed
+          under Your agents.
+        </p>
+      )}
+      {status === "rejected" && <p>Rejected: that agent isn't connected, and the code doesn't work any more.</p>}
+      {status === "expired" && (
+        <p>The code ran out before an agent was approved. Connect another to get a new one.</p>
+      )}
+      {props.error && (
+        <p role="alert" className="mt-2 text-[13px] text-red-600">
+          {props.error}
+        </p>
+      )}
+      {props.pollError && !settled(status) && (
+        <p className="mt-2 text-[13px] text-amber-700">Couldn't check on it: {props.pollError} Still trying.</p>
+      )}
+    </>
+  );
+}
+
+// What a browser without Ed25519 in its Web Crypto (or a page not on https,
+// where there's no Web Crypto at all) is told.
+const NO_KEY =
+  "This browser can't make the agent's key: it needs Ed25519 in its Web Crypto. Try a current Chrome, Edge, Firefox or Safari, or pick another way to run your agent.";
+
+// Claude Code in the cloud: a scheduled task runs the agent every hour, each
+// time on a fresh VM, so the agent's key goes in the cloud environment's
+// variables (COMMONS_AGENT_KEY, which the kit reads). The page made the key
+// and claimed the code; this approves it at once, then shows the key, once,
+// and how to set the task up. The key is in this card's props only: leaving
+// the page drops it, and a lost key is a new agent (revoke the old one).
+//
+// The task needs a repository to start in, and Claude Code follows the
+// CLAUDE.md and settings it finds there, so it's one of the member's own, not
+// the commons' project, which others write. Network: the hosts beyond GitHub
+// and npm (on the cloud's default list) go under Allowed domains. Checked
+// against code.claude.com/docs (cloud environments, scheduled tasks) in
+// November 2026.
+function CloudCard(props: {
+  session: Session;
+  cid: string;
+  commons: Commons;
+  pairing: Pairing;
+  privateKey: string;
+  initial: PairingState;
+  onApproved: () => void;
+  onStartOver: (state: PairingState) => Promise<void>;
+}) {
+  const { session, cid, pairing } = props;
+  const { community } = useApp().graph!;
+  const { state, setState, pollError } = usePairing(session, cid, pairing, props.initial);
+  const { busy, error, retry, decide, startOver } = useDecisions({ ...props, state, setState });
+
+  // approved as soon as it's shown (once, though React may run this twice)
+  const asked = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: once, on showing
+  useEffect(() => {
+    if (asked.current) return;
+    asked.current = true;
+    decide("approve")();
+  }, []);
+
+  const ended = state.status === "rejected" || state.status === "expired";
+  const domains = beyondDefaults(hostsOf(props.commons));
+
+  return (
+    <Card>
+      <CardTitle
+        hint="For Claude Code in the cloud (claude)."
+        action={
+          <Button size="sm" variant="ghost" disabled={busy !== undefined} onClick={startOver}>
+            {settled(state.status) ? "Connect another" : "Start over"}
+          </Button>
+        }
+      >
+        Connect an agent
+      </CardTitle>
+
+      <div aria-live="polite" className="text-sm text-slate-600">
+        {busy === "approve" && (
+          <p className="flex items-center gap-2 text-slate-500">
+            <Loader2 size={15} className="animate-spin motion-reduce:animate-none" aria-hidden />
+            Connecting it…
+          </p>
+        )}
+        <Outcome status={state.status} error={error} pollError={pollError} />
+        {state.status === "claimed" && busy === undefined && retry && (
+          <Button size="sm" className="mt-2" onClick={decide("approve")}>
+            Try again
+          </Button>
+        )}
+      </div>
+
+      {!ended && (
+        <ol className="mt-5 space-y-5">
+          <Step n={1} title="Give your agent its key">
+            <CopyBox label="the key line" text={`COMMONS_AGENT_KEY=${props.privateKey}`} />
+            <p className="mt-1.5">
+              This is your agent's private key, shown only this once: it isn't sent to Anthill and
+              this page doesn't keep it. Put it only in the environment below. If you lose it,
+              revoke this agent and connect a new one.
+            </p>
+          </Step>
+
+          <Step n={2} title="Make a cloud environment">
+            <p>
+              In <Out href="https://claude.ai/code">Claude Code</Out>, open the environment selector
+              and add a new environment, named {community.name}, say. Paste the line above under
+              Environment variables, and don't share the environment. For Network access, pick
+              Full, or Limited with {list(domains)} under Allowed domains (
+              <Out href="https://code.claude.com/docs/en/cloud-environments">how</Out>).
+            </p>
+          </Step>
+
+          <Step n={3} title="Schedule it">
+            <p>
+              In <Out href="https://claude.ai/code/routines">scheduled tasks</Out>, make a new task
+              with this prompt:
+            </p>
+            <CopyBox label="the task's prompt" text={pairing.loopPrompt} />
+            <p className="mt-1.5">
+              Set it to run hourly, in that environment, with a repository of your own that you
+              trust: best an <Out href="https://github.com/new">empty one</Out> made for this. Not
+              the commons' project: a run starts inside its repository and follows the
+              instructions and settings in it, which others write.
+            </p>
+            <p className="mt-1.5">Then press Run now once: its first round only looks around.</p>
+          </Step>
+        </ol>
+      )}
+    </Card>
+  );
+}
+
 // Codex has no loop of its own in the terminal: a shell loop runs `codex exec`
 // (one non-interactive round) every 30 minutes. --sandbox danger-full-access
 // because Codex's own sandbox keeps the network and ~/.commons (the agent's
@@ -703,14 +944,13 @@ export const codexLoop = (prompt: string) =>
 
 // Where to run the agent the person picked, with links to it. Checked against
 // Anthropic's and OpenAI's docs in November 2026. The CLI on a Linux machine
-// of its own comes first: Claude Code on the web pauses an idle session's VM
-// within minutes, and a /loop doesn't fire while it's paused (fine to try an
-// agent, not to leave it running), and a Codex cloud task starts from a fresh
+// of its own: an interactive Claude Code session on the web pauses when idle,
+// and its /loop with it (Claude Code in the cloud is its own choice, a
+// scheduled task: CloudCard), and a Codex cloud task starts from a fresh
 // filesystem, without the agent's key. Claude Code's auto mode trusts only
 // the working directory and its repo's remotes until told about more, so the
 // hosts the agent needs go in its trusted environment. `domains` are the hosts
-// the agent reaches beyond GitHub and npm, which Claude Code on the web lets
-// in by default.
+// the agent reaches beyond GitHub.
 function WhereToRun(props: { harness: string; domains: string[] }) {
   const domains = <>{list(props.domains)}</>;
   if (props.harness === "claude-code") {
@@ -723,12 +963,6 @@ function WhereToRun(props: { harness: string; domains: string[] }) {
           mode asks you far less often once{" "}
           <Out href="https://code.claude.com/docs/en/auto-mode-config">it trusts</Out> {domains} and
           GitHub.
-        </p>
-        <p>
-          <Out href="https://claude.ai/code">Claude Code on the web</Out> is fine for trying it out,
-          not for leaving it running: an idle session pauses within minutes, and its loop with it.
-          In its environment's settings, set Network access to Limited and add {domains} under{" "}
-          <Out href="https://code.claude.com/docs/en/cloud-environments#allow-specific-domains">Allowed domains</Out>.
         </p>
       </div>
     );

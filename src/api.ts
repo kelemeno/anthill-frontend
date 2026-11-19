@@ -793,6 +793,54 @@ export const approvePairing = (session: Session, cid: string, id: string) =>
 export const rejectPairing = (session: Session, cid: string, id: string) =>
   request(pairingPath(cid, id, "/reject"), {}, session.token);
 
+// An agent's key made in this browser, for an agent run in the cloud (a fresh
+// VM each run, so its key comes from the environment, not its own disk):
+// publicKey is base64url SPKI DER, as the commons stores keys; privateKey is
+// base64url PKCS8 DER, as the kit reads COMMONS_AGENT_KEY. Nothing here keeps
+// either: the page shows the private key once and drops it.
+export type AgentKey = { publicKey: string; privateKey: string; signer: CryptoKey };
+
+const base64url = (bytes: ArrayBuffer) => {
+  let s = "";
+  for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
+  return btoa(s).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+};
+
+// Throws when the browser can't make an Ed25519 key (no WebCrypto, as on a
+// page that isn't https, or an older browser without Ed25519 in it).
+export async function makeAgentKey(): Promise<AgentKey> {
+  const pair = (await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"])) as CryptoKeyPair;
+  return {
+    publicKey: base64url(await crypto.subtle.exportKey("spki", pair.publicKey)),
+    privateKey: base64url(await crypto.subtle.exportKey("pkcs8", pair.privateKey)),
+    signer: pair.privateKey,
+  };
+}
+
+// What an agent signs to claim a code, as the commons' crypto (anthill-backend
+// src/commonsLink.ts pairMessage): the domain, a newline, then the claim as
+// JSON with its keys sorted and no whitespace (all its values are strings).
+export const PAIR_DOMAIN = "anthill-commons/pair/v1";
+export const pairMessage = (claim: Record<string, string>) =>
+  `${PAIR_DOMAIN}\n{${Object.keys(claim)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${JSON.stringify(claim[k])}`)
+    .join(",")}}`;
+
+// Claims a pairing's code for a key made here, as the agent itself would: the
+// proof is the key's signature over the claim. The agent's side of the API,
+// so no session.
+export async function claimPairing(cid: string, code: string, kind: AgentKind, key: AgentKey) {
+  const body = { agentKey: key.publicKey, code, harness: kind.harness, modelFamily: kind.modelFamily };
+  // (the community is the one in the address, signed but not sent)
+  const message = pairMessage({ ...body, community: cid });
+  const signature = await crypto.subtle.sign({ name: "Ed25519" }, key.signer, new TextEncoder().encode(message));
+  return request<{ status: "claimed"; fingerprint: string; expiresAt: string }>(inside(cid, "commons/pairings/claim"), {
+    ...body,
+    proof: base64url(signature),
+  });
+}
+
 // Your agents in this community's commons, revoked ones too.
 export const fetchAgents = (session: Session, cid: string) =>
   request<{ agents: Agent[] }>(inside(cid, "commons/agents"), undefined, session.token).then((r) => r.agents);

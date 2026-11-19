@@ -8,7 +8,11 @@
 // refusal isn't offered again), then lists the agent, and no late poll answer
 // undoes that; an agent is revoked after a confirm, with a reason if given,
 // also by someone who has left; the commons' model families, when given, are
-// checked; and a first visit's tour waits for a community's home page.
+// checked. Claude Code in the cloud, the first choice: the page makes the
+// agent's key, claims the code with a proof that verifies, approves it, and
+// shows the key once with the setup steps, keeping it nowhere; a browser
+// without Ed25519 is told so. And a first visit's tour waits for a
+// community's home page.
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -179,6 +183,7 @@ const button = (label: string) => {
   return found as HTMLButtonElement;
 };
 const click = (b: HTMLElement) => act(async () => b.click());
+const choose = (value: string) => click(document.querySelector<HTMLInputElement>(`input[value="${value}"]`)!);
 function typeInto(input: HTMLInputElement, value: string) {
   Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, value);
   input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -297,6 +302,7 @@ describe("the Agents page", () => {
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
 
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await until(() => text().includes("Pairing code: ABCD"));
     expect(made).toEqual({ harness: "claude-code", modelFamily: "claude" });
@@ -304,15 +310,17 @@ describe("the Agents page", () => {
     expect(text()).toContain("/loop 30m Fetch the instructions and do one iteration.");
     expect(text()).toContain("coordinator.example");
     expect(text()).toContain("Waiting for your agent");
-    // where to run Claude Code, with links to it
-    expect(linkTo("https://claude.ai/code")?.textContent).toContain("Claude Code on the web");
+    // where to run Claude Code on your own machine, with links to it (the
+    // cloud is its own choice)
     expect(linkTo("https://code.claude.com/docs/en/setup")?.getAttribute("target")).toBe("_blank");
     expect(text()).toContain("claude --permission-mode auto");
-    // the web lets in GitHub and npm itself; the rest are to add, the
-    // coordinator too when it's on a host of its own
-    const web = [...document.querySelectorAll("p")].find((p) => p.textContent?.includes("Network access"))!;
-    expect(web.textContent).toContain(`${new URL(backendUrl).host} and coordinator.example under Allowed domains`);
-    expect(web.textContent).not.toContain("github.com");
+    // auto mode is told about the hosts beyond GitHub, the coordinator too
+    // when it's on a host of its own
+    const trust = [...document.querySelectorAll("p")].find((p) => p.textContent?.includes("Auto mode"))!;
+    expect(trust.textContent).toContain(`it trusts ${new URL(backendUrl).host} and coordinator.example and GitHub`);
+    expect(linkTo("https://claude.ai/code")).toBeNull();
+    expect(text()).not.toContain("Claude Code on the web");
+    expect(text()).not.toContain("COMMONS_AGENT_KEY");
     expect(text()).toContain("for 7 days: then run it again");
     expect(linkTo("https://chatgpt.com/codex/")).toBeNull();
 
@@ -353,6 +361,7 @@ describe("the Agents page", () => {
     routes["c/builders/commons/pairings/p1"] = pairingIs("open");
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await until(() => text().includes("Pairing code"));
 
@@ -374,6 +383,7 @@ describe("the Agents page", () => {
     routes["c/builders/commons/pairings/p1"] = pairingIs("open");
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await until(() => text().includes("Pairing code"));
     const tab = (label: string) =>
@@ -387,7 +397,7 @@ describe("the Agents page", () => {
     // starting over ends the code
     routes["c/builders/commons/pairings/p1/reject"] = () => ({ body: { ok: true } });
     await click(button("Start over"));
-    await until(() => text().includes("Get a prompt"));
+    await until(() => text().includes("Which agent?"));
     expect(callsTo("c/builders/commons/pairings/p1/reject")).toHaveLength(1);
   });
 
@@ -402,6 +412,7 @@ describe("the Agents page", () => {
     });
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await later(POLL_MS);
     await until(() => text().includes("3f2a-91bc-07de-55e1"));
@@ -422,6 +433,7 @@ describe("the Agents page", () => {
     });
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await later(POLL_MS);
     await until(() => text().includes("3f2a-91bc-07de-55e1"));
@@ -457,6 +469,7 @@ describe("the Agents page", () => {
     };
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await later(POLL_MS);
     await until(() => text().includes("3f2a-91bc-07de-55e1"));
@@ -480,6 +493,7 @@ describe("the Agents page", () => {
     });
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await later(POLL_MS);
     await until(() => text().includes("3f2a-91bc-07de-55e1"));
@@ -494,6 +508,7 @@ describe("the Agents page", () => {
     routes["c/builders/commons/pairings/p1"] = pairingIs("claimed", { claim });
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await later(POLL_MS);
     await until(() => text().includes("3f2a-91bc-07de-55e1"));
@@ -531,6 +546,7 @@ describe("the Agents page", () => {
     routes["c/builders/commons/pairings/p1"] = pairingIs("claimed", { claim });
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
+    await choose("claude-code");
     await click(button("Get a prompt"));
     await later(POLL_MS);
     await until(() => text().includes("3f2a-91bc-07de-55e1"));
@@ -668,6 +684,184 @@ describe("the Agents page", () => {
   });
 });
 
+describe("Claude Code in the cloud", () => {
+  const b64 = (s: string) => Uint8Array.from(atob(s.replaceAll("-", "+").replaceAll("_", "/")), (c) => c.charCodeAt(0));
+  // the claim as the backend checks it (commonsLink verifyPairProof): the
+  // agent key's signature over the domain and the claim's canonical JSON
+  async function proofVerifies(body: { agentKey: string; code: string; harness: string; modelFamily: string; proof: string }) {
+    const key = await crypto.subtle.importKey("spki", b64(body.agentKey), { name: "Ed25519" }, false, ["verify"]);
+    const message = `anthill-commons/pair/v1\n{"agentKey":${JSON.stringify(body.agentKey)},"code":${JSON.stringify(body.code)},"community":"builders","harness":"claude-code","modelFamily":"claude"}`;
+    return b64(body.proof).length === 64 && crypto.subtle.verify({ name: "Ed25519" }, key, b64(body.proof), new TextEncoder().encode(message));
+  }
+  let claimed: Record<string, string> | undefined;
+  function cloudServer() {
+    claimed = undefined;
+    routes["c/builders/commons/pairings"] = () => ({ body: pairing() });
+    routes["c/builders/commons/pairings/claim"] = async (init) => {
+      claimed = bodyOf(init);
+      return (await proofVerifies(claimed as never))
+        ? { body: { status: "claimed", fingerprint: claim.fingerprint, expiresAt: expiresAt() } }
+        : { status: 400, body: { error: "The proof isn't this agent key's signature over the claim.", code: "bad proof" } };
+    };
+    routes["c/builders/commons/pairings/p1"] = pairingIs("claimed", { claim });
+    routes["c/builders/commons/pairings/p1/reject"] = () => ({ body: { ok: true } });
+  }
+  const approves = () => {
+    let approved = 0;
+    routes["c/builders/commons/pairings/p1/approve"] = () => {
+      approved++;
+      routes["c/builders/commons/agents"] = () => ({ body: { agents: [agent()] } });
+      return { body: { agent: { keyId: agent().keyId, modelFamily: "claude", harness: "claude-code" } } };
+    };
+    return () => approved;
+  };
+  const keyLine = () => document.querySelector('pre[aria-label="the key line"]')?.textContent ?? "";
+  const stored = () => JSON.stringify([{ ...localStorage }, { ...sessionStorage }]);
+
+  it("is the first choice, and the one picked", async () => {
+    signedInAs(ada);
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    const choices = [...document.querySelectorAll<HTMLInputElement>('input[name="agent-choice"]')];
+    expect(choices.map((c) => c.value)).toEqual(["claude-cloud", "claude-code", "codex", "other"]);
+    expect(choices[0].checked).toBe(true);
+    expect(choices[0].closest("label")?.textContent).toBe("Claude Code in the cloud");
+    expect(choices[1].closest("label")?.textContent).toBe("Claude Code on your own machine");
+    expect(text()).toContain("It keeps running with your computer off.");
+    expect(button("Make its key and connect")).toBeTruthy();
+  });
+
+  it("makes the key here, claims the code with it, approves it, and shows the setup once", async () => {
+    signedInAs(ada);
+    cloudServer();
+    const approved = approves();
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    const before = stored();
+
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Connected."));
+    expect(bodyOf(callsTo("c/builders/commons/pairings")[0].init)).toEqual({ harness: "claude-code", modelFamily: "claude" });
+    // claimed as the agent would, with a proof that verifies, and no session
+    expect(Object.keys(claimed!).sort()).toEqual(["agentKey", "code", "harness", "modelFamily", "proof"]);
+    expect(claimed).toMatchObject({ code: pairing().code, harness: "claude-code", modelFamily: "claude" });
+    expect(await proofVerifies(claimed as never)).toBe(true);
+    expect(callsTo("c/builders/commons/pairings/claim")[0].init.headers).not.toHaveProperty("Authorization");
+    expect(approved()).toBe(1);
+    await until(() => text().includes("Claude Code · claude"));
+
+    // the private key for that public key, as the kit reads it
+    const line = keyLine();
+    expect(line).toMatch(/^COMMONS_AGENT_KEY=[A-Za-z0-9_-]+$/);
+    const privateKey = await crypto.subtle.importKey("pkcs8", b64(line.split("=")[1]), { name: "Ed25519" }, false, ["sign"]);
+    const publicKey = await crypto.subtle.importKey("spki", b64(claimed!.agentKey), { name: "Ed25519" }, false, ["verify"]);
+    const signed = await crypto.subtle.sign({ name: "Ed25519" }, privateKey, new TextEncoder().encode("hello"));
+    expect(await crypto.subtle.verify({ name: "Ed25519" }, publicKey, signed, new TextEncoder().encode("hello"))).toBe(true);
+    // and never sent anywhere
+    const secret = line.split("=")[1];
+    expect(calls.some((c) => String(c.init.body ?? "").includes(secret))).toBe(false);
+    expect(text()).toContain("it isn't sent to Anthill and this page doesn't keep it");
+
+    // the steps, with their links
+    for (const title of ["Give your agent its key", "Make a cloud environment", "Schedule it"]) {
+      expect([...document.querySelectorAll("h3")].map((h) => h.textContent)).toContain(title);
+    }
+    for (const href of [
+      "https://claude.ai/code",
+      "https://code.claude.com/docs/en/cloud-environments",
+      "https://claude.ai/code/routines",
+      "https://github.com/new",
+    ]) {
+      expect(linkTo(href)?.getAttribute("target")).toBe("_blank");
+    }
+    const network = [...document.querySelectorAll("p")].find((p) => p.textContent?.includes("Network access"))!;
+    expect(network.textContent).toContain("named Builders, say");
+    expect(network.textContent).toContain(`Full, or Limited with ${new URL(backendUrl).host} and coordinator.example under Allowed domains`);
+    expect(network.textContent).not.toContain("github.com");
+    expect(document.querySelector('pre[aria-label="the task\'s prompt"]')?.textContent).toBe(pairing().loopPrompt);
+    expect(text()).toContain("Set it to run hourly");
+    expect(text()).toContain("Not the commons' project");
+    expect(text()).toContain("press Run now once");
+    expect(text()).not.toContain("/loop");
+
+    // kept nowhere: not on the device, and gone on coming back to the page
+    expect(stored()).toBe(before);
+    expect(stored()).not.toContain(secret);
+    const tab = (label: string) =>
+      [...document.querySelectorAll<HTMLAnchorElement>("nav a")].find((a) => a.textContent?.trim() === label)!;
+    await click(tab("People"));
+    await until(() => !text().includes("COMMONS_AGENT_KEY"));
+    await click(tab("Agents"));
+    await until(() => text().includes("Which agent?"));
+    expect(text()).not.toContain("COMMONS_AGENT_KEY");
+    expect(document.body.innerHTML).not.toContain(secret);
+    expect(stored()).toBe(before);
+  });
+
+  it("keeps the key and offers to approve again when approving gets no answer", async () => {
+    signedInAs(ada);
+    cloudServer();
+    routes["c/builders/commons/pairings/p1/approve"] = () => ({ status: 502, body: { error: "Couldn't reach the commons' coordinator." } });
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Couldn't approve it: Couldn't reach the commons' coordinator."));
+    expect(keyLine()).toMatch(/^COMMONS_AGENT_KEY=/);
+    const approved = approves();
+    await click(button("Try again"));
+    await until(() => text().includes("Connected."));
+    expect(approved()).toBe(1);
+    expect(keyLine()).toMatch(/^COMMONS_AGENT_KEY=/);
+  });
+
+  it("doesn't offer to try again when the commons refuses it", async () => {
+    signedInAs(ada);
+    cloudServer();
+    routes["c/builders/commons/pairings/p1/approve"] = () => ({
+      status: 400,
+      body: { error: "The commons already has this agent's key, for someone else.", code: "key taken" },
+    });
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Couldn't approve it: The commons already has this agent's key"));
+    expect(text()).not.toContain("Try again");
+  });
+
+  it("says so, and ends the code, when the claim fails", async () => {
+    signedInAs(ada);
+    cloudServer();
+    routes["c/builders/commons/pairings/claim"] = () => ({ status: 429, body: { error: "Too many requests: try again in a minute." } });
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Couldn't pair the new key: Too many requests"));
+    await until(() => callsTo("c/builders/commons/pairings/p1/reject").length === 1);
+    expect(text()).not.toContain("COMMONS_AGENT_KEY");
+    expect(callsTo("c/builders/commons/pairings/p1/approve")).toHaveLength(0);
+  });
+
+  it("says plainly when the browser can't make the key, before asking for a code", async () => {
+    signedInAs(ada);
+    cloudServer();
+    const generate = vi
+      .spyOn(crypto.subtle, "generateKey")
+      .mockRejectedValue(new DOMException("Unrecognized algorithm name", "NotSupportedError"));
+    try {
+      await show("/c/builders/agents");
+      await until(() => text().includes("None yet."));
+      await click(button("Make its key and connect"));
+      await until(() => text().includes("This browser can't make the agent's key"));
+      expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+        "Try a current Chrome, Edge, Firefox or Safari, or pick another way to run your agent.",
+      );
+      expect(callsTo("c/builders/commons/pairings")).toHaveLength(0);
+    } finally {
+      generate.mockRestore();
+    }
+  });
+});
+
 describe("the tour on a first visit", () => {
   const touring = () => document.querySelector('[role="dialog"][aria-label="Guided tour"]') !== null;
 
@@ -705,6 +899,8 @@ describe("the privacy page", () => {
       "the reason you give",
       "separate from Anthill's log and append-only",
       "Revoking an agent, leaving the community or deleting your Anthill account doesn't erase anything from it",
+      "For an agent run in the cloud, the website makes its key in your browser: the private key is shown to you once and never sent to Anthill.",
+      "Last updated 19 November 2026",
     ]) {
       expect(page).toContain(said);
     }

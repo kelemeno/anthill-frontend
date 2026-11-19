@@ -5,7 +5,8 @@
 // browser brings the page Back), and the callback's checks (the state must be
 // the one this tab started; it goes back only to paths on this site; linking
 // and confirming finish with the signed-in session). And pairing agents with a
-// community's agent commons, and the agents' list and revoking. And a
+// community's agent commons (for one in the cloud, its key made here and the
+// code claimed with a proof of it), and the agents' list and revoking. And a
 // community's site: reading it, and saving all of it. And a commons'
 // proposals: listing them (signed in or not), approving one as a task and
 // declining a pending approval.
@@ -21,6 +22,7 @@ import {
   backendUrl,
   browser,
   check,
+  claimPairing,
   createCommunity,
   createInviteLink,
   createPairing,
@@ -43,7 +45,9 @@ import {
   isCancel,
   linkGoogle,
   loadSession,
+  makeAgentKey,
   newRecoveryCode,
+  pairMessage,
   rejectPairing,
   removePasskey,
   revokeAgent,
@@ -647,6 +651,32 @@ describe("agents", () => {
       status: 502,
       message: "Couldn't reach the commons' coordinator.",
     });
+  });
+
+  it("signs a claim over the commons' canonical message", () => {
+    expect(pairMessage({ modelFamily: "claude", code: "C-1", harness: "claude code", community: "builders", agentKey: "k\"1" })).toBe(
+      'anthill-commons/pair/v1\n{"agentKey":"k\\"1","code":"C-1","community":"builders","harness":"claude code","modelFamily":"claude"}',
+    );
+  });
+
+  it("claims a code for a key made here, without a session, with a proof of the key", async () => {
+    const key = await makeAgentKey();
+    // base64url DER, no padding: a 44-byte SPKI, and a PKCS8 the kit reads
+    expect(key.publicKey).toMatch(/^[A-Za-z0-9_-]{59}$/);
+    expect(key.privateKey).toMatch(/^[A-Za-z0-9_-]+$/);
+    respond({ status: "claimed", fingerprint: "3f2a-91bc", expiresAt: "2026-11-18T12:30:00.000Z" });
+    await expect(claimPairing("builders", "C-1", { harness: "claude-code", modelFamily: "claude" }, key)).resolves.toMatchObject({
+      fingerprint: "3f2a-91bc",
+    });
+    expect(last()).toMatchObject({ method: "POST", auth: undefined });
+    expect(last().url).toBe(`${backendUrl}c/builders/commons/pairings/claim`);
+    const { proof, ...claim } = last().body;
+    expect(claim).toEqual({ agentKey: key.publicKey, code: "C-1", harness: "claude-code", modelFamily: "claude" });
+    const bytes = (s: string) => Uint8Array.from(atob(s.replaceAll("-", "+").replaceAll("_", "/")), (c) => c.charCodeAt(0));
+    const publicKey = await crypto.subtle.importKey("spki", bytes(key.publicKey), { name: "Ed25519" }, false, ["verify"]);
+    const message = new TextEncoder().encode(pairMessage({ ...claim, community: "builders" }));
+    expect(proof).toMatch(/^[A-Za-z0-9_-]{86}$/);
+    expect(await crypto.subtle.verify({ name: "Ed25519" }, publicKey, bytes(proof), message)).toBe(true);
   });
 
   it("lists your agents and revokes one, with or without a reason", async () => {
