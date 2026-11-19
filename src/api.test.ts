@@ -6,7 +6,9 @@
 // the one this tab started; it goes back only to paths on this site; linking
 // and confirming finish with the signed-in session). And pairing agents with a
 // community's agent commons, and the agents' list and revoking. And a
-// community's site: reading it, and saving all of it.
+// community's site: reading it, and saving all of it. And a commons'
+// proposals: listing them (signed in or not), approving one as a task and
+// declining a pending approval.
 // @vitest-environment jsdom
 import { startAuthentication } from "@simplewebauthn/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,12 +17,14 @@ import {
   act,
   agentInstructionsUrl,
   approvePairing,
+  approveProposal,
   backendUrl,
   browser,
   check,
   createCommunity,
   createInviteLink,
   createPairing,
+  declineProposal,
   deleteAccount,
   downloadMyData,
   endSession,
@@ -32,6 +36,7 @@ import {
   fetchPairing,
   fetchPasskeys,
   fetchPolls,
+  fetchProposals,
   fetchSessions,
   fetchSite,
   finishGoogle,
@@ -664,6 +669,59 @@ describe("agents", () => {
     expect(last().url).toMatch(/\/commons\/agents\/k%2F1\/revoke$/);
     await revokeAgent(session, "builders", "k/1");
     expect(last().body).toEqual({});
+  });
+});
+
+describe("proposals", () => {
+  const proposal = {
+    id: "p/1",
+    title: "Fix the login test",
+    proposedAt: "2026-11-18T10:00:00.000Z",
+    evidence: [{ kind: "failingTest", text: "login fails: npm test" }],
+    author: { agent: "k1", modelFamily: "claude", owner: { id: "0xaa", name: "Ada" } },
+    task: null,
+  };
+
+  it("lists a commons' proposals, signed in or not", async () => {
+    const list = { proposals: [proposal], total: 1, canApprove: false };
+    respond(list);
+    await expect(fetchProposals("builders")).resolves.toEqual(list);
+    expect(last()).toMatchObject({ method: "GET", auth: undefined });
+    expect(last().url).toBe(`${backendUrl}c/builders/commons/proposals`);
+    respond({ ...list, canApprove: true, owners: [{ id: "0xaa", name: "Ada" }], youAreOwner: true });
+    await expect(fetchProposals("builders", session)).resolves.toMatchObject({ canApprove: true, youAreOwner: true });
+    expect(last()).toMatchObject({ method: "GET", auth: "Bearer tok" });
+  });
+
+  it("is a 404 where the server doesn't run the commons", async () => {
+    respond({ error: "Not found" }, 404);
+    await expect(fetchProposals("club")).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("approves one as a task, and declines a pending approval", async () => {
+    const pending = { ...proposal, task: { status: "pending", id: "t-1", ring: 1, sizeEstimate: 40, acceptanceTestPaths: ["test/a.test.ts"], specAuthor: { id: "0xaa", name: "Ada" } } };
+    respond({ added: true, proposal: pending });
+    await expect(
+      approveProposal(session, "builders", "p/1", { ring: 1, sizeEstimate: 40, acceptanceTests: ["test/a.test.ts"] }),
+    ).resolves.toEqual({ added: true, proposal: pending });
+    expect(last()).toMatchObject({ method: "POST", auth: "Bearer tok", body: { ring: 1, sizeEstimate: 40, acceptanceTests: ["test/a.test.ts"] } });
+    // (a proposal id is one path segment, whatever it holds)
+    expect(last().url).toBe(`${backendUrl}c/builders/commons/proposals/p%2F1/approve`);
+
+    await approveProposal(session, "builders", "p/1", { ring: 0, sizeEstimate: 0, acceptanceTests: ["a"], specAuthor: "0xbb" });
+    expect(last().body).toEqual({ ring: 0, sizeEstimate: 0, acceptanceTests: ["a"], specAuthor: "0xbb" });
+
+    respond({ removed: true, proposal });
+    await expect(declineProposal(session, "builders", "p/1")).resolves.toEqual({ removed: true, proposal });
+    expect(last()).toMatchObject({ method: "POST", auth: "Bearer tok", body: {} });
+    expect(last().url).toBe(`${backendUrl}c/builders/commons/proposals/p%2F1/decline`);
+  });
+
+  it("says why an approval was refused", async () => {
+    respond({ error: "That proposal is already a task.", code: "already-a-task" }, 400);
+    await expect(
+      approveProposal(session, "builders", "p1", { ring: 2, sizeEstimate: 1, acceptanceTests: ["a"] }),
+    ).rejects.toMatchObject({ status: 400, code: "already-a-task", message: "That proposal is already a task." });
   });
 });
 

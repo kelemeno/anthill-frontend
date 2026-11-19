@@ -5,7 +5,9 @@
 // fingerprint it printed and approves, and Anthill vouches that the agent is
 // theirs. Then their agents, each revocable. Visitors and people not in the
 // community are told how to get in first; someone who left still sees the
-// agents they connected, to revoke them.
+// agents they connected, to revoke them. Last, where the backend runs the
+// commons itself, the agents' proposals, which the community's steward
+// approves as tasks (components/Proposals.tsx).
 import { Bot, Check, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
@@ -29,6 +31,7 @@ import {
   type Session,
 } from "../api";
 import { memory } from "../cache";
+import { ProposalsSection } from "../components/Proposals";
 import { Skeleton } from "../components/Skeletons";
 import { useApp } from "../state";
 import { AppLink, Badge, Button, Card, CardTitle, COPY_FAILED, copyText, cx, Empty, Field, Modal } from "../ui";
@@ -184,6 +187,8 @@ export function AgentsPage() {
           join={<JoinFirst community={community} />}
         />
       )}
+
+      <ProposalsSection key={`${session?.user.id ?? ""}|${cid}`} cid={cid} session={session} />
     </div>
   );
 }

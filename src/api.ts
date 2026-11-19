@@ -3,7 +3,8 @@
 // community its whole graph, tree actions and their dry runs, who someone can
 // endorse, invites and polls, its site (which pages it shows, its colour, its
 // About text), and for a community with an agent commons, pairing agents with
-// it. Profiles belong to the account.
+// it (and, where the server runs the commons itself, approving its agents'
+// proposals as tasks). Profiles belong to the account.
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 
 export const backendUrl: string =
@@ -804,3 +805,86 @@ export const revokeAgent = (session: Session, cid: string, keyId: string, reason
     reason ? { reason } : {},
     session.token,
   );
+
+//// proposals into tasks: in a commons the backend runs itself, its agents
+//// propose work (with evidence), and the community's steward (whoever may
+//// change its settings) approves a proposal as a task agents can claim. The
+//// commons' coordinator makes it a task on its next pass, within a minute;
+//// until then the approval is pending, and can be declined.
+
+// 0: the kernel (reputation maths, sign-in, the ledger, the coordinator);
+// 1: plain logic; 2: UI that can't change any state.
+export type Ring = 0 | 1 | 2;
+
+// One piece of a proposal's evidence, in words (written by an agent), and
+// the repository file it points at (a diagnostic's or a location's), which
+// the approve form classifies with the commons' rings.
+export type Evidence = { kind: "failingTest" | "diagnostic" | "location" | "other"; text: string; file?: string };
+
+// The commons' ring rules (the ledger's rules.rings, from its genesis or
+// last rules change): the first matching glob gives a file's ring, and a
+// file no glob matches is ring 1 (rings.ts).
+export type RingRule = { glob: string; ring: Ring };
+
+export type PersonRef = { id: string; name: string };
+
+// What became of a proposal: pending (approved, waiting for the commons) or
+// created (a task in the commons; state: open, claimed or merged, as it says).
+// problem, on a pending one: why the commons won't make it a task (it fails
+// the checks the ledger makes of a task, or it's been waiting several of the
+// coordinator's passes); declining it is the way out.
+export type ProposalTask = {
+  status: "pending" | "created";
+  id: string;
+  ring: number;
+  sizeEstimate: number;
+  acceptanceTestPaths: string[];
+  specAuthor: PersonRef;
+  state?: string;
+  problem?: string;
+};
+
+export type Proposal = {
+  id: string;
+  title: string;
+  proposedAt: string;
+  evidence: Evidence[];
+  // the agent's key and model family, and whose it is (agent null: the
+  // owner's own key)
+  author: { agent: string | null; modelFamily: string | null; owner: PersonRef | null };
+  task: ProposalTask | null;
+};
+
+// Newest first. For whoever may approve (canApprove): who can be a task's
+// spec author (the commons' owners: members with an agent connected) and
+// whether you're one. problem: the server can't read its approvals. rings:
+// the commons' ring rules, when the server could read them.
+export type Proposals = {
+  proposals: Proposal[];
+  total: number;
+  canApprove: boolean;
+  owners?: PersonRef[];
+  youAreOwner?: boolean;
+  problem?: string;
+  rings?: RingRule[];
+};
+
+// acceptanceTests: test file paths in the repository; specAuthor: an
+// owner's user id (you, when left out).
+export type TaskApproval = { ring: Ring; sizeEstimate: number; acceptanceTests: string[]; specAuthor?: string };
+
+// The community's proposals; a 404 when it has no commons the server runs
+// itself (approving happens on the commons' own server then).
+export const fetchProposals = (cid: string, session?: Session) =>
+  request<Proposals>(inside(cid, "commons/proposals"), undefined, session?.token);
+
+const proposalPath = (cid: string, id: string, then: string) =>
+  inside(cid, `commons/proposals/${encodeURIComponent(id)}/${then}`);
+
+// added: false when it was approved already (the same task).
+export const approveProposal = (session: Session, cid: string, id: string, approval: TaskApproval) =>
+  request<{ added: boolean; proposal: Proposal }>(proposalPath(cid, id, "approve"), approval, session.token);
+
+// Takes back an approval the commons hasn't made a task of yet.
+export const declineProposal = (session: Session, cid: string, id: string) =>
+  request<{ removed: boolean; proposal: Proposal }>(proposalPath(cid, id, "decline"), {}, session.token);
