@@ -1,15 +1,17 @@
 // The community you're in, in the header: a menu to switch to another of yours
 // or a public one, see all communities, start one, or (as its founder, or the
-// root of one without a founder) change this one's settings.
-import { ChevronDown, LayoutGrid, Lock, Plus, Settings } from "lucide-react";
+// root of one without a founder) change this one's settings and customise its
+// site.
+import { ChevronDown, LayoutGrid, Lock, Palette, Plus, Settings } from "lucide-react";
 
 import type { Community } from "../api";
+import { markBackground } from "../model";
 import { useApp } from "../state";
 import { communityPath, cx, Menu, MenuItem, useAppNavigate } from "../ui";
 import { Skeleton } from "./Skeletons";
 
 export function CommunitySwitcher() {
-  const { cid, graph, notFound, communities = [], createCommunity, editCommunity } = useApp();
+  const { cid, graph, notFound, communities = [], createCommunity, editCommunity, customise } = useApp();
   const navigate = useAppNavigate();
   const here = cid ? (graph?.community ?? communities.find((c) => c.id === cid)) : undefined;
   const yours = communities.filter((c) => c.you !== null);
@@ -48,9 +50,14 @@ export function CommunitySwitcher() {
               Start a community
             </MenuItem>
             {(here?.canChangeSettings ?? here?.isFounder) && (
-              <MenuItem icon={<Settings size={16} />} onClick={() => (close(), editCommunity())}>
-                Settings for {here.name}
-              </MenuItem>
+              <>
+                <MenuItem icon={<Settings size={16} />} onClick={() => (close(), editCommunity())}>
+                  Settings for {here.name}
+                </MenuItem>
+                <MenuItem icon={<Palette size={16} />} onClick={() => (close(), customise())}>
+                  Customise {here.name}
+                </MenuItem>
+              </>
             )}
           </div>
         </>
@@ -84,13 +91,9 @@ function Section(props: { title: string; list: Community[]; current?: string; pi
   );
 }
 
-// A community's initial on a colour picked from its address.
+// A community's initial on a colour picked from its address (markBackground).
 export function CommunityMark(props: { community: Pick<Community, "id" | "name" | "visibility">; size?: number }) {
   const size = props.size ?? 36;
-  let hash = 0;
-  for (const ch of props.community.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  const hues = [243, 199, 160, 32, 340, 270, 12, 186];
-  const hue = hues[hash % hues.length];
   return (
     <span
       aria-hidden
@@ -99,7 +102,7 @@ export function CommunityMark(props: { community: Pick<Community, "id" | "name" 
         width: size,
         height: size,
         fontSize: size * 0.42,
-        background: `linear-gradient(135deg, hsl(${hue} 70% 58%), hsl(${hue} 65% 46%))`,
+        background: markBackground(props.community.id),
       }}
     >
       {props.community.name.trim().charAt(0).toUpperCase() || "?"}

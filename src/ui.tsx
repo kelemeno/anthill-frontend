@@ -1,12 +1,13 @@
 // Small shared UI pieces: buttons, cards, avatars, person rows. One look across
-// all screens: white cards on a light canvas, slate text, indigo for actions.
+// all screens: cards on a canvas, slate text, the accent (the community's
+// colour) for actions. Light or dark: see index.css.
 import { X } from "lucide-react";
-import { type ComponentProps, type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type ComponentProps, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useMatch, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { Person } from "./api";
-import { colorOf, formatRep, initials, rep } from "./model";
+import { avatarStyle, formatRep, initials, rep } from "./model";
 
 export function cx(...classes: (string | false | undefined | null)[]) {
   return classes.filter(Boolean).join(" ");
@@ -55,12 +56,12 @@ export function Button(
       {...rest}
       className={cx(
         "inline-flex items-center justify-center gap-1.5 rounded-lg font-medium whitespace-nowrap transition-colors",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500",
         "disabled:cursor-not-allowed disabled:opacity-50",
         size === "sm" ? "h-8 px-3 text-[13px]" : "h-9 px-3.5 text-sm",
-        variant === "primary" && "bg-indigo-600 text-white hover:bg-indigo-700",
+        variant === "primary" && "bg-accent-solid text-white hover:bg-accent-solid-hover",
         variant === "secondary" &&
-          "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
+          "border border-slate-200 bg-surface text-slate-700 hover:bg-slate-50",
         variant === "ghost" && "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
         variant === "danger" && "text-red-600 hover:bg-red-50",
         className,
@@ -75,7 +76,7 @@ export function Card(props: ComponentProps<"section">) {
     <section
       {...rest}
       className={cx(
-        "rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
+        "rounded-2xl border border-slate-200/80 bg-surface p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
         className,
       )}
     />
@@ -99,13 +100,13 @@ export function Avatar(props: { person: Pick<Person, "id" | "name">; size?: numb
   return (
     <span
       className={cx(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
-        props.ring && "ring-2 ring-indigo-500 ring-offset-2",
+        "avatar inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white",
+        props.ring && "ring-2 ring-accent-500 ring-offset-2 ring-offset-surface",
       )}
       style={{
         width: size,
         height: size,
-        background: colorOf(props.person.id),
+        ...avatarStyle(props.person.id),
         fontSize: Math.max(10, size * 0.38),
       }}
     >
@@ -114,14 +115,14 @@ export function Avatar(props: { person: Pick<Person, "id" | "name">; size?: numb
   );
 }
 
-export function Badge(props: { children: ReactNode; tone?: "slate" | "indigo" | "amber" | "emerald" }) {
+export function Badge(props: { children: ReactNode; tone?: "slate" | "accent" | "amber" | "emerald" }) {
   const tone = props.tone ?? "slate";
   return (
     <span
       className={cx(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
         tone === "slate" && "bg-slate-100 text-slate-600",
-        tone === "indigo" && "bg-indigo-50 text-indigo-700",
+        tone === "accent" && "bg-accent-50 text-accent-700",
         tone === "amber" && "bg-amber-50 text-amber-700",
         tone === "emerald" && "bg-emerald-50 text-emerald-700",
       )}
@@ -142,7 +143,7 @@ export function PersonRow(props: {
       <AppLink to={`/p/${props.person.id}`} className="flex min-w-0 flex-1 items-center gap-3 group">
         <Avatar person={props.person} size={34} />
         <span className="min-w-0">
-          <span className="block truncate text-sm font-medium text-slate-900 group-hover:text-indigo-600">
+          <span className="block truncate text-sm font-medium text-slate-900 group-hover:text-accent-600">
             {props.person.name}
           </span>
           <span className="block truncate text-[13px] text-slate-500">
@@ -160,32 +161,35 @@ export function Empty(props: { children: ReactNode }) {
 }
 
 // A dialog: centred card on wide screens, bottom sheet on phones. Escape or a
-// click outside closes it (when onClose is given).
+// click outside closes it (when onClose is given), except an Escape that ends
+// typing in another script (an IME) or that a control inside already used.
 export function Modal(props: {
   title: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
   onClose?: () => void;
-  wide?: boolean;
+  // "extra" for a dialog with an editor in it
+  wide?: boolean | "extra";
 }) {
   const { onClose } = props;
   useEffect(() => {
     if (!onClose) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) =>
+      e.key === "Escape" && !e.isComposing && e.keyCode !== 229 && !e.defaultPrevented && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 sm:items-center sm:p-4 dark:bg-black/60"
       onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}
     >
       <div
         role="dialog"
         aria-modal="true"
         className={cx(
-          "max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl sm:p-6",
-          props.wide ? "sm:max-w-lg" : "sm:max-w-md",
+          "max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl bg-surface p-5 shadow-2xl sm:rounded-2xl sm:p-6",
+          props.wide === "extra" ? "sm:max-w-2xl" : props.wide ? "sm:max-w-lg" : "sm:max-w-md",
         )}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
@@ -209,6 +213,11 @@ export function Modal(props: {
   );
 }
 
+// How a text field shows it has the focus, in the community's colour: its
+// border turns accent-500, at least 3:1 against the surface for every accent in
+// both schemes (400 isn't, for most of them, on white).
+export const FIELD_FOCUS = "outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-100";
+
 export function Field(props: {
   label: string;
   value: string;
@@ -222,8 +231,10 @@ export function Field(props: {
   onEnter?: () => void;
 }) {
   const id = useId();
-  const cls =
-    "w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
+  const cls = cx(
+    "w-full rounded-lg border border-slate-200 bg-surface px-3 text-sm text-slate-900 placeholder:text-slate-400",
+    FIELD_FOCUS,
+  );
   return (
     <div className="mt-3">
       <label htmlFor={id} className="mb-1 block text-[13px] font-medium text-slate-700">
@@ -286,7 +297,7 @@ export function Menu(props: {
       {open && (
         <div
           className={cx(
-            "absolute z-40 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl",
+            "absolute z-40 mt-2 w-64 overflow-hidden rounded-xl border border-slate-200 bg-surface py-1.5 shadow-xl",
             props.align === "left" ? "left-0" : "right-0",
           )}
         >
@@ -315,6 +326,29 @@ export function MenuItem(props: { icon?: ReactNode; children: ReactNode; onClick
 
 // For a clickable shape that isn't a link or button (an svg <g>): Enter, or
 // Space, does what a click does.
+// For a group of role="radio" (or role="tab") buttons, on the element around
+// them: the arrow keys (and Home and End) move the choice and the focus, as
+// screen readers say they will. Give the chosen one tabIndex 0 and the others
+// -1, so the group is one Tab stop.
+export function arrowKeys<T>(options: readonly T[], current: T, choose: (option: T) => void) {
+  return (e: ReactKeyboardEvent<HTMLElement>) => {
+    const at = options.indexOf(current);
+    const to: number | undefined = {
+      ArrowRight: at + 1,
+      ArrowDown: at + 1,
+      ArrowLeft: at - 1,
+      ArrowUp: at - 1,
+      Home: 0,
+      End: options.length - 1,
+    }[e.key];
+    if (to === undefined || options.length === 0) return;
+    e.preventDefault();
+    const next = (to + options.length) % options.length;
+    choose(options[next]);
+    e.currentTarget.querySelectorAll<HTMLElement>('[role="radio"], [role="tab"]')[next]?.focus();
+  };
+}
+
 export function opensOnKey(e: { key: string; preventDefault: () => void }, open: () => void) {
   if (e.key !== "Enter" && e.key !== " ") return;
   e.preventDefault();

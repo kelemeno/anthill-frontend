@@ -5,7 +5,8 @@
 // browser brings the page Back), and the callback's checks (the state must be
 // the one this tab started; it goes back only to paths on this site; linking
 // and confirming finish with the signed-in session). And pairing agents with a
-// community's agent commons, and the agents' list and revoking.
+// community's agent commons, and the agents' list and revoking. And a
+// community's site: reading it, and saving all of it.
 // @vitest-environment jsdom
 import { startAuthentication } from "@simplewebauthn/browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,6 +33,7 @@ import {
   fetchPasskeys,
   fetchPolls,
   fetchSessions,
+  fetchSite,
   finishGoogle,
   isCancel,
   linkGoogle,
@@ -43,6 +45,7 @@ import {
   sameSitePath,
   saveProfile,
   saveSession,
+  saveSite,
   signInWithGoogle,
   signOut,
   signOutEverywhere,
@@ -661,5 +664,36 @@ describe("agents", () => {
     expect(last().url).toMatch(/\/commons\/agents\/k%2F1\/revoke$/);
     await revokeAgent(session, "builders", "k/1");
     expect(last().body).toEqual({});
+  });
+});
+
+describe("site", () => {
+  const site = { pages: { explore: true, polls: false, people: true, agents: false }, accent: "teal", about: "# Hi" };
+
+  it("reads a community's site, signed out or with the token (a private one needs it)", async () => {
+    respond({ site });
+    await expect(fetchSite("club")).resolves.toEqual(site);
+    expect(last()).toMatchObject({ method: "GET", auth: undefined });
+    expect(last().url).toBe(`${backendUrl}c/club/site`);
+    await fetchSite("back room", session);
+    expect(last()).toMatchObject({ method: "GET", auth: "Bearer tok" });
+    expect(last().url).toBe(`${backendUrl}c/back%20room/site`);
+  });
+
+  it("saves the whole site, signed in, and answers the community", async () => {
+    respond({ community: { id: "club", site: { pages: site.pages, accent: "teal", hasAbout: true } } });
+    await expect(saveSite(session, "club", site)).resolves.toMatchObject({ id: "club", site: { accent: "teal" } });
+    expect(last()).toMatchObject({ method: "POST", auth: "Bearer tok", body: site });
+    expect(last().url).toBe(`${backendUrl}c/club/site`);
+  });
+
+  it("surfaces the server's refusal in its words", async () => {
+    respond({ error: "Choose an accent colour: indigo, blue, teal." }, 400);
+    await expect(saveSite(session, "club", { ...site, accent: "plaid" })).rejects.toMatchObject({
+      message: "Choose an accent colour: indigo, blue, teal.",
+      status: 400,
+    });
+    respond({ error: "Only the founder can change this community's settings." }, 403);
+    await expect(saveSite(session, "club", site)).rejects.toMatchObject({ status: 403 });
   });
 });

@@ -6,6 +6,8 @@ import { X } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
+import type { SitePages } from "../api";
+import { type NavPage, navPages } from "../site";
 import { Button } from "../ui";
 
 export type TourStep = {
@@ -155,12 +157,12 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
     <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Guided tour">
       <div className="absolute inset-0" />
       <div
-        className="pointer-events-none fixed rounded-2xl shadow-[0_0_0_9999px_rgba(15,23,42,0.55)] transition-all duration-300"
+        className="pointer-events-none fixed rounded-2xl shadow-[0_0_0_9999px_rgba(15,23,42,0.55)] transition-all dark:shadow-[0_0_0_9999px_rgba(0,0,0,0.7)] duration-300"
         style={rect ?? { top: vh / 2, left: vw / 2, width: 0, height: 0 }}
       />
       <div
         ref={cardRef}
-        className="fixed rounded-2xl bg-white p-5 shadow-2xl transition-all duration-300"
+        className="fixed rounded-2xl bg-surface p-5 shadow-2xl transition-all duration-300"
         style={{ ...pos, width }}
       >
         <button
@@ -171,7 +173,7 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
         >
           <X size={16} />
         </button>
-        <p className="text-[12px] font-semibold text-indigo-600">
+        <p className="text-[12px] font-semibold text-accent-600">
           {at + 1} of {steps.length}
         </p>
         <h2 className="mt-1 pr-6 text-[16px] font-semibold text-slate-900">{step.title}</h2>
@@ -189,9 +191,24 @@ export function Tour(props: { steps: TourStep[]; navigate: NavigateFunction; onC
   );
 }
 
+// each tab after "You", for the step about the nav
+const PLACES: Record<Exclude<NavPage, "home">, { name: string; what: string }> = {
+  explore: { name: "Explore", what: "the whole tree" },
+  polls: { name: "Polls", what: "the questions people vote on" },
+  people: { name: "People", what: "everyone by reputation" },
+  agents: { name: "Agents", what: "members' AI agents" },
+  about: { name: "About", what: "what the community is about" },
+};
+const COUNT = ["One", "Two", "Three", "Four", "Five", "Six"];
+
 // The tour's steps: the full walkthrough for members (or a previewed member),
-// a shorter one for visitors.
-export function tourSteps(context: { member: boolean; signedIn: boolean }): TourStep[] {
+// a shorter one for visitors. Only through the tabs the community shows
+// (`tabs`, as the nav has them: navPages; a community's defaults when not
+// given), and the step about the nav names each of them.
+export function tourSteps(context: { member: boolean; signedIn: boolean; tabs?: NavPage[] }): TourStep[] {
+  const tabs = context.tabs ?? navPages(undefined);
+  const on = (page: NavPage) => tabs.includes(page);
+  const places = tabs.flatMap((page) => (page === "home" ? [] : [{ page, ...PLACES[page] }]));
   const steps: TourStep[] = [
     {
       title: "Welcome to Anthill",
@@ -214,13 +231,18 @@ export function tourSteps(context: { member: boolean; signedIn: boolean }): Tour
       ),
     },
     {
-      title: "Four places",
+      title: `${COUNT[places.length]} ${places.length === 0 ? "place" : "places"}`,
       target: "nav",
       body: (
         <p>
-          <strong>You</strong> is your overview, <strong>Explore</strong> the whole tree,{" "}
-          <strong>Polls</strong> the questions people vote on, <strong>People</strong> everyone
-          by reputation.
+          <strong>You</strong> is your overview
+          {places.map((p, i) => (
+            <span key={p.page}>
+              {i === places.length - 1 ? " and " : ", "}
+              <strong>{p.name}</strong> {p.what}
+            </span>
+          ))}
+          .
         </p>
       ),
     },
@@ -281,8 +303,9 @@ export function tourSteps(context: { member: boolean; signedIn: boolean }): Tour
       body: <p>Pick anyone to see the app from their point of view, read-only, before you join.</p>,
     });
   }
-  steps.push(
+  const pageSteps: (TourStep & { page: keyof SitePages })[] = [
     {
+      page: "explore",
       title: "The whole tree",
       target: "explore-tree",
       path: "/explore",
@@ -294,11 +317,13 @@ export function tourSteps(context: { member: boolean; signedIn: boolean }): Tour
       ),
     },
     {
+      page: "explore",
       title: "Find someone",
       target: "explore-search",
       body: <p>Search by name to jump straight to them.</p>,
     },
     {
+      page: "polls",
       title: "Polls",
       target: "polls",
       path: "/polls",
@@ -310,11 +335,15 @@ export function tourSteps(context: { member: boolean; signedIn: boolean }): Tour
       ),
     },
     {
+      page: "people",
       title: "People",
       target: "people",
       path: "/people",
       body: <p>Everyone ranked by reputation. Filter to who you can endorse, or who has a free spot.</p>,
     },
+  ];
+  steps.push(
+    ...pageSteps.filter((s) => on(s.page)).map(({ page, ...step }) => step),
     context.signedIn
       ? {
           title: "Your account",

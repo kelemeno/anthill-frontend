@@ -31,7 +31,7 @@ export function ReplayBar(props: {
 
   return (
     <div
-      className="absolute inset-x-2 bottom-2 z-20 mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur sm:inset-x-3 sm:bottom-3"
+      className="absolute inset-x-2 bottom-2 z-20 mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-surface/95 p-3 shadow-xl backdrop-blur sm:inset-x-3 sm:bottom-3"
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-baseline justify-between gap-3 px-1">
@@ -48,7 +48,7 @@ export function ReplayBar(props: {
           )}
         </p>
         {props.error ? (
-          <button type="button" onClick={props.onRetry} className="shrink-0 text-[13px] font-medium text-indigo-600 hover:underline">
+          <button type="button" onClick={props.onRetry} className="shrink-0 text-[13px] font-medium text-accent-600 hover:underline">
             Try again
           </button>
         ) : (
@@ -68,7 +68,7 @@ export function ReplayBar(props: {
           title={props.playing ? "Pause (space)" : "Play (space)"}
           disabled={!steps}
           onClick={props.playing ? props.onPause : props.onPlay}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-solid text-white hover:bg-accent-solid-hover disabled:opacity-40"
         >
           {props.playing ? <Pause size={16} /> : atEnd ? <RotateCcw size={16} /> : <Play size={16} className="ml-0.5" />}
         </button>
@@ -86,7 +86,7 @@ export function ReplayBar(props: {
           value={step}
           disabled={!steps}
           onChange={(e) => props.onSeek(Number(e.target.value))}
-          className="mx-2 h-1.5 min-w-0 flex-1 cursor-pointer accent-indigo-600 max-sm:order-last max-sm:mx-1 max-sm:my-2 max-sm:basis-full"
+          className="mx-2 h-1.5 min-w-0 flex-1 cursor-pointer accent-accent-solid max-sm:order-last max-sm:mx-1 max-sm:my-2 max-sm:basis-full"
         />
         <button
           type="button"

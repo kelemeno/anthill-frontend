@@ -8,6 +8,7 @@ import { readCache, writeCache } from "../cache";
 import { CommunityMark } from "../components/CommunitySwitcher";
 import { CardGridSkeleton, GhostTree } from "../components/Skeletons";
 import { formatRep, toNumber } from "../model";
+import { siteOf } from "../site";
 import { useApp } from "../state";
 import { AppLink, Badge, Button, Card, communityPath, Empty, SiteFooter } from "../ui";
 import { HowItWorks, TopOfTree } from "./Landing";
@@ -85,14 +86,20 @@ export function HomePage() {
               <div className="fade-in">
                 <TopOfTree graph={demo} cid={DEMO_COMMUNITY} />
                 <p className="pb-1 text-center text-[12px] text-slate-400">
-                  The top of the demo community ·{" "}
-                  <AppLink
-                    to={`${communityPath(DEMO_COMMUNITY, "/explore")}?replay=1`}
-                    global
-                    className="font-medium text-indigo-600 hover:underline"
-                  >
-                    watch it grow
-                  </AppLink>
+                  The top of the demo community
+                  {/* (its replay is on its Explore page, if it shows one) */}
+                  {siteOf(demo.community).pages.explore && (
+                    <>
+                      {" · "}
+                      <AppLink
+                        to={`${communityPath(DEMO_COMMUNITY, "/explore")}?replay=1`}
+                        global
+                        className="font-medium text-accent-600 hover:underline"
+                      >
+                        watch it grow
+                      </AppLink>
+                    </>
+                  )}
                 </p>
               </div>
             ) : (
@@ -163,7 +170,7 @@ function CommunityGrid(props: {
           {props.failed && (
             <p className="mt-3 text-sm text-slate-500">
               Couldn't refresh the communities: {props.failed.message}{" · "}
-              <button type="button" onClick={props.failed.retry} className="font-medium text-indigo-600 hover:underline">
+              <button type="button" onClick={props.failed.retry} className="font-medium text-accent-600 hover:underline">
                 Try again
               </button>
             </p>
@@ -196,7 +203,7 @@ function CommunityCard(props: { community: Community }) {
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
           {c.you ? (
             <>
-              <Badge tone="indigo">#{c.you.rank} of {c.members}</Badge>
+              <Badge tone="accent">#{c.you.rank} of {c.members}</Badge>
               <span className="num text-[13px] text-slate-500">{formatRep(toNumber(c.you.reputation))} reputation</span>
             </>
           ) : (

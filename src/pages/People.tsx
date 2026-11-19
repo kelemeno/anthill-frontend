@@ -6,7 +6,7 @@ import { fetchReach } from "../api";
 import { formatRep, level, rankedWithRank, relation, rep } from "../model";
 import { useApp } from "../state";
 import { RowsSkeleton } from "../components/Skeletons";
-import { AppLink, Avatar, Badge, Card, cx, Empty } from "../ui";
+import { AppLink, Avatar, Badge, Card, cx, Empty, FIELD_FOCUS } from "../ui";
 
 type Filter = "all" | "reach" | "free";
 
@@ -47,7 +47,7 @@ export function PeoplePage() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name…"
           aria-label="Search people by name"
-          className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+          className={cx("h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-surface px-3.5 text-sm", FIELD_FOCUS)}
         />
         <div className="flex rounded-xl bg-slate-100 p-1">
           {filters.map((f) => (
@@ -57,7 +57,7 @@ export function PeoplePage() {
               onClick={() => setFilter(f.key)}
               className={cx(
                 "rounded-lg px-3 py-1.5 text-[13px] font-medium whitespace-nowrap",
-                filter === f.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800",
+                filter === f.key ? "bg-surface text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800",
               )}
             >
               {f.label}
@@ -79,7 +79,7 @@ export function PeoplePage() {
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium text-slate-900">{p.name}</span>
-                  {p.id === viewer?.id && <Badge tone="indigo">You</Badge>}
+                  {p.id === viewer?.id && <Badge tone="accent">You</Badge>}
                 </span>
                 <span className="block truncate text-[13px] text-slate-500">
                   Level {level(p)} · {p.recDagVotes.length} endorse them

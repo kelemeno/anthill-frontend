@@ -1,8 +1,9 @@
 // Talking to the Anthill backend: accounts (passkeys, Google through the
 // backend, sessions, export and deletion), communities, and inside each
 // community its whole graph, tree actions and their dry runs, who someone can
-// endorse, invites and polls, and for a community with an agent commons,
-// pairing agents with it. Profiles belong to the account.
+// endorse, invites and polls, its site (which pages it shows, its colour, its
+// About text), and for a community with an agent commons, pairing agents with
+// it. Profiles belong to the account.
 import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 
 export const backendUrl: string =
@@ -59,6 +60,10 @@ export type Community = {
   // a founder's): the coordinator agents work through, and the commons' public
   // site. Missing from older servers, like null.
   commons?: Commons | null;
+  // how its site looks: which pages it shows, its accent colour, and whether
+  // it has an About text (fetched with fetchSite). Missing from older servers:
+  // every page on, the default colour, no About (see siteOf).
+  site?: SiteSummary;
 };
 
 export type CommunitySettings = Pick<Community, "name" | "description" | "visibility" | "joinPolicy">;
@@ -177,6 +182,28 @@ export const saveCommunitySettings = (session: Session, cid: string, settings: C
   request<{ community: Community }>(inside(cid, "settings"), settings, session.token).then(
     (r) => r.community,
   );
+
+//// a community's site: presentation only (a page turned off is hidden, its
+//// data and rules stay as they are)
+
+// The pages a community can turn off; "You", its home, is always on. Agents
+// can be on only where the operator set up a commons.
+export type SitePage = "explore" | "polls" | "people" | "agents";
+export type SitePages = Record<SitePage, boolean>;
+export type SiteSummary = { pages: SitePages; accent: string; hasAbout: boolean };
+// accent: one of ACCENTS (src/site.ts); about: Markdown, up to ABOUT_MAX
+// characters. (Read through siteOf / pagesOf, which also take pages as a list
+// of the pages shown.)
+export type Site = { pages: SitePages; accent: string; about: string };
+
+// Anyone who can see the community.
+export const fetchSite = (cid: string, session?: Session) =>
+  request<{ site: Site }>(inside(cid, "site"), undefined, session?.token).then((r) => r.site);
+
+// Whoever may change its settings (canChangeSettings). Replaces the whole
+// site, About included.
+export const saveSite = (session: Session, cid: string, site: Site) =>
+  request<{ community: Community }>(inside(cid, "site"), site, session.token).then((r) => r.community);
 
 // A URL-friendly address from a name: "Book Club!" -> "book-club".
 export function slugify(name: string): string {

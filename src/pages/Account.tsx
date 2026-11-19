@@ -363,7 +363,7 @@ function AccountSettings(props: { session: Session }) {
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 text-sm font-medium text-slate-900">
                   <span className="truncate">{s.device || "Unknown device"}</span>
-                  {s.current && <Badge tone="indigo">This device</Badge>}
+                  {s.current && <Badge tone="accent">This device</Badge>}
                 </p>
                 <p className="text-[13px] text-slate-500">
                   {MADE_BY[s.method] ?? "Signed in"} · {formatDate(s.createdAt)}

@@ -9,7 +9,7 @@ import { memory, viewerKey } from "../cache";
 import { formatRep, toNumber } from "../model";
 import { useApp } from "../state";
 import { Skeleton } from "../components/Skeletons";
-import { AppLink, Avatar, Badge, Button, Card, cx, Empty, Field, Modal } from "../ui";
+import { AppLink, Avatar, Badge, Button, Card, cx, Empty, Field, FIELD_FOCUS, Modal } from "../ui";
 
 // the polls each community last showed each viewer (their votes are in it),
 // for coming back without a wait
@@ -183,16 +183,16 @@ function PollCard(props: {
               onClick={() => props.onVote(i)}
               className={cx(
                 "relative flex w-full items-center gap-3 overflow-hidden rounded-xl border px-3.5 py-2.5 text-left transition-colors",
-                mine ? "border-indigo-300 bg-indigo-50/40" : "border-slate-200",
-                clickable ? "cursor-pointer hover:border-indigo-300" : "cursor-default",
+                mine ? "border-accent-300 bg-accent-50/40" : "border-slate-200",
+                clickable ? "cursor-pointer hover:border-accent-300" : "cursor-default",
               )}
             >
               <span
-                className={cx("absolute inset-y-0 left-0", leading ? "bg-indigo-100" : "bg-slate-100")}
+                className={cx("absolute inset-y-0 left-0", leading ? "bg-accent-100" : "bg-slate-100")}
                 style={{ width: `${share * 100}%` }}
               />
               <span className="relative flex min-w-0 flex-1 items-center gap-2 text-sm font-medium text-slate-900">
-                {mine && <Check size={15} className="shrink-0 text-indigo-600" />}
+                {mine && <Check size={15} className="shrink-0 text-accent-600" />}
                 <span className="truncate">{option}</span>
               </span>
               <span className="num relative shrink-0 text-[13px] text-slate-500">
@@ -267,7 +267,7 @@ function NewPollModal(props: { onClose: () => void; onCreate: (q: string, option
               maxLength={80}
               placeholder={`Option ${i + 1}`}
               onChange={(e) => setOptions(options.map((o, j) => (j === i ? e.target.value : o)))}
-              className="h-10 flex-1 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className={cx("h-10 flex-1 rounded-lg border border-slate-200 px-3 text-sm", FIELD_FOCUS)}
             />
             {options.length > 2 && (
               <Button

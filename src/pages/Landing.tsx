@@ -5,8 +5,10 @@ import { ArrowUpRight, Heart, Lock, Play, TrendingUp, UserPlus } from "lucide-re
 import { type ReactNode, useState } from "react";
 
 import { DEFAULT_COMMUNITY, DEMO_COMMUNITY, type Graph } from "../api";
-import { colorOf, formatRep, initials, members, rep } from "../model";
+import { avatarStyle, formatRep, initials, members, rep } from "../model";
+import { siteOf } from "../site";
 import { useApp } from "../state";
+import { AboutCard } from "./About";
 import { GhostTree, Skeleton } from "../components/Skeletons";
 import {
   AppLink,
@@ -14,6 +16,8 @@ import {
   Card,
   CardTitle,
   communityPath,
+  cx,
+  FIELD_FOCUS,
   opensOnKey,
   PersonRow,
   SiteFooter,
@@ -29,6 +33,7 @@ export function Landing() {
   const endorsements = people.reduce((n, p) => n + p.sentDagVotes.length, 0);
   const levels = people.length === 0 ? 0 : Math.max(0, ...people.map((p) => p.depth)) + 1;
   const empty = graph !== undefined && people.length === 0;
+  const explore = siteOf(community).pages.explore;
 
   return (
     <div className="space-y-6">
@@ -36,7 +41,7 @@ export function Landing() {
         <div>
           {community ? (
             <>
-              <p className="flex items-center gap-1.5 text-[13px] font-medium text-indigo-600">
+              <p className="flex items-center gap-1.5 text-[13px] font-medium text-accent-600">
                 {community.visibility === "private" && <Lock size={13} />}
                 An Anthill community ·{" "}
                 {community.joinPolicy === "open"
@@ -65,7 +70,7 @@ export function Landing() {
               community?.joinPolicy === "closed" ? (
                 <p className="mr-2 text-sm text-slate-600">
                   It isn't taking new members.{" "}
-                  <AppLink to={communityPath(DEFAULT_COMMUNITY, "/")} global className="font-medium text-indigo-600 hover:underline">
+                  <AppLink to={communityPath(DEFAULT_COMMUNITY, "/")} global className="font-medium text-accent-600 hover:underline">
                     Join the Commons
                   </AppLink>{" "}
                   or start your own community.
@@ -81,7 +86,7 @@ export function Landing() {
                 <Button onClick={() => openAuth("create")}>Create account</Button>
               </>
             )}
-            {!empty && (
+            {!empty && explore && (
               <>
                 <AppLink to="/explore">
                   <Button variant="ghost">
@@ -133,6 +138,7 @@ export function Landing() {
         )}
       </section>
 
+      <AboutCard />
       <HowItWorks />
       {people.length > 0 && <MemberPreview />}
       <SiteFooter />
@@ -172,7 +178,7 @@ function Stat(props: { label: string; value: number | undefined }) {
 function Point(props: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <Card>
-      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-50 text-accent-600">
         {props.icon}
       </span>
       <h2 className="mt-3 text-[15px] font-semibold">{props.title}</h2>
@@ -234,7 +240,7 @@ export function TopOfTree(props: { graph: Graph; cid?: string }) {
             aria-label={`${p.name}: ${formatRep(rep(p))} reputation`}
           >
             <title>{`${p.name}: ${formatRep(rep(p))} reputation`}</title>
-            <circle r={r(p.id)} fill={colorOf(p.id)} />
+            <circle r={r(p.id)} className="avatar-fill" style={avatarStyle(p.id)} />
             <text y={4} textAnchor="middle" className="pointer-events-none fill-white text-[9px] font-semibold">
               {initials(p.name)}
             </text>
@@ -267,7 +273,7 @@ function MemberPreview() {
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search by name…"
         aria-label="Search members by name"
-        className="h-9 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+        className={cx("h-9 w-full rounded-lg border border-slate-200 px-3 text-sm", FIELD_FOCUS)}
       />
       <div className="mt-1 divide-y divide-slate-50">
         {matches.map((p) => (

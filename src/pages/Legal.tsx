@@ -26,7 +26,7 @@ function LegalPage(props: { title: string; intro: ReactNode; children: ReactNode
 const Contact = () => (
   <p>
     Questions, or something here that isn't right? Open an issue where Anthill's code lives,{" "}
-    <a href={SOURCE_URL} className="font-medium text-indigo-600 hover:underline">
+    <a href={SOURCE_URL} className="font-medium text-accent-600 hover:underline">
       github.com/kelemeno/anthill
     </a>
     .
@@ -61,7 +61,8 @@ export function PrivacyPage() {
         <li>
           <strong>What you do in communities:</strong> joining and leaving, moves in the tree,
           endorsements, the invites you make and use, polls you start and how you vote, and a
-          community's settings if you start one.
+          community's settings and its site (which pages it shows, its colour and its About
+          text, which everyone who can see the community can read) if you change them.
         </li>
         <li>
           <strong>Passkeys:</strong> each one's public key and id, how your browser said it can
@@ -94,8 +95,8 @@ export function PrivacyPage() {
       </ul>
       <p>
         In your browser, Anthill keeps your session (so you stay signed in), copies of the public
-        communities and their trees (so pages open quickly), the last community you opened and whether
-        you've seen the tour. While you're away signing in at Google, the tab also remembers a
+        communities and their trees (so pages open quickly), the last community you opened, whether
+        you've seen the tour, and light or dark if you chose one. While you're away signing in at Google, the tab also remembers a
         one-time value that checks Google sent you back from the sign-in you started.
       </p>
 
@@ -175,7 +176,7 @@ export function PrivacyPage() {
       <h2>Your data, your choices</h2>
       <ul>
         <li>
-          <strong>Download it:</strong> on your <AppLink to="/account" global className="font-medium text-indigo-600 hover:underline">account page</AppLink>,
+          <strong>Download it:</strong> on your <AppLink to="/account" global className="font-medium text-accent-600 hover:underline">account page</AppLink>,
           "Download my data" gives you a file with everything Anthill holds about your account.
         </li>
         <li>
@@ -234,7 +235,7 @@ export function TermsPage() {
         <p>
           Anthill is free to use. By using it you agree to these terms; they're short, so please
           read them. How Anthill handles your data is on the{" "}
-          <AppLink to="/privacy" global className="font-medium text-indigo-600 hover:underline">
+          <AppLink to="/privacy" global className="font-medium text-accent-600 hover:underline">
             privacy page
           </AppLink>
           .

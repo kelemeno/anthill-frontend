@@ -2,6 +2,8 @@
 // them in a side panel (a sheet on phones). Your own circle is ringed in
 // indigo; "Who I can endorse" highlights your reach; the selected person's
 // endorsements are drawn as arcs (green: endorses them, indigo: they endorse).
+// The tree's colours are the same in every community, not its accent: an accent
+// near one of them (green, amber, rose) would make two meanings look alike.
 //
 // "Watch it grow" replays the community's history step by step (?replay=1
 // opens it, so the link can be shared): people glide to their new places,
@@ -17,10 +19,10 @@ import { fetchHistory, fetchReach, type Graph, type HistoryStep, type Person } f
 import { ReplayBar } from "../components/ReplayBar";
 import { GhostTree } from "../components/Skeletons";
 import { PersonActions } from "../components/PersonActions";
-import { colorOf, formatRep, initials, level, members, person, rankOf, relation, rep } from "../model";
+import { avatarStyle, formatRep, initials, level, members, person, rankOf, relation, rep } from "../model";
 import { actors, caption, compact, dwell, graphAt } from "../replay";
 import { useApp } from "../state";
-import { AppLink, Avatar, Badge, Button, cx, opensOnKey } from "../ui";
+import { AppLink, Avatar, Badge, Button, cx, FIELD_FOCUS, opensOnKey } from "../ui";
 
 const SLOT = 64; // horizontal space per leaf
 const LEVEL = 96; // vertical space per level
@@ -121,7 +123,7 @@ const SM = 640; // Tailwind's sm: the person panel is a side card from here, a s
 
 // Full-bleed under the header: cancel main's padding (its bottom padding too,
 // or the page scrolls by the difference), and leave the phone tab bar room.
-const BLEED = "-mx-4 -mt-5 -mb-24 h-[calc(100dvh-57px)] bg-slate-50 sm:-mx-6 sm:-mb-8 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]";
+const BLEED = "-mx-4 -mt-5 -mb-24 h-[calc(100dvh-57px)] bg-canvas sm:-mx-6 sm:-mb-8 lg:-mx-8 max-sm:h-[calc(100dvh-57px-60px)]";
 
 // A fresh view for each community: camera, selection and replay start over.
 export function ExplorePage() {
@@ -423,11 +425,11 @@ function Explore() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find someone…"
               aria-label="Find someone"
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className={cx("h-10 w-full rounded-xl border border-slate-200 bg-surface pr-3 pl-9 text-sm shadow-sm", FIELD_FOCUS)}
             />
           </div>
           {matches.length > 0 && (
-            <div className="mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+            <div className="mt-1 overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-lg">
               {matches.map((p) => (
                 <button
                   key={p.id}
@@ -451,13 +453,13 @@ function Explore() {
               type="button"
               data-tour="explore-replay"
               onClick={openReplay}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-surface px-3 py-2 text-[13px] font-medium text-slate-700 shadow-sm hover:bg-slate-50"
             >
-              <Play size={14} className="text-indigo-600" /> Watch it grow
+              <Play size={14} className="text-accent-600" /> Watch it grow
             </button>
             {viewer && (
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[13px] text-slate-700 shadow-sm">
-                <input type="checkbox" checked={showReach} onChange={(e) => setShowReach(e.target.checked)} className="accent-indigo-600" />
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-surface px-3 py-2 text-[13px] text-slate-700 shadow-sm">
+                <input type="checkbox" checked={showReach} onChange={(e) => setShowReach(e.target.checked)} className="accent-accent-solid" />
                 Highlight who I can endorse
               </label>
             )}
@@ -468,7 +470,7 @@ function Explore() {
       {/* zoom */}
       <div
         className={cx(
-          "absolute right-3 flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
+          "absolute right-3 flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-sm",
           replaying ? "top-3" : "bottom-3 max-sm:bottom-auto max-sm:top-3",
         )}
       >
@@ -565,7 +567,7 @@ function Explore() {
                 onMouseEnter={() => setHovered(p.id)}
                 onMouseLeave={() => setHovered((h) => (h === p.id ? undefined : h))}
               >
-                {inReach && <circle r={r + 7} className="fill-amber-200/70" />}
+                {inReach && <circle r={r + 7} className="fill-amber-200/70 dark:fill-amber-400/35" />}
                 {isActor && (
                   <>
                     <circle key={`ping-${current?.index}`} r={r + 4} className="replay-ping fill-amber-300" />
@@ -582,7 +584,7 @@ function Explore() {
                     strokeWidth={2.5}
                   />
                 )}
-                <circle r={r} fill={colorOf(p.id)} />
+                <circle r={r} className="avatar-fill" style={avatarStyle(p.id)} />
                 <text y={4} textAnchor="middle" className="pointer-events-none fill-white text-[10px] font-semibold">
                   {initials(p.name)}
                 </text>
@@ -613,10 +615,9 @@ function Explore() {
                 y={at.y + at.r + 15 / zoomFix}
                 textAnchor="middle"
                 paintOrder="stroke"
-                stroke="white"
                 strokeWidth={4 / zoomFix}
                 strokeLinejoin="round"
-                className="pointer-events-none fill-slate-900 font-semibold"
+                className="pointer-events-none fill-slate-900 stroke-canvas font-semibold"
                 style={{ fontSize: 12 / zoomFix }}
               >
                 {p.name}
@@ -627,7 +628,7 @@ function Explore() {
       </svg>
 
       {/* legend */}
-      <div className={cx("absolute bottom-3 left-3 hidden gap-3 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[12px] text-slate-500 shadow-sm", !replaying && "sm:flex")}>
+      <div className={cx("absolute bottom-3 left-3 hidden gap-3 rounded-xl border border-slate-200 bg-surface/90 px-3 py-2 text-[12px] text-slate-500 shadow-sm", !replaying && "sm:flex")}>
         <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-full ring-2 ring-indigo-500" /> You</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 border-t-2 border-dashed border-emerald-500" /> Endorses them</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 border-t-2 border-dashed border-indigo-500" /> They endorse</span>
@@ -674,7 +675,7 @@ function PersonPanel(props: { graph: Graph; person: Person; viewer: Person | und
   return (
     <aside
       className={cx(
-        "absolute z-10 overflow-y-auto border-slate-200 bg-white shadow-xl",
+        "absolute z-10 overflow-y-auto border-slate-200 bg-surface shadow-xl",
         // side panel on wide screens, bottom sheet on phones
         "top-3 right-3 max-h-[calc(100%-24px)] w-[340px] rounded-2xl border p-5",
         "max-sm:inset-x-0 max-sm:top-auto max-sm:right-0 max-sm:bottom-0 max-sm:max-h-[62%] max-sm:w-auto max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0",
@@ -694,8 +695,8 @@ function PersonPanel(props: { graph: Graph; person: Person; viewer: Person | und
         </button>
       </div>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {viewer?.id === p.id && <Badge tone="indigo">You</Badge>}
-        {rel && <Badge tone="indigo">{rel}</Badge>}
+        {viewer?.id === p.id && <Badge tone="accent">You</Badge>}
+        {rel && <Badge tone="accent">{rel}</Badge>}
         <Badge>Level {level(p)}</Badge>
         <Badge tone="emerald">{p.recDagVotes.length} endorse them</Badge>
         <Badge>They endorse {p.sentDagVotes.length}</Badge>
@@ -706,7 +707,7 @@ function PersonPanel(props: { graph: Graph; person: Person; viewer: Person | und
           href={p.link}
           target="_blank"
           rel="noopener noreferrer nofollow"
-          className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-indigo-600 hover:underline"
+          className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-accent-600 hover:underline"
         >
           {p.link.replace(/^https?:\/\//, "")} <ExternalLink size={13} />
         </a>

@@ -1,16 +1,312 @@
 @import "tailwindcss";
 
+/* Dark: the system's setting (it switches live, e.g. with macOS's Auto),
+   unless this browser chose light or dark in the account menu: then <html>
+   has data-theme, set by /theme.js before the page paints. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+}
+
 @theme {
   --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* what cards, menus, dialogs and fields sit on (surface), and the page
+     behind them (canvas); white stays white, for text on colour */
+  --color-surface: #fff;
+  --color-canvas: var(--color-slate-50);
+
+  /* the accent: actions, links, what's selected. A community picks one of
+     the palette below (data-accent on <html>, see App); this is the default,
+     indigo, the look from before. 600 is for text and 700 for text on the
+     light tints (50, 100); solid is behind white text. */
+  --color-accent-50: oklch(96.2% 0.018 272.314);
+  --color-accent-100: oklch(93% 0.034 272.788);
+  --color-accent-200: oklch(87% 0.065 274.039);
+  --color-accent-300: oklch(78.5% 0.115 274.713);
+  --color-accent-400: oklch(67.3% 0.182 276.935);
+  --color-accent-500: oklch(58.5% 0.233 277.117);
+  --color-accent-600: oklch(51.1% 0.262 276.966);
+  --color-accent-700: oklch(45.7% 0.24 277.023);
+  --color-accent-solid: oklch(51.1% 0.262 276.966);
+  --color-accent-solid-hover: oklch(45.7% 0.24 277.023);
+}
+
+/* Dark mode keeps the class names and changes what they mean: the slate
+   greys turn around (900 is now the lightest text, 50 a hover a little above
+   the surface), and the tints (red, amber, emerald: 50 to 200 behind text,
+   600 and up as text) become dark tints and light text. Every pair the pages
+   use passes WCAG AA (4.5:1 for text). */
+:root {
+  @variant dark {
+    --color-surface: oklch(20.8% 0.042 265.755);
+    --color-canvas: oklch(12.9% 0.042 264.695);
+    --color-slate-50: oklch(24.5% 0.042 262.9);
+    --color-slate-100: oklch(27.9% 0.041 260.031);
+    --color-slate-200: oklch(33% 0.043 258.7);
+    --color-slate-300: oklch(44.6% 0.043 257.281);
+    --color-slate-400: oklch(62% 0.045 257.4);
+    --color-slate-500: oklch(70.4% 0.04 256.788);
+    --color-slate-600: oklch(79% 0.031 254.8);
+    --color-slate-700: oklch(86.9% 0.022 252.894);
+    --color-slate-800: oklch(92.9% 0.013 255.508);
+    --color-slate-900: oklch(96.8% 0.007 247.896);
+    --color-slate-950: oklch(98.4% 0.003 247.858);
+    --color-red-50: color-mix(in oklab, oklch(63.7% 0.237 25.331) 14%, var(--color-surface));
+    --color-red-100: color-mix(in oklab, oklch(63.7% 0.237 25.331) 20%, var(--color-surface));
+    --color-red-200: color-mix(in oklab, oklch(63.7% 0.237 25.331) 32%, var(--color-surface));
+    --color-red-600: oklch(70.4% 0.191 22.216);
+    --color-red-700: oklch(80.8% 0.114 19.571);
+    --color-red-800: oklch(88.5% 0.062 18.334);
+    --color-red-900: oklch(93.6% 0.032 17.717);
+    --color-amber-50: color-mix(in oklab, oklch(76.9% 0.188 70.08) 14%, var(--color-surface));
+    --color-amber-100: color-mix(in oklab, oklch(76.9% 0.188 70.08) 20%, var(--color-surface));
+    --color-amber-200: color-mix(in oklab, oklch(76.9% 0.188 70.08) 32%, var(--color-surface));
+    --color-amber-600: oklch(82.8% 0.189 84.429);
+    --color-amber-700: oklch(87.9% 0.169 91.605);
+    --color-amber-800: oklch(92.4% 0.12 95.746);
+    --color-amber-900: oklch(96.2% 0.059 95.617);
+    --color-emerald-50: color-mix(in oklab, oklch(69.6% 0.17 162.48) 14%, var(--color-surface));
+    --color-emerald-100: color-mix(in oklab, oklch(69.6% 0.17 162.48) 20%, var(--color-surface));
+    --color-emerald-200: color-mix(in oklab, oklch(69.6% 0.17 162.48) 32%, var(--color-surface));
+    --color-emerald-600: oklch(76.5% 0.177 163.223);
+    --color-emerald-700: oklch(84.5% 0.143 164.978);
+    --color-emerald-800: oklch(90.5% 0.093 164.15);
+    --color-emerald-900: oklch(95% 0.052 163.051);
+  }
+}
+
+/* The accent palette. Each colour's text (600 and 700) passes WCAG AA on the
+   surface, the canvas and its own tints, and white passes on its solid, in
+   both schemes. Its names are in src/site.ts (and the backend's site.ts). */
+:root,
+[data-accent="indigo"] {
+  --color-accent-50: oklch(96.2% 0.018 272.314);
+  --color-accent-100: oklch(93% 0.034 272.788);
+  --color-accent-200: oklch(87% 0.065 274.039);
+  --color-accent-300: oklch(78.5% 0.115 274.713);
+  --color-accent-400: oklch(67.3% 0.182 276.935);
+  --color-accent-500: oklch(58.5% 0.233 277.117);
+  --color-accent-600: oklch(51.1% 0.262 276.966);
+  --color-accent-700: oklch(45.7% 0.24 277.023);
+  --color-accent-solid: oklch(51.1% 0.262 276.966);
+  --color-accent-solid-hover: oklch(45.7% 0.24 277.023);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(58.5% 0.233 277.117) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(58.5% 0.233 277.117) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(58.5% 0.233 277.117) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(58.5% 0.233 277.117) 50%, var(--color-surface));
+    --color-accent-400: oklch(58.5% 0.233 277.117);
+    --color-accent-500: oklch(67.3% 0.182 276.935);
+    --color-accent-600: oklch(67.3% 0.182 276.935);
+    --color-accent-700: oklch(78.5% 0.115 274.713);
+    --color-accent-solid: oklch(51.1% 0.262 276.966);
+    --color-accent-solid-hover: oklch(45.7% 0.24 277.023);
+  }
+}
+[data-accent="blue"] {
+  --color-accent-50: oklch(97% 0.014 254.604);
+  --color-accent-100: oklch(93.2% 0.032 255.585);
+  --color-accent-200: oklch(88.2% 0.059 254.128);
+  --color-accent-300: oklch(80.9% 0.105 251.813);
+  --color-accent-400: oklch(70.7% 0.165 254.624);
+  --color-accent-500: oklch(62.3% 0.214 259.815);
+  --color-accent-600: oklch(54.6% 0.245 262.881);
+  --color-accent-700: oklch(48.8% 0.243 264.376);
+  --color-accent-solid: oklch(54.6% 0.245 262.881);
+  --color-accent-solid-hover: oklch(48.8% 0.243 264.376);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(62.3% 0.214 259.815) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(62.3% 0.214 259.815) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(62.3% 0.214 259.815) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(62.3% 0.214 259.815) 50%, var(--color-surface));
+    --color-accent-400: oklch(62.3% 0.214 259.815);
+    --color-accent-500: oklch(70.7% 0.165 254.624);
+    --color-accent-600: oklch(70.7% 0.165 254.624);
+    --color-accent-700: oklch(80.9% 0.105 251.813);
+    --color-accent-solid: oklch(54.6% 0.245 262.881);
+    --color-accent-solid-hover: oklch(48.8% 0.243 264.376);
+  }
+}
+[data-accent="teal"] {
+  --color-accent-50: oklch(98.4% 0.014 180.72);
+  --color-accent-100: oklch(95.3% 0.051 180.801);
+  --color-accent-200: oklch(91% 0.096 180.426);
+  --color-accent-300: oklch(85.5% 0.138 181.071);
+  --color-accent-400: oklch(70.4% 0.14 182.503);
+  --color-accent-500: oklch(60% 0.118 184.704);
+  --color-accent-600: oklch(51.1% 0.096 186.391);
+  --color-accent-700: oklch(43.7% 0.078 188.216);
+  --color-accent-solid: oklch(51.1% 0.096 186.391);
+  --color-accent-solid-hover: oklch(43.7% 0.078 188.216);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(70.4% 0.14 182.503) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(70.4% 0.14 182.503) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(70.4% 0.14 182.503) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(70.4% 0.14 182.503) 50%, var(--color-surface));
+    --color-accent-400: oklch(70.4% 0.14 182.503);
+    --color-accent-500: oklch(77.7% 0.152 181.912);
+    --color-accent-600: oklch(77.7% 0.152 181.912);
+    --color-accent-700: oklch(85.5% 0.138 181.071);
+    --color-accent-solid: oklch(51.1% 0.096 186.391);
+    --color-accent-solid-hover: oklch(43.7% 0.078 188.216);
+  }
+}
+[data-accent="green"] {
+  --color-accent-50: oklch(98.2% 0.018 155.826);
+  --color-accent-100: oklch(96.2% 0.044 156.743);
+  --color-accent-200: oklch(92.5% 0.084 155.995);
+  --color-accent-300: oklch(87.1% 0.15 154.449);
+  --color-accent-400: oklch(72.3% 0.219 149.579);
+  --color-accent-500: oklch(62.7% 0.194 149.214);
+  --color-accent-600: oklch(52.7% 0.154 150.069);
+  --color-accent-700: oklch(44.8% 0.119 151.328);
+  --color-accent-solid: oklch(52.7% 0.154 150.069);
+  --color-accent-solid-hover: oklch(44.8% 0.119 151.328);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(72.3% 0.219 149.579) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(72.3% 0.219 149.579) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(72.3% 0.219 149.579) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(72.3% 0.219 149.579) 50%, var(--color-surface));
+    --color-accent-400: oklch(72.3% 0.219 149.579);
+    --color-accent-500: oklch(79.2% 0.209 151.711);
+    --color-accent-600: oklch(79.2% 0.209 151.711);
+    --color-accent-700: oklch(87.1% 0.15 154.449);
+    --color-accent-solid: oklch(52.7% 0.154 150.069);
+    --color-accent-solid-hover: oklch(44.8% 0.119 151.328);
+  }
+}
+[data-accent="amber"] {
+  --color-accent-50: oklch(98.7% 0.022 95.277);
+  --color-accent-100: oklch(96.2% 0.059 95.617);
+  --color-accent-200: oklch(92.4% 0.12 95.746);
+  --color-accent-300: oklch(87.9% 0.169 91.605);
+  --color-accent-400: oklch(76.9% 0.188 70.08);
+  --color-accent-500: oklch(66.6% 0.179 58.318);
+  --color-accent-600: oklch(55.5% 0.163 48.998);
+  --color-accent-700: oklch(47.3% 0.137 46.201);
+  --color-accent-solid: oklch(55.5% 0.163 48.998);
+  --color-accent-solid-hover: oklch(47.3% 0.137 46.201);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(76.9% 0.188 70.08) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(76.9% 0.188 70.08) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(76.9% 0.188 70.08) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(76.9% 0.188 70.08) 50%, var(--color-surface));
+    --color-accent-400: oklch(76.9% 0.188 70.08);
+    --color-accent-500: oklch(82.8% 0.189 84.429);
+    --color-accent-600: oklch(82.8% 0.189 84.429);
+    --color-accent-700: oklch(87.9% 0.169 91.605);
+    --color-accent-solid: oklch(55.5% 0.163 48.998);
+    --color-accent-solid-hover: oklch(47.3% 0.137 46.201);
+  }
+}
+[data-accent="orange"] {
+  --color-accent-50: oklch(98% 0.016 73.684);
+  --color-accent-100: oklch(95.4% 0.038 75.164);
+  --color-accent-200: oklch(90.1% 0.076 70.697);
+  --color-accent-300: oklch(83.7% 0.128 66.29);
+  --color-accent-400: oklch(70.5% 0.213 47.604);
+  --color-accent-500: oklch(64.6% 0.222 41.116);
+  --color-accent-600: oklch(55.3% 0.195 38.402);
+  --color-accent-700: oklch(47% 0.157 37.304);
+  --color-accent-solid: oklch(55.3% 0.195 38.402);
+  --color-accent-solid-hover: oklch(47% 0.157 37.304);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(70.5% 0.213 47.604) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(70.5% 0.213 47.604) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(70.5% 0.213 47.604) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(70.5% 0.213 47.604) 50%, var(--color-surface));
+    --color-accent-400: oklch(70.5% 0.213 47.604);
+    --color-accent-500: oklch(75% 0.183 55.934);
+    --color-accent-600: oklch(75% 0.183 55.934);
+    --color-accent-700: oklch(83.7% 0.128 66.29);
+    --color-accent-solid: oklch(55.3% 0.195 38.402);
+    --color-accent-solid-hover: oklch(47% 0.157 37.304);
+  }
+}
+[data-accent="rose"] {
+  --color-accent-50: oklch(96.9% 0.015 12.422);
+  --color-accent-100: oklch(94.1% 0.03 12.58);
+  --color-accent-200: oklch(89.2% 0.058 10.001);
+  --color-accent-300: oklch(81% 0.117 11.638);
+  --color-accent-400: oklch(71.2% 0.194 13.428);
+  --color-accent-500: oklch(64.5% 0.246 16.439);
+  --color-accent-600: oklch(51.4% 0.222 16.935);
+  --color-accent-700: oklch(45.5% 0.188 13.697);
+  --color-accent-solid: oklch(51.4% 0.222 16.935);
+  --color-accent-solid-hover: oklch(45.5% 0.188 13.697);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(64.5% 0.246 16.439) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(64.5% 0.246 16.439) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(64.5% 0.246 16.439) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(64.5% 0.246 16.439) 50%, var(--color-surface));
+    --color-accent-400: oklch(64.5% 0.246 16.439);
+    --color-accent-500: oklch(71.2% 0.194 13.428);
+    --color-accent-600: oklch(71.2% 0.194 13.428);
+    --color-accent-700: oklch(81% 0.117 11.638);
+    --color-accent-solid: oklch(51.4% 0.222 16.935);
+    --color-accent-solid-hover: oklch(45.5% 0.188 13.697);
+  }
+}
+[data-accent="violet"] {
+  --color-accent-50: oklch(96.9% 0.016 293.756);
+  --color-accent-100: oklch(94.3% 0.029 294.588);
+  --color-accent-200: oklch(89.4% 0.057 293.283);
+  --color-accent-300: oklch(81.1% 0.111 293.571);
+  --color-accent-400: oklch(70.2% 0.183 293.541);
+  --color-accent-500: oklch(60.6% 0.25 292.717);
+  --color-accent-600: oklch(54.1% 0.281 293.009);
+  --color-accent-700: oklch(49.1% 0.27 292.581);
+  --color-accent-solid: oklch(54.1% 0.281 293.009);
+  --color-accent-solid-hover: oklch(49.1% 0.27 292.581);
+  @variant dark {
+    --color-accent-50: color-mix(in oklab, oklch(60.6% 0.25 292.717) 16%, var(--color-surface));
+    --color-accent-100: color-mix(in oklab, oklch(60.6% 0.25 292.717) 22%, var(--color-surface));
+    --color-accent-200: color-mix(in oklab, oklch(60.6% 0.25 292.717) 34%, var(--color-surface));
+    --color-accent-300: color-mix(in oklab, oklch(60.6% 0.25 292.717) 50%, var(--color-surface));
+    --color-accent-400: oklch(60.6% 0.25 292.717);
+    --color-accent-500: oklch(70.2% 0.183 293.541);
+    --color-accent-600: oklch(70.2% 0.183 293.541);
+    --color-accent-700: oklch(81.1% 0.111 293.571);
+    --color-accent-solid: oklch(54.1% 0.281 293.009);
+    --color-accent-solid-hover: oklch(49.1% 0.27 292.581);
+  }
 }
 
 html {
+  color-scheme: light dark;
+  background: var(--color-canvas);
+}
+html[data-theme="light"] {
   color-scheme: light;
-  background: var(--color-slate-50);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-canvas text-slate-900 antialiased;
+}
+
+/* people's colours (see avatarStyle in model.ts), one for each scheme: white
+   initials pass AA on both */
+.avatar {
+  background: var(--avatar);
+  @variant dark {
+    background: var(--avatar-dark);
+  }
+}
+.avatar-fill {
+  fill: var(--avatar);
+  @variant dark {
+    fill: var(--avatar-dark);
+  }
 }
 
 /* tabular numbers for reputation figures */
@@ -64,7 +360,7 @@ svg g[tabindex]:focus {
   outline: none;
 }
 svg g[tabindex]:focus-visible {
-  outline: 2px solid var(--color-indigo-500);
+  outline: 2px solid var(--color-accent-500);
   outline-offset: 3px;
   border-radius: 9999px;
 }

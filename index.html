@@ -12,7 +12,12 @@
     <link rel="icon" href="/logo.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#ffffff" />
+    <!-- the header's colour, light and dark; /theme.js applies a choice made
+         in the account menu before the page paints -->
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f172b" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <script src="/theme.js"></script>
     <!-- link previews, e.g. when an invite link is shared in a chat -->
     <meta property="og:title" content="Anthill" />
     <meta

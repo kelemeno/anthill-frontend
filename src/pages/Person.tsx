@@ -17,6 +17,7 @@ import {
   relation,
   rep,
 } from "../model";
+import { siteOf } from "../site";
 import { useApp } from "../state";
 import { RowsSkeleton, Skeleton } from "../components/Skeletons";
 import { AppLink, Avatar, Badge, Button, Card, CardTitle, Empty, PersonRow } from "../ui";
@@ -68,8 +69,8 @@ export function PersonPage() {
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-xl font-semibold tracking-tight">{them.name}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {isMe && <Badge tone="indigo">You</Badge>}
-              {rel && <Badge tone="indigo">{rel}</Badge>}
+              {isMe && <Badge tone="accent">You</Badge>}
+              {rel && <Badge tone="accent">{rel}</Badge>}
               <Badge>
                 #{rank} of {of}
               </Badge>
@@ -89,7 +90,7 @@ export function PersonPage() {
                 href={them.link}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="mt-1 inline-flex items-center gap-1 text-sm text-indigo-600 hover:underline"
+                className="mt-1 inline-flex items-center gap-1 text-sm text-accent-600 hover:underline"
               >
                 {them.link.replace(/^https?:\/\//, "")} <ExternalLink size={13} />
               </a>
@@ -101,11 +102,13 @@ export function PersonPage() {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <AppLink to={`/explore?focus=${them.id}`}>
-            <Button size="sm">
-              <Network size={15} /> Show in the tree
-            </Button>
-          </AppLink>
+          {siteOf(graph.community).pages.explore && (
+            <AppLink to={`/explore?focus=${them.id}`}>
+              <Button size="sm">
+                <Network size={15} /> Show in the tree
+              </Button>
+            </AppLink>
+          )}
           {isMe && (
             <AppLink to="/">
               <Button size="sm">Go to your overview</Button>
@@ -139,7 +142,7 @@ export function PersonPage() {
                 <PersonRow
                   key={e.from.id}
                   person={e.from}
-                  right={<span className="num text-sm font-medium text-emerald-600">+{formatRep(e.adds)}</span>}
+                  right={<span className="num text-sm font-medium text-emerald-700">+{formatRep(e.adds)}</span>}
                 />
               ))}
             </div>

@@ -209,7 +209,7 @@ function Choice(props: {
       className={cx(
         "rounded-xl border p-3 text-left transition-colors",
         props.selected
-          ? "border-indigo-500 bg-indigo-50/60 ring-1 ring-indigo-500"
+          ? "border-accent-500 bg-accent-50/60 ring-1 ring-accent-500"
           : "border-slate-200 hover:border-slate-300",
       )}
     >

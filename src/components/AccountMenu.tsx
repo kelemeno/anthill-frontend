@@ -1,13 +1,15 @@
 // The signed-in account: an avatar button with a menu (your overview,
-// profile, invite to this community, the account page, tour, sign out), plus
+// profile, invite to this community, the account page, tour, light or dark,
+// sign out), plus
 // the profile and invite dialogs it opens. The account and profile are the
 // same in every community.
-import { CircleHelp, Link2, LogOut, ShieldCheck, User, UserPen } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { CircleHelp, Link2, LogOut, Monitor, Moon, ShieldCheck, Sun, User, UserPen } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { act, createInviteLink, fetchProfile, rename, saveProfile, type Session, signOut } from "../api";
 import { useApp } from "../state";
-import { Avatar, Button, COPY_FAILED, copyText, Field, Menu, MenuItem, Modal, useAppNavigate } from "../ui";
+import { currentTheme, onThemeChange, setTheme, type ThemeChoice } from "../theme";
+import { arrowKeys, Avatar, Button, COPY_FAILED, copyText, cx, Field, Menu, MenuItem, Modal, useAppNavigate } from "../ui";
 
 export function AccountMenu(props: { session: Session }) {
   const { graph, cid, setSession, startTour } = useApp();
@@ -60,6 +62,7 @@ export function AccountMenu(props: { session: Session }) {
                 Guided tour
               </MenuItem>
             </div>
+            <Appearance />
             <div className="border-t border-slate-100 pt-1">
               <MenuItem
                 icon={<LogOut size={16} />}
@@ -86,6 +89,52 @@ export function AccountMenu(props: { session: Session }) {
         />
       )}
     </>
+  );
+}
+
+const THEMES: { choice: ThemeChoice; label: string; icon: typeof Sun }[] = [
+  { choice: "system", label: "System", icon: Monitor },
+  { choice: "light", label: "Light", icon: Sun },
+  { choice: "dark", label: "Dark", icon: Moon },
+];
+
+// Light or dark: as the system is set (the default, switching with it), or
+// always one of them, on this browser.
+function Appearance() {
+  const theme = useSyncExternalStore(onThemeChange, currentTheme);
+  return (
+    <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3.5 py-2">
+      <span className="text-sm text-slate-700">Appearance</span>
+      <div
+        role="radiogroup"
+        aria-label="Appearance"
+        className="flex rounded-lg bg-slate-100 p-0.5"
+        onKeyDown={arrowKeys(
+          THEMES.map((t) => t.choice),
+          theme,
+          setTheme,
+        )}
+      >
+        {THEMES.map(({ choice, label, icon: Icon }) => (
+          <button
+            key={choice}
+            type="button"
+            role="radio"
+            aria-checked={theme === choice}
+            tabIndex={theme === choice ? 0 : -1}
+            aria-label={label}
+            title={label}
+            onClick={() => setTheme(choice)}
+            className={cx(
+              "flex h-7 w-8 items-center justify-center rounded-md",
+              theme === choice ? "bg-surface text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900",
+            )}
+          >
+            <Icon size={15} />
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

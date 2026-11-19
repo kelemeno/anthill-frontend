@@ -3,7 +3,8 @@
 // passkey session, and the viewer: the signed-in person, or a member you
 // preview the app as (?as=<id>, read-only). Also the things any screen can
 // open: the sign-in dialog, the recovery code, toasts, the tour, and the
-// dialogs for starting a community or changing its settings.
+// dialogs for starting a community, changing its settings or customising its
+// site.
 import { X } from "lucide-react";
 import {
   createContext,
@@ -38,6 +39,7 @@ import {
 import { dropCache, dropCacheUnder, forgetMemories, memory, readCache, viewerKey, writeCache } from "./cache";
 import { AuthModal, type AuthMode } from "./components/AuthModal";
 import { CommunitySettingsModal, CreateCommunityModal } from "./components/CommunityModals";
+import { CustomiseModal } from "./components/CustomiseModal";
 import { person } from "./model";
 import { RecoveryCodeModal } from "./ui";
 
@@ -93,6 +95,8 @@ type AppState = {
   // that `session` is signed in
   resumeAfterSignIn: (then: "create") => void;
   editCommunity: () => void;
+  // the site: which pages it shows, its colour, its About
+  customise: () => void;
 };
 
 const Ctx = createContext<AppState | null>(null);
@@ -122,7 +126,9 @@ export function AppProvider(props: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthMode>();
   const [recoveryCode, setRecoveryCode] = useState<string>();
   const [tourRequested, setTourRequested] = useState(0);
-  const [dialog, setDialog] = useState<{ kind: "create" } | { kind: "settings"; community: Community }>();
+  const [dialog, setDialog] = useState<
+    { kind: "create" } | { kind: "settings" | "customise"; community: Community }
+  >();
   // what to open once signed in (Start a community, while signed out)
   const [afterAuth, setAfterAuth] = useState<"create">();
 
@@ -299,10 +305,10 @@ export function AppProvider(props: { children: ReactNode }) {
     [],
   );
 
-  // a settings dialog is for the community it was opened in
+  // a settings or customise dialog is for the community it was opened in
   // biome-ignore lint/correctness/useExhaustiveDependencies: cid triggers it
   useEffect(() => {
-    setDialog((d) => (d?.kind === "settings" ? undefined : d));
+    setDialog((d) => (d?.kind === "create" ? d : undefined));
   }, [cid]);
 
   const notify = useCallback(
@@ -452,6 +458,10 @@ export function AppProvider(props: { children: ReactNode }) {
     document.title = communityName ? `${communityName} · Anthill` : "Anthill";
   }, [communityName]);
 
+  // the URL's community, for its settings and Customise: its summary will do
+  // before its graph loads (the buttons for them show from the summary too)
+  const here = cid ? (graph?.community ?? communities?.find((c) => c.id === cid)) : undefined;
+
   // what Start a community asked for, once signed in (after the recovery code)
   const resume = () => {
     if (afterAuth) setDialog({ kind: afterAuth });
@@ -489,13 +499,21 @@ export function AppProvider(props: { children: ReactNode }) {
           setAuth("create");
         },
         resumeAfterSignIn: (then) => setDialog({ kind: then }),
-        editCommunity: () => graph && setDialog({ kind: "settings", community: graph.community }),
+        editCommunity: () => here && setDialog({ kind: "settings", community: here }),
+        customise: () => here && setDialog({ kind: "customise", community: here }),
       }}
     >
       {props.children}
       {dialog?.kind === "create" && session && <CreateCommunityModal onClose={() => setDialog(undefined)} />}
       {dialog?.kind === "settings" && session && (
         <CommunitySettingsModal
+          key={dialog.community.id}
+          community={dialog.community}
+          onClose={() => setDialog(undefined)}
+        />
+      )}
+      {dialog?.kind === "customise" && session && (
+        <CustomiseModal
           key={dialog.community.id}
           community={dialog.community}
           onClose={() => setDialog(undefined)}
@@ -532,14 +550,14 @@ export function AppProvider(props: { children: ReactNode }) {
         <div className="fixed inset-x-0 bottom-20 z-[60] flex justify-center px-4 sm:bottom-6">
           <div
             role="status"
-            className="flex max-w-lg items-start gap-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-white shadow-lg"
+            className="flex max-w-lg items-start gap-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-slate-50 shadow-lg"
           >
             <span>{toast.message}</span>
             {toast.stay && (
               <button
                 type="button"
                 aria-label="Close"
-                className="-mr-1 shrink-0 rounded p-0.5 text-slate-300 hover:text-white"
+                className="-mr-1 shrink-0 rounded p-0.5 text-slate-300 hover:text-slate-50"
                 onClick={() => setToast(undefined)}
               >
                 <X size={16} />

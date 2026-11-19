@@ -122,7 +122,7 @@ export function PersonActions(props: { them: Person }) {
                 "flex h-10 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium transition-colors",
                 "disabled:cursor-not-allowed",
                 item.primary && !blocked
-                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                  ? "bg-accent-solid text-white hover:bg-accent-solid-hover"
                   : "bg-slate-100 text-slate-800 hover:bg-slate-200",
                 blocked && "bg-slate-50 text-slate-400 hover:bg-slate-50",
               )}

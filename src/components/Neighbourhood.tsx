@@ -2,7 +2,7 @@
 // parent, parent, themselves and the person next to them, and the people under
 // them. Click anyone to open their page.
 import type { Graph, Person } from "../api";
-import { childrenOf, colorOf, initials, parentOf, siblingsOf } from "../model";
+import { avatarStyle, childrenOf, initials, parentOf, siblingsOf } from "../model";
 import { opensOnKey, useAppNavigate } from "../ui";
 
 const W = 300;
@@ -84,11 +84,11 @@ export function Neighbourhood(props: { graph: Graph; person: Person; viewerId?: 
                 cx={x}
                 cy={cy}
                 r={R + 4}
-                className={isViewer ? "fill-none stroke-indigo-500" : "fill-none stroke-slate-400"}
+                className={isViewer ? "fill-none stroke-accent-500" : "fill-none stroke-slate-400"}
                 strokeWidth={2}
               />
             )}
-            <circle cx={x} cy={cy} r={R} fill={colorOf(p.id)} />
+            <circle cx={x} cy={cy} r={R} className="avatar-fill" style={avatarStyle(p.id)} />
             <text
               x={x}
               y={cy + 4}

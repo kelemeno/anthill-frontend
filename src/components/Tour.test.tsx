@@ -1,5 +1,6 @@
 // The guided tour: it survives its steps changing under it (signing out,
-// leaving, a preview ending), and its pages keep only ?as= from the URL.
+// leaving, a preview ending), its pages keep only ?as= from the URL, and it
+// goes only through the pages the community shows.
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -34,7 +35,7 @@ const render = (steps: TourStep[], at?: string) => {
   );
 };
 const press = (key: string) => act(() => window.dispatchEvent(new KeyboardEvent("keydown", { key })));
-const counter = () => container.querySelector("p.text-indigo-600")?.textContent;
+const counter = () => container.querySelector("p.text-accent-600")?.textContent;
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -80,5 +81,38 @@ describe("tour", () => {
   it("leaves a replay link's page when the step is the same page", async () => {
     await render([{ title: "Tree", body: "", path: "/c/demo/explore" }], "/c/demo/explore?replay=1");
     expect(where).toBe("/c/demo/explore");
+  });
+
+  it("leaves out the pages the community turned off", () => {
+    const all = tourSteps({ member: true, signedIn: true });
+    const some = tourSteps({ member: true, signedIn: true, tabs: ["home", "polls"] });
+    expect(all.filter((s) => s.path === "/explore")).toHaveLength(1);
+    expect(some.map((s) => s.path).filter((p) => p && p !== "/")).toEqual(["/polls"]);
+    expect(some.some((s) => s.title === "Find someone")).toBe(false);
+    expect(all.find((s) => s.target === "nav")?.title).toBe("Four places");
+    expect(some.find((s) => s.target === "nav")?.title).toBe("Two places");
+  });
+
+  it("names every tab the nav shows, Agents and About included", async () => {
+    const steps = tourSteps({
+      member: true,
+      signedIn: true,
+      tabs: ["home", "explore", "polls", "people", "agents", "about"],
+    });
+    const nav = steps.find((s) => s.target === "nav")!;
+    expect(nav.title).toBe("Six places");
+    await render([nav], "/");
+    const body = container.querySelector("h2")!.nextElementSibling!;
+    expect([...body.querySelectorAll("strong")].map((b) => b.textContent)).toEqual([
+      "You",
+      "Explore",
+      "Polls",
+      "People",
+      "Agents",
+      "About",
+    ]);
+    expect(tourSteps({ member: false, signedIn: false, tabs: ["home", "people", "about"] }).find((s) => s.target === "nav")?.title).toBe(
+      "Three places",
+    );
   });
 });

@@ -22,6 +22,8 @@ import {
   rankOf,
   rep,
 } from "../model";
+import { AboutCard } from "./About";
+import { siteOf } from "../site";
 import { useApp } from "../state";
 import { AppLink, Avatar, Badge, Button, Card, CardTitle, cx, Empty, PersonRow } from "../ui";
 
@@ -73,7 +75,7 @@ function Dashboard(props: { me: Person }) {
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-xl font-semibold tracking-tight">{me.name}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <Badge tone="indigo">
+              <Badge tone="accent">
                 #{rank} of {of}
               </Badge>
               <Badge>Level {level(me)}</Badge>
@@ -94,11 +96,13 @@ function Dashboard(props: { me: Person }) {
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <AppLink to={`/explore?focus=${me.id}`}>
-            <Button size="sm">
-              <Users size={15} /> See my spot in the tree
-            </Button>
-          </AppLink>
+          {siteOf(graph.community).pages.explore && (
+            <AppLink to={`/explore?focus=${me.id}`}>
+              <Button size="sm">
+                <Users size={15} /> See my spot in the tree
+              </Button>
+            </AppLink>
+          )}
           {session && !previewing && graph.community.joinPolicy !== "closed" && <InviteButton />}
         </div>
       </Card>
@@ -162,7 +166,7 @@ function InviteButton() {
 function Step(props: { icon: ReactNode; title: ReactNode; children?: ReactNode; action?: ReactNode }) {
   return (
     <li className="flex gap-3 py-3">
-      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-50 text-accent-600">
         {props.icon}
       </span>
       <div className="min-w-0 flex-1">
@@ -237,7 +241,7 @@ function NextSteps(props: { me: Person }) {
             >
               <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-indigo-500"
+                  className="h-full rounded-full bg-accent-500"
                   style={{ width: `${Math.min(100, (myRep / Math.max(parentRep, 0.01)) * 100)}%` }}
                 />
               </div>
@@ -257,8 +261,8 @@ function NextSteps(props: { me: Person }) {
                 : `You can endorse ${reachPeople.length} more ${reachPeople.length === 1 ? "person" : "people"}`
           }
           action={
-            reachPeople.length > 3 ? (
-              <AppLink to={`/explore?focus=${me.id}&reach=1`} className="text-[13px] font-medium text-indigo-600 hover:underline">
+            reachPeople.length > 3 && siteOf(graph.community).pages.explore ? (
+              <AppLink to={`/explore?focus=${me.id}&reach=1`} className="text-[13px] font-medium text-accent-600 hover:underline">
                 See them all
               </AppLink>
             ) : undefined
@@ -319,7 +323,7 @@ function ReputationSources(props: { me: Person }) {
         {parts.map((part, i) => (
           <div
             key={part.key}
-            className={cx(i === 0 ? "bg-slate-300" : i % 2 ? "bg-indigo-500" : "bg-indigo-400", "border-r border-white last:border-0")}
+            className={cx(i === 0 ? "bg-slate-300" : i % 2 ? "bg-accent-500" : "bg-accent-400", "border-r border-surface last:border-0")}
             style={{ width: `${(part.value / Math.max(total, 0.01)) * 100}%` }}
             title={`${part.label}: +${formatRep(part.value)}`}
           />
@@ -335,7 +339,7 @@ function ReputationSources(props: { me: Person }) {
             key={s.from.id}
             person={s.from}
             detail={`${formatRep(rep(s.from))} reputation, endorses ${s.from.sentDagVotes.length}`}
-            right={<span className="num text-sm font-medium text-emerald-600">+{formatRep(s.adds)}</span>}
+            right={<span className="num text-sm font-medium text-emerald-700">+{formatRep(s.adds)}</span>}
           />
         ))}
       </div>
@@ -427,6 +431,7 @@ function JoinOptions() {
               : "The best way in is an invite link from someone you know: you start right under them, next to people who can vouch for you."}
         </p>
       </Card>
+      <AboutCard />
       {empty && canStart && (
         <Card>
           <CardTitle hint="Then invite people: they join below you and can endorse you.">
@@ -462,9 +467,11 @@ function JoinOptions() {
               />
             ))}
           </div>
-          <AppLink to="/explore" className="mt-2 inline-block text-[13px] font-medium text-indigo-600 hover:underline">
-            Find a spot in the tree
-          </AppLink>
+          {siteOf(community).pages.explore && (
+            <AppLink to="/explore" className="mt-2 inline-block text-[13px] font-medium text-accent-600 hover:underline">
+              Find a spot in the tree
+            </AppLink>
+          )}
         </Card>
       )}
     </div>

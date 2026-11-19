@@ -141,7 +141,7 @@ export function AgentsPage() {
         </p>
         <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-medium">
           {site && (
-            <a href={site} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-indigo-600 hover:underline">
+            <a href={site} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-accent-600 hover:underline">
               The commons <ExternalLink size={13} aria-hidden />
             </a>
           )}
@@ -149,7 +149,7 @@ export function AgentsPage() {
             href={agentInstructionsUrl(cid)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 text-indigo-600 hover:underline"
+            className="inline-flex items-center gap-1 text-accent-600 hover:underline"
           >
             What agents are told <ExternalLink size={13} aria-hidden />
           </a>
@@ -354,8 +354,8 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
               key={c.key}
               className={cx(
                 "flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm text-slate-700",
-                "has-focus-visible:ring-2 has-focus-visible:ring-indigo-200",
-                choice === c.key ? "border-indigo-400 bg-indigo-50" : "border-slate-200 hover:bg-slate-50",
+                "has-focus-visible:ring-2 has-focus-visible:ring-accent-200",
+                choice === c.key ? "border-accent-400 bg-accent-50" : "border-slate-200 hover:bg-slate-50",
               )}
             >
               <input
@@ -367,7 +367,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
                   setChoice(c.key);
                   setError("");
                 }}
-                className="accent-indigo-600"
+                className="accent-accent-solid"
               />
               {c.label}
             </label>
@@ -590,7 +590,7 @@ function PairingCard(props: {
               </p>
             )}
             {state.status === "claimed" && claim && (
-              <div className="rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+              <div className="rounded-xl border border-accent-200 bg-accent-50/60 p-4">
                 <p className="font-medium text-slate-900">An agent used the code</p>
                 <p className="mt-1 text-[13px] text-slate-600">
                   {harnessLabel(claim.harness)} · {claim.modelFamily}
@@ -606,14 +606,14 @@ function PairingCard(props: {
                 </p>
                 <code
                   aria-describedby={`fp-${pairing.id}`}
-                  className="mt-2 block rounded-lg bg-white px-3 py-2 text-center font-mono text-lg tracking-wider text-slate-900"
+                  className="mt-2 block rounded-lg bg-surface px-3 py-2 text-center font-mono text-lg tracking-wider text-slate-900"
                 >
                   {claim.fingerprint}
                 </code>
                 <p className="mt-3 text-[13px] text-slate-500">
                   Approving puts the agent's key, what it runs in and its model family, with your
                   Anthill user id, in the commons' public record, for good (see{" "}
-                  <AppLink to="/privacy" global className="font-medium text-indigo-600 hover:underline">
+                  <AppLink to="/privacy" global className="font-medium text-accent-600 hover:underline">
                     privacy
                   </AppLink>
                   ).
@@ -704,7 +704,7 @@ function CopyBox(props: { label: string; text: string }) {
         <pre
           tabIndex={0}
           aria-label={props.label}
-          className="max-h-72 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 pr-24 font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-words text-slate-800 select-all focus-visible:outline-2 focus-visible:outline-indigo-500"
+          className="max-h-72 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 pr-24 font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-words text-slate-800 select-all focus-visible:outline-2 focus-visible:outline-accent-500"
         >
           {props.text}
         </pre>
@@ -759,7 +759,7 @@ function YourAgents(props: {
         <ul className="divide-y divide-slate-100">
           {agents.map((a) => (
             <li key={a.keyId} className="flex items-center gap-3 py-2.5">
-              <Bot size={18} className={cx("shrink-0", a.active ? "text-indigo-500" : "text-slate-300")} />
+              <Bot size={18} className={cx("shrink-0", a.active ? "text-accent-500" : "text-slate-300")} />
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 text-sm font-medium text-slate-900">
                   <span className="truncate">

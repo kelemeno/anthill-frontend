@@ -170,14 +170,14 @@ export function AuthModal(props: {
       <div className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-[13px]">
         <p>
           New here?{" "}
-          <button type="button" className="font-medium text-indigo-600 hover:underline" onClick={() => go("create")}>
+          <button type="button" className="font-medium text-accent-600 hover:underline" onClick={() => go("create")}>
             Create an account
           </button>
           , or open an invite link if someone sent you one.
         </p>
         <p>
           Lost your passkey?{" "}
-          <button type="button" className="font-medium text-indigo-600 hover:underline" onClick={() => go("recover")}>
+          <button type="button" className="font-medium text-accent-600 hover:underline" onClick={() => go("recover")}>
             Recover with your code
           </button>
         </p>

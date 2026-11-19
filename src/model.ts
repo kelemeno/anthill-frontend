@@ -1,6 +1,8 @@
 // What the screens need, derived from the graph: reputation as numbers, rank,
 // family (parent, children, siblings), how two people relate, and where
 // someone's reputation comes from.
+import type { CSSProperties } from "react";
+
 import type { Graph, Person } from "./api";
 
 const SENTINEL = "0x0000000000000000000000000000000000000001";
@@ -136,10 +138,9 @@ export function endorsementsOut(graph: Graph, p: Person) {
 
 export const BASE_REPUTATION = toNumber(UNIT);
 
-// A stable, soft colour per person (used for avatars and tree nodes).
-// (FNV-1a plus a final mix, so ids that differ only in their last characters
-// still get clearly different hues.)
-export function colorOf(id: string): string {
+// A stable hue per person. (FNV-1a plus a final mix, so ids that differ only
+// in their last characters still get clearly different hues.)
+function hueOf(id: string): number {
   let h = 2166136261;
   for (let i = 0; i < id.length; i++) {
     h ^= id.charCodeAt(i);
@@ -148,7 +149,67 @@ export function colorOf(id: string): string {
   h ^= h >>> 13;
   h = Math.imul(h, 0x5bd1e995);
   h ^= h >>> 15;
-  return `hsl(${(h >>> 0) % 360} 60% 52%)`;
+  return (h >>> 0) % 360;
+}
+
+// A stable, soft colour per person (used for avatars and tree nodes): the
+// look from before dark mode, darkened only as far as white initials need to
+// pass WCAG AA (yellows and greens were as low as 1.7:1; blues and violets
+// keep their colour).
+export function colorOf(id: string): string {
+  const h = hueOf(id);
+  return `hsl(${h} 60% ${readableLightness(h, 60, 52)}%)`;
+}
+
+// WCAG contrast of white on hsl(h s% l%).
+export function whiteContrast(h: number, s: number, l: number): number {
+  const a = (s / 100) * Math.min(l / 100, 1 - l / 100);
+  const channel = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = l / 100 - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lum = 0.2126 * channel(0) + 0.7152 * channel(8) + 0.0722 * channel(4);
+  return 1.05 / (lum + 0.05);
+}
+
+// The lightness, from `from` down, at which white on hsl(h s% l%) passes WCAG
+// AA (4.6, a little over 4.5, so browsers' rounding can't take it under).
+const lightness = new Map<string, number>();
+function readableLightness(h: number, s: number, from: number): number {
+  const key = `${h} ${s} ${from}`;
+  let l = lightness.get(key);
+  if (l === undefined) {
+    l = from;
+    while (l > 20 && whiteContrast(h, s, l) < 4.6) l--;
+    lightness.set(key, l);
+  }
+  return l;
+}
+
+// Its colour in dark mode: the same hue, a little calmer and darker, and dark
+// enough for white initials to pass WCAG AA (yellows and greens need it
+// darkest).
+export function darkColorOf(id: string): string {
+  const h = hueOf(id);
+  return `hsl(${h} 55% ${readableLightness(h, 55, 50)}%)`;
+}
+
+// A community's mark (its initial on a tile): a hue picked from its address,
+// as a gradient whose both ends keep white text at WCAG AA, as people's
+// colours do. The same in both schemes: a coloured tile reads on either.
+const MARK_HUES = [243, 199, 160, 32, 340, 270, 12, 186];
+export function markBackground(id: string): string {
+  let hash = 0;
+  for (const ch of id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const h = MARK_HUES[hash % MARK_HUES.length];
+  return `linear-gradient(135deg, hsl(${h} 70% ${readableLightness(h, 70, 58)}%), hsl(${h} 65% ${readableLightness(h, 65, 46)}%))`;
+}
+
+// For an element with the avatar or avatar-fill class (index.css): its colour
+// in each scheme.
+export function avatarStyle(id: string): CSSProperties {
+  return { "--avatar": colorOf(id), "--avatar-dark": darkColorOf(id) } as CSSProperties;
 }
 
 // (by code point, so a name starting with an emoji keeps it whole)
