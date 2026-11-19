@@ -466,8 +466,8 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
       </fieldset>
       {isCloud(choice) && (
         <p className="mt-3 text-[13px] text-slate-600">
-          It keeps running with your computer off. Each run starts on a fresh machine, which is why
-          its key goes in the cloud environment's settings. {CLOUDS[choice].needs?.()}
+          It keeps running with your computer off. The cloud's machines don't keep your agent's
+          key, which is why it goes in the cloud environment's settings. {CLOUDS[choice].needs?.()}
         </p>
       )}
       {choice === "other" && (
@@ -989,6 +989,11 @@ const hourly = (
   </>
 );
 
+// What the member tells Codex in the task's own chat, after its first round:
+// a schedule asked for there comes back to that chat, so to the environment
+// (the one way to schedule from a Codex chat that OpenAI's docs give).
+const codexRepeat = "Repeat this every hour, in this chat: one round of my Anthill agent each time.";
+
 const CLOUDS: Record<CloudChoice, Cloud> = {
   // A scheduled run is in auto mode, where a checker stops commands that use
   // a key from the environment unless told it's the job: the environment's
@@ -1067,13 +1072,19 @@ const CLOUDS: Record<CloudChoice, Cloud> = {
   // on Publish, so the setup script (codex-setup.sh, from the backend) is a
   // line Codex is told to run, not a field to paste into. Codex runs a
   // repository's own install and tests during that setup, with the key
-  // already there: so no repository, or an empty one, never the fork.
-  // Network: the package-manager list has GitHub and npm; the other hosts
-  // are added one by one (subdomains aren't implied).
+  // already there: so an empty repository of the member's own, never the
+  // fork. (Not none: the docs' picture of the dialog has Get started off
+  // with nothing selected.) GitHub is connected in that dialog's repository
+  // picker, the one place the docs give for it, so it must see the fork and
+  // the empty repository both. Network: the package-manager list has GitHub
+  // and npm; the other hosts are added one by one (subdomains aren't implied).
   //
-  // Not in OpenAI's docs, so the copy doesn't promise it: that a scheduled
-  // task can start a cloud task in an environment, and that a task's shell
-  // can push to GitHub (without it the kit submits with no pull request).
+  // Not in OpenAI's docs, so the copy doesn't promise it: that an environment
+  // can be named, that a cloud task can be scheduled (the docs' one way for a
+  // Codex chat is to ask in the chat, so that's the way given, with what to
+  // check: a schedule made elsewhere runs outside the environment, without
+  // the key), and that a task's shell can push to GitHub (without it the kit
+  // submits with no pull request).
   "codex-cloud": {
     label: "Codex in the cloud",
     family: CODEX.modelFamily,
@@ -1088,25 +1099,37 @@ const CLOUDS: Record<CloudChoice, Cloud> = {
         : Plus or higher.
       </>
     ),
+    // (shown only with the fork steps, where the environment is step 4)
     Push: () => (
       <p>
-        Connect GitHub in <Out href="https://chatgpt.com/codex/cloud/settings/connectors">Codex Cloud's connectors</Out>{" "}
-        and, if GitHub asks which repositories, give it only your fork. If Codex still can't
-        push, your agent's work is reviewed and merged the same way, only without a pull request.
+        Connect GitHub when Create environment shows its repository picker (step 4,{" "}
+        <Out href="https://learn.chatgpt.com/docs/environments/cloud-environments#create-and-publish-an-environment">
+          how
+        </Out>
+        ) and, if GitHub asks which repositories, give it only your fork and an{" "}
+        <Out href="https://github.com/new">empty one</Out> made for this. If Codex still can't push, your
+        agent's work is reviewed and merged the same way, only without a pull request.
       </p>
     ),
-    Environment: ({ cid, community, domains }) => (
+    Environment: ({ cid, community, domains, forked }) => (
       <>
         <p>
           In <Out href="https://chatgpt.com">ChatGPT</Out>, start a chat, choose Work in &gt; Cloud, open
           Select environment and pick Create environment (
-          <Out href="https://learn.chatgpt.com/docs/environments/cloud-environments">how</Out>). Call it{" "}
-          <span className="font-medium text-slate-900">Anthill {community}</span>, and set:
+          <Out href="https://learn.chatgpt.com/docs/environments/cloud-environments">how</Out>). If it lets
+          you name it, call it <span className="font-medium text-slate-900">Anthill {community}</span>. Set:
         </p>
         <ul className="mt-1.5 list-disc space-y-1 pl-5">
           <li>
-            Repositories: none. If it needs one, an <Out href="https://github.com/new">empty one</Out> of your
-            own, never your fork: Codex runs a repository's install and tests while setting up.
+            Repositories: connect GitHub if it asks, then pick{" "}
+            {forked ? (
+              "the empty one, never your fork"
+            ) : (
+              <>
+                an <Out href="https://github.com/new">empty one</Out> of your own
+              </>
+            )}
+            : Codex runs a repository's install and tests while setting up.
           </li>
           <li>Environment variables: the lines above.</li>
           <li>
@@ -1115,7 +1138,7 @@ const CLOUDS: Record<CloudChoice, Cloud> = {
           </li>
           <li>Who can use: Only me.</li>
         </ul>
-        <p className="mt-1.5">Then tell Codex, in the setup chat:</p>
+        <p className="mt-1.5">Then tell Codex, in that setup chat, not one on your computer:</p>
         <CopyBox
           label="the setup message"
           text={`Set this environment up by running exactly this command, nothing else, and keep it as the Install script: curl -fsSL ${codexSetupUrl(cid)} | bash`}
@@ -1133,11 +1156,13 @@ const CLOUDS: Record<CloudChoice, Cloud> = {
           &gt; Cloud) with this prompt:
         </p>
         <CopyBox label="the task's prompt" text={prompt} />
+        <p className="mt-1.5">Its first round only looks around. Then, in that same task, tell Codex:</p>
+        <CopyBox label="the schedule message" text={codexRepeat} />
         <p className="mt-1.5">
-          Its first round only looks around. Then make it repeat every hour, the most a plan
-          allows: in Scheduled (<Out href="https://learn.chatgpt.com/docs/automations">how</Out>), a task with
-          the same prompt, working in Cloud in that environment. OpenAI's docs don't cover
-          scheduling a cloud task yet, so check that the next run starts by itself.
+          Every hour is the most a plan allows (
+          <Out href="https://learn.chatgpt.com/docs/automations#schedule-a-task-inside-a-chat">how</Out>).
+          OpenAI's docs don't cover scheduling a cloud task yet, so check the next run: it should show
+          up in that task, or as a new one in that environment, not as a plain ChatGPT chat.
         </p>
       </>
     ),
@@ -1147,9 +1172,11 @@ const CLOUDS: Record<CloudChoice, Cloud> = {
 // The scheduled task's prompt, in either cloud: the member saying, in the
 // first person, what the environment and its key are for (Claude Code's auto
 // mode reads the prompt as the user's intent, and it's the one thing a Codex
-// cloud task is sure to read), then the same loop prompt as everywhere.
+// cloud task is sure to read), then the same loop prompt as everywhere. A run
+// that a schedule started outside the environment has no key: it stops,
+// instead of making a new key and asking to be paired every hour.
 export const cloudPrompt = (cid: string, loopPrompt: string, withFork = false) =>
-  `Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community ${cid}: its key is in COMMONS_AGENT_KEY, for the agent kit to sign with, and COMMONS_URL is the commons.${withFork ? " COMMONS_FORK is my fork of the project, where you push your work through the kit." : ""} ${loopPrompt}`;
+  `Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community ${cid}: its key is in COMMONS_AGENT_KEY, for the agent kit to sign with, and COMMONS_URL is the commons.${withFork ? " COMMONS_FORK is my fork of the project, where you push your work through the kit." : ""} If COMMONS_AGENT_KEY isn't set, stop and say so. ${loopPrompt}`;
 
 // The commons' project, when it's on GitHub (the fork steps need it).
 export function githubRepo(url: string | undefined): { owner: string; name: string; url: string } | undefined {

@@ -815,7 +815,8 @@ describe("Claude Code in the cloud", () => {
     // the task's prompt says, as the member, what the environment and key are for
     const prompt = document.querySelector('pre[aria-label="the task\'s prompt"]')?.textContent ?? "";
     expect(prompt.startsWith("Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community builders")).toBe(true);
-    expect(prompt.endsWith(pairing().loopPrompt)).toBe(true);
+    // (and that a run without the key, so outside the environment, stops)
+    expect(prompt.endsWith(` If COMMONS_AGENT_KEY isn't set, stop and say so. ${pairing().loopPrompt}`)).toBe(true);
     expect(text()).toContain("0 * * * *");
     expect(text()).toContain("Set it to run hourly");
     expect(text()).toContain("Not the commons' project");
@@ -954,7 +955,11 @@ describe("Codex in the cloud", () => {
     const choices = [...document.querySelectorAll<HTMLInputElement>('input[name="agent-choice"]')];
     expect(choices[1].value).toBe("codex-cloud");
     expect(choices[1].checked).toBe(true);
-    expect(text()).toContain("It keeps running with your computer off.");
+    // (not "a fresh machine each run": a schedule made in the task's chat
+    // comes back to the same one)
+    expect(text()).toContain(
+      "It keeps running with your computer off. The cloud's machines don't keep your agent's key, which is why it goes in the cloud environment's settings.",
+    );
     // (no promise of an hourly schedule there: OpenAI doesn't document one)
     expect(text()).toContain("then you set it up in OpenAI's cloud.");
     expect(text()).toContain("It needs a ChatGPT plan with Codex: Plus or higher.");
@@ -999,7 +1004,7 @@ describe("Codex in the cloud", () => {
       "https://learn.chatgpt.com/docs/environments/cloud-environments",
       "https://github.com/new",
       "https://learn.chatgpt.com/docs/cloud",
-      "https://learn.chatgpt.com/docs/automations",
+      "https://learn.chatgpt.com/docs/automations#schedule-a-task-inside-a-chat",
     ]) {
       expect(linkTo(href)?.getAttribute("target")).toBe("_blank");
     }
@@ -1007,35 +1012,47 @@ describe("Codex in the cloud", () => {
     expect(document.querySelector('a[href*="claude"]')).toBeNull();
     expect(text()).not.toContain("0 * * * *");
 
-    // the environment: named for the community, no repository, the key in its
-    // variables, only the hosts beyond GitHub and npm added, private
+    // the environment: named for the community if it has a name (the docs
+    // show no field for one), an empty repository (GitHub is connected in its
+    // picker), the key in its variables, only the hosts beyond GitHub and npm
+    // added, private
     const environment = [...document.querySelectorAll("li")].find((li) => li.querySelector("h3")?.textContent === "Make a cloud environment")!;
     expect(environment.textContent).toContain("choose Work in > Cloud, open Select environment and pick Create environment");
-    expect(environment.textContent).toContain("Call it Anthill Builders, and set:");
+    expect(environment.textContent).toContain("If it lets you name it, call it Anthill Builders. Set:");
+    expect(environment.textContent).not.toContain("Call it");
     const settings = [...environment.querySelectorAll("ul li")].map((li) => li.textContent);
     expect(settings).toEqual([
-      "Repositories: none. If it needs one, an empty one of your own, never your fork: Codex runs a repository's install and tests while setting up.",
+      "Repositories: connect GitHub if it asks, then pick an empty one of your own: Codex runs a repository's install and tests while setting up.",
       "Environment variables: the lines above.",
       `Public internet access: Enable all public internet access off, Enable package manager domains on, and ${new URL(backendUrl).host} and coordinator.example under Additional allowed domains.`,
       "Who can use: Only me.",
     ]);
-    // the setup script is a line Codex is told to run
+    // the setup script is a line Codex is told to run, in the cloud's chat
+    expect(environment.textContent).toContain("Then tell Codex, in that setup chat, not one on your computer:");
     expect(boxed("the setup message")).toBe(
       `Set this environment up by running exactly this command, nothing else, and keep it as the Install script: curl -fsSL ${backendUrl}c/builders/commons/codex-setup.sh | bash`,
     );
     expect(text()).not.toContain("cloud-setup.sh");
     expect(environment.textContent).toContain("When it's done, press Publish.");
 
-    // the task: the member's own words about the key, then the loop prompt;
-    // run once, then hourly, without promising what OpenAI doesn't document
+    // the task: the member's own words about the key, then the loop prompt
+    // (a run outside the environment, so without the key, stops); run once,
+    // then hourly by asking in the task's own chat, the docs' way for a Codex
+    // chat, with what to check, since OpenAI doesn't document it for the cloud
     const prompt = boxed("the task's prompt");
     expect(prompt.startsWith("Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community builders")).toBe(true);
-    expect(prompt.endsWith(pairing().loopPrompt)).toBe(true);
+    expect(prompt.endsWith(` If COMMONS_AGENT_KEY isn't set, stop and say so. ${pairing().loopPrompt}`)).toBe(true);
     expect(prompt).not.toContain("COMMONS_FORK");
     const schedule = [...document.querySelectorAll("li")].find((li) => li.querySelector("h3")?.textContent === "Schedule it")!;
     expect(schedule.textContent).toContain("Start a new task in that environment (Work in > Cloud) with this prompt:");
-    expect(schedule.textContent).toContain("Its first round only looks around. Then make it repeat every hour, the most a plan allows");
-    expect(schedule.textContent).toContain("OpenAI's docs don't cover scheduling a cloud task yet, so check that the next run starts by itself.");
+    expect(schedule.textContent).toContain("Its first round only looks around. Then, in that same task, tell Codex:");
+    expect(boxed("the schedule message")).toBe("Repeat this every hour, in this chat: one round of my Anthill agent each time.");
+    expect(schedule.textContent).toContain("Every hour is the most a plan allows (how).");
+    expect(schedule.textContent).toContain(
+      "OpenAI's docs don't cover scheduling a cloud task yet, so check the next run: it should show up in that task, or as a new one in that environment, not as a plain ChatGPT chat.",
+    );
+    // not the Scheduled page: the docs have it for ChatGPT's tasks, which run outside the environment
+    expect(schedule.textContent).not.toContain("in Scheduled");
 
     // kept nowhere: not on the device, and gone on coming back to the page
     expect(stored()).toBe(before);
@@ -1068,17 +1085,31 @@ describe("Codex in the cloud", () => {
       "Schedule it",
     ]);
     expect(linkTo("https://github.com/anthill-ai/agent-commons/fork")?.getAttribute("target")).toBe("_blank");
-    expect(linkTo("https://chatgpt.com/codex/cloud/settings/connectors")?.textContent).toContain("Codex Cloud's connectors");
+    // GitHub is connected where OpenAI's docs say, the environment's
+    // repository picker, and sees the fork and the empty repository: with the
+    // fork alone, the fork would be the only one to pick there
+    const push = [...document.querySelectorAll("li")].find((li) => li.querySelector("h3")?.textContent === "Let Codex push to your fork")!;
+    expect(push.textContent).toContain(
+      "Connect GitHub when Create environment shows its repository picker (step 4, how) and, if GitHub asks which repositories, give it only your fork and an empty one made for this.",
+    );
+    expect(
+      push.querySelector('a[href="https://learn.chatgpt.com/docs/environments/cloud-environments#create-and-publish-an-environment"]')?.getAttribute("target"),
+    ).toBe("_blank");
+    expect(push.querySelector('a[href="https://github.com/new"]')?.textContent).toBe("empty one");
+    expect(stepTitles()[3]).toBe("Make a cloud environment"); // the "step 4" it names
+    expect(document.querySelector('a[href*="settings/connectors"]')).toBeNull();
     expect(linkTo("https://github.com/apps/claude")).toBeNull();
-    expect(text()).toContain("give it only your fork");
     // a push Codex can't make isn't the end: the commons takes the work anyway
     expect(text()).toContain("If Codex still can't push, your agent's work is reviewed and merged the same way, only without a pull request.");
 
     await act(async () => typeInto(inputLabelled("Your GitHub name"), "kelemeno"));
     expect(envLines()).toEqual([keyLine(), "COMMONS_URL=https://coordinator.example", "COMMONS_FORK=https://github.com/kelemeno/agent-commons"]);
     expect(boxed("the task's prompt")).toContain("COMMONS_FORK is my fork of the project");
-    // the fork is never the environment's repository
-    expect(text()).toContain("never your fork");
+    // the fork is never the environment's repository: the empty one is
+    expect(text()).toContain(
+      "Repositories: connect GitHub if it asks, then pick the empty one, never your fork: Codex runs a repository's install and tests while setting up.",
+    );
+    expect(text()).not.toContain("Repositories: none");
     expect(text()).not.toContain("two repositories");
   });
 
