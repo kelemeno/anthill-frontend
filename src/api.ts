@@ -768,6 +768,8 @@ export const agentInstructionsUrl = (cid: string) => backendUrl + inside(cid, "c
 // The setup script for a Claude Code cloud environment that runs an agent
 // here (anthill-backend templates/cloud-setup.sh).
 export const cloudSetupUrl = (cid: string) => backendUrl + inside(cid, "commons/cloud-setup.sh");
+// The same for a Codex cloud environment (anthill-backend templates/codex-setup.sh).
+export const codexSetupUrl = (cid: string) => backendUrl + inside(cid, "commons/codex-setup.sh");
 
 // What an agent on a loop is told each time, when the server doesn't say.
 // (the server's own words: the agent reads the page verbatim with curl, not

@@ -11,8 +11,9 @@
 // checked. Claude Code in the cloud, the first choice: the page makes the
 // agent's key, claims the code with a proof that verifies, approves it, and
 // shows the key once with the setup steps, keeping it nowhere; a browser
-// without Ed25519 is told so. And a first visit's tour waits for a
-// community's home page.
+// without Ed25519 is told so. Codex in the cloud, the second, the same way,
+// as a codex agent of the gpt family, with OpenAI's steps and links. And a
+// first visit's tour waits for a community's home page.
 // @vitest-environment jsdom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -624,7 +625,7 @@ describe("the Agents page", () => {
     expect(text()).toContain(`Read your instructions verbatim: run \`curl -fsSL ${backendUrl}c/builders/commons/agent.md\` in your shell and follow the page exactly as printed (not through a web-fetch or summarizing tool, which would reword its commands and rules), and do one iteration as it says.`);
   });
 
-  it("links to Codex, with a loop that runs in its terminal, when Codex is picked", async () => {
+  it("links to Codex, with a loop that runs in its terminal, when Codex on your own machine is picked", async () => {
     signedInAs(ada);
     let made: unknown;
     routes["c/builders/commons/pairings"] = (init) => {
@@ -633,13 +634,19 @@ describe("the Agents page", () => {
     };
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
-    await click(document.querySelector<HTMLInputElement>('input[value="codex"]')!);
+    const own = document.querySelector<HTMLInputElement>('input[value="codex"]')!;
+    expect(own.closest("label")?.textContent).toBe("Codex on your own machine");
+    await click(own);
     await click(button("Get a prompt"));
     await until(() => text().includes("Pairing code"));
     expect(made).toEqual({ harness: "codex", modelFamily: "gpt" });
 
     expect(linkTo("https://learn.chatgpt.com/docs/codex/cli")?.textContent).toContain("install the Codex CLI");
-    expect(linkTo("https://chatgpt.com/codex/")?.getAttribute("rel")).toBe("noreferrer");
+    expect(linkTo("https://learn.chatgpt.com/docs/codex/cli")?.getAttribute("rel")).toBe("noreferrer");
+    // the cloud is its own choice now, not a way that "fits less well"
+    expect(linkTo("https://chatgpt.com/codex/")).toBeNull();
+    expect(text()).not.toContain("fits less well");
+    expect(text()).not.toContain("COMMONS_AGENT_KEY");
     expect(linkTo("https://claude.ai/code")).toBeNull();
     expect(text()).not.toContain("/loop");
     expect(text()).toContain("press Ctrl-C while it waits");
@@ -684,51 +691,70 @@ describe("the Agents page", () => {
   });
 });
 
-describe("Claude Code in the cloud", () => {
-  const b64 = (s: string) => Uint8Array.from(atob(s.replaceAll("-", "+").replaceAll("_", "/")), (c) => c.charCodeAt(0));
-  // the claim as the backend checks it (commonsLink verifyPairProof): the
-  // agent key's signature over the domain and the claim's canonical JSON
-  async function proofVerifies(body: { agentKey: string; code: string; harness: string; modelFamily: string; proof: string }) {
-    const key = await crypto.subtle.importKey("spki", b64(body.agentKey), { name: "Ed25519" }, false, ["verify"]);
-    const message = `anthill-commons/pair/v1\n{"agentKey":${JSON.stringify(body.agentKey)},"code":${JSON.stringify(body.code)},"community":"builders","harness":"claude-code","modelFamily":"claude"}`;
-    return b64(body.proof).length === 64 && crypto.subtle.verify({ name: "Ed25519" }, key, b64(body.proof), new TextEncoder().encode(message));
-  }
-  let claimed: Record<string, string> | undefined;
-  function cloudServer() {
-    claimed = undefined;
-    routes["c/builders/commons/pairings"] = () => ({ body: pairing() });
-    routes["c/builders/commons/pairings/claim"] = async (init) => {
-      claimed = bodyOf(init);
-      return (await proofVerifies(claimed as never))
-        ? { body: { status: "claimed", fingerprint: claim.fingerprint, expiresAt: expiresAt() } }
-        : { status: 400, body: { error: "The proof isn't this agent key's signature over the claim.", code: "bad proof" } };
-    };
-    routes["c/builders/commons/pairings/p1"] = pairingIs("claimed", { claim });
-    routes["c/builders/commons/pairings/p1/reject"] = () => ({ body: { ok: true } });
-  }
-  const approves = () => {
-    let approved = 0;
-    routes["c/builders/commons/pairings/p1/approve"] = () => {
-      approved++;
-      routes["c/builders/commons/agents"] = () => ({ body: { agents: [agent()] } });
-      return { body: { agent: { keyId: agent().keyId, modelFamily: "claude", harness: "claude-code" } } };
-    };
-    return () => approved;
-  };
-  const envLines = () => (document.querySelector('pre[aria-label="the environment variables"]')?.textContent ?? "").split("\n");
-  const keyLine = () => envLines()[0] ?? "";
-  const stored = () => JSON.stringify([{ ...localStorage }, { ...sessionStorage }]);
+//// an agent in the cloud: the page is the one that claims the code
 
+const b64 = (s: string) => Uint8Array.from(atob(s.replaceAll("-", "+").replaceAll("_", "/")), (c) => c.charCodeAt(0));
+type Kind = { harness: string; modelFamily: string };
+const claudeKind: Kind = { harness: "claude-code", modelFamily: "claude" };
+const codexKind: Kind = { harness: "codex", modelFamily: "gpt" };
+// the claim as the backend checks it (commonsLink verifyPairProof): the
+// agent key's signature over the domain and the claim's canonical JSON, for
+// the kind the choice stands for
+async function proofVerifies(body: { agentKey: string; code: string; proof: string }, kind: Kind) {
+  const key = await crypto.subtle.importKey("spki", b64(body.agentKey), { name: "Ed25519" }, false, ["verify"]);
+  const message = `anthill-commons/pair/v1\n{"agentKey":${JSON.stringify(body.agentKey)},"code":${JSON.stringify(body.code)},"community":"builders","harness":${JSON.stringify(kind.harness)},"modelFamily":${JSON.stringify(kind.modelFamily)}}`;
+  return b64(body.proof).length === 64 && crypto.subtle.verify({ name: "Ed25519" }, key, b64(body.proof), new TextEncoder().encode(message));
+}
+let claimed: Record<string, string> | undefined;
+function cloudServer(kind: Kind = claudeKind) {
+  claimed = undefined;
+  routes["c/builders/commons/pairings"] = () => ({ body: pairing() });
+  routes["c/builders/commons/pairings/claim"] = async (init) => {
+    claimed = bodyOf(init);
+    return (await proofVerifies(claimed as never, kind))
+      ? { body: { status: "claimed", fingerprint: claim.fingerprint, expiresAt: expiresAt() } }
+      : { status: 400, body: { error: "The proof isn't this agent key's signature over the claim.", code: "bad proof" } };
+  };
+  routes["c/builders/commons/pairings/p1"] = pairingIs("claimed", { claim: { ...claim, ...kind } });
+  routes["c/builders/commons/pairings/p1/reject"] = () => ({ body: { ok: true } });
+}
+const approves = (kind: Kind = claudeKind) => {
+  let approved = 0;
+  routes["c/builders/commons/pairings/p1/approve"] = () => {
+    approved++;
+    routes["c/builders/commons/agents"] = () => ({ body: { agents: [agent(kind)] } });
+    return { body: { agent: { keyId: agent().keyId, ...kind } } };
+  };
+  return () => approved;
+};
+const envLines = () => (document.querySelector('pre[aria-label="the environment variables"]')?.textContent ?? "").split("\n");
+const keyLine = () => envLines()[0] ?? "";
+const stored = () => JSON.stringify([{ ...localStorage }, { ...sessionStorage }]);
+const stepTitles = () => [...document.querySelectorAll("li h3")].map((h) => h.textContent);
+const onGithub = { ...commons, repo: "https://github.com/anthill-ai/agent-commons" };
+const projectOnGithub = () => {
+  routes["c/builders/graph"] = () => ({ body: graphOf("builders", [node("0xbo", "Bo"), node("0xada", "Ada")], { commons: onGithub }) });
+};
+
+describe("Claude Code in the cloud", () => {
   it("is the first choice, and the one picked", async () => {
     signedInAs(ada);
     await show("/c/builders/agents");
     await until(() => text().includes("None yet."));
     const choices = [...document.querySelectorAll<HTMLInputElement>('input[name="agent-choice"]')];
-    expect(choices.map((c) => c.value)).toEqual(["claude-cloud", "claude-code", "codex", "other"]);
+    // the clouds first, Claude Code's then Codex's
+    expect(choices.map((c) => c.value)).toEqual(["claude-cloud", "codex-cloud", "claude-code", "codex", "other"]);
     expect(choices[0].checked).toBe(true);
-    expect(choices[0].closest("label")?.textContent).toBe("Claude Code in the cloud");
-    expect(choices[1].closest("label")?.textContent).toBe("Claude Code on your own machine");
+    expect(choices.map((c) => c.closest("label")?.textContent)).toEqual([
+      "Claude Code in the cloud",
+      "Codex in the cloud",
+      "Claude Code on your own machine",
+      "Codex on your own machine",
+      "Another agent",
+    ]);
     expect(text()).toContain("It keeps running with your computer off.");
+    expect(text()).toContain("run every hour in Claude's cloud");
+    expect(text()).not.toContain("ChatGPT plan");
     expect(button("Make its key and connect")).toBeTruthy();
   });
 
@@ -746,10 +772,11 @@ describe("Claude Code in the cloud", () => {
     // claimed as the agent would, with a proof that verifies, and no session
     expect(Object.keys(claimed!).sort()).toEqual(["agentKey", "code", "harness", "modelFamily", "proof"]);
     expect(claimed).toMatchObject({ code: pairing().code, harness: "claude-code", modelFamily: "claude" });
-    expect(await proofVerifies(claimed as never)).toBe(true);
+    expect(await proofVerifies(claimed as never, claudeKind)).toBe(true);
     expect(callsTo("c/builders/commons/pairings/claim")[0].init.headers).not.toHaveProperty("Authorization");
     expect(approved()).toBe(1);
     await until(() => text().includes("Claude Code · claude"));
+    expect(text()).toContain("For Claude Code in the cloud (claude).");
 
     // the private key for that public key, as the kit reads it
     const line = keyLine();
@@ -811,8 +838,7 @@ describe("Claude Code in the cloud", () => {
 
   it("starts with forking the project when it's on GitHub, and puts the fork in the environment", async () => {
     signedInAs(ada);
-    const onGithub = { ...commons, repo: "https://github.com/anthill-ai/agent-commons" };
-    routes["c/builders/graph"] = () => ({ body: graphOf("builders", [node("0xbo", "Bo"), node("0xada", "Ada")], { commons: onGithub }) });
+    projectOnGithub();
     cloudServer();
     approves();
     await show("/c/builders/agents");
@@ -824,10 +850,17 @@ describe("Claude Code in the cloud", () => {
     expect([...document.querySelectorAll("h3")].map((h) => h.textContent)).toEqual(
       expect.arrayContaining(["Fork the project", "Let Claude push to your fork", "Give your agent its key", "Make a cloud environment", "Schedule it"]),
     );
-    const titles = [...document.querySelectorAll("li h3")].map((h) => h.textContent);
-    expect(titles.indexOf("Fork the project")).toBeLessThan(titles.indexOf("Give your agent its key"));
+    expect(stepTitles()).toEqual([
+      "Fork the project",
+      "Let Claude push to your fork",
+      "Give your agent its key",
+      "Make a cloud environment",
+      "Schedule it",
+    ]);
     expect(linkTo("https://github.com/anthill-ai/agent-commons/fork")?.getAttribute("target")).toBe("_blank");
     expect(linkTo("https://github.com/apps/claude")).toBeTruthy();
+    // nothing of Codex's cloud
+    expect(document.querySelector('a[href*="chatgpt.com"]')).toBeNull();
 
     // the fork line follows the GitHub name typed, and waits for a valid one
     expect(envLines()[2]).toBe("COMMONS_FORK=https://github.com/<your GitHub name>/agent-commons");
@@ -904,6 +937,165 @@ describe("Claude Code in the cloud", () => {
     } finally {
       generate.mockRestore();
     }
+  });
+});
+
+describe("Codex in the cloud", () => {
+  const pick = async () => {
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    await choose("codex-cloud");
+  };
+  const boxed = (label: string) => document.querySelector(`pre[aria-label="${label}"]`)?.textContent ?? "";
+
+  it("is the second choice, and says what it needs", async () => {
+    signedInAs(ada);
+    await pick();
+    const choices = [...document.querySelectorAll<HTMLInputElement>('input[name="agent-choice"]')];
+    expect(choices[1].value).toBe("codex-cloud");
+    expect(choices[1].checked).toBe(true);
+    expect(text()).toContain("It keeps running with your computer off.");
+    // (no promise of an hourly schedule there: OpenAI doesn't document one)
+    expect(text()).toContain("then you set it up in OpenAI's cloud.");
+    expect(text()).toContain("It needs a ChatGPT plan with Codex: Plus or higher.");
+    expect(
+      linkTo("https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan")?.getAttribute("target"),
+    ).toBe("_blank");
+    expect(button("Make its key and connect")).toBeTruthy();
+  });
+
+  it("connects a codex agent of the gpt family with a key made here, and shows OpenAI's setup once", async () => {
+    signedInAs(ada);
+    cloudServer(codexKind);
+    const approved = approves(codexKind);
+    await pick();
+    const before = stored();
+
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Connected."));
+    // what it is, to the pairing and in the claim the page signs
+    expect(bodyOf(callsTo("c/builders/commons/pairings")[0].init)).toEqual({ harness: "codex", modelFamily: "gpt" });
+    expect(Object.keys(claimed!).sort()).toEqual(["agentKey", "code", "harness", "modelFamily", "proof"]);
+    expect(claimed).toMatchObject({ code: pairing().code, harness: "codex", modelFamily: "gpt" });
+    expect(await proofVerifies(claimed as never, codexKind)).toBe(true);
+    expect(await proofVerifies(claimed as never, claudeKind)).toBe(false);
+    expect(callsTo("c/builders/commons/pairings/claim")[0].init.headers).not.toHaveProperty("Authorization");
+    expect(approved()).toBe(1);
+    await until(() => text().includes("Codex · gpt"));
+    expect(text()).toContain("For Codex in the cloud (gpt).");
+
+    // the key the kit reads, sent nowhere
+    const line = keyLine();
+    expect(line).toMatch(/^COMMONS_AGENT_KEY=[A-Za-z0-9_-]+$/);
+    const secret = line.split("=")[1];
+    await crypto.subtle.importKey("pkcs8", b64(secret), { name: "Ed25519" }, false, ["sign"]);
+    expect(calls.some((c) => String(c.init.body ?? "").includes(secret))).toBe(false);
+    expect(envLines()).toEqual([line, "COMMONS_URL=https://coordinator.example"]);
+
+    // the steps (no fork: the project isn't on GitHub), each with its links
+    expect(stepTitles()).toEqual(["Give your agent its key", "Make a cloud environment", "Schedule it"]);
+    for (const href of [
+      "https://chatgpt.com",
+      "https://learn.chatgpt.com/docs/environments/cloud-environments",
+      "https://github.com/new",
+      "https://learn.chatgpt.com/docs/cloud",
+      "https://learn.chatgpt.com/docs/automations",
+    ]) {
+      expect(linkTo(href)?.getAttribute("target")).toBe("_blank");
+    }
+    // none of Claude Code's
+    expect(document.querySelector('a[href*="claude"]')).toBeNull();
+    expect(text()).not.toContain("0 * * * *");
+
+    // the environment: named for the community, no repository, the key in its
+    // variables, only the hosts beyond GitHub and npm added, private
+    const environment = [...document.querySelectorAll("li")].find((li) => li.querySelector("h3")?.textContent === "Make a cloud environment")!;
+    expect(environment.textContent).toContain("choose Work in > Cloud, open Select environment and pick Create environment");
+    expect(environment.textContent).toContain("Call it Anthill Builders, and set:");
+    const settings = [...environment.querySelectorAll("ul li")].map((li) => li.textContent);
+    expect(settings).toEqual([
+      "Repositories: none. If it needs one, an empty one of your own, never your fork: Codex runs a repository's install and tests while setting up.",
+      "Environment variables: the lines above.",
+      `Public internet access: Enable all public internet access off, Enable package manager domains on, and ${new URL(backendUrl).host} and coordinator.example under Additional allowed domains.`,
+      "Who can use: Only me.",
+    ]);
+    // the setup script is a line Codex is told to run
+    expect(boxed("the setup message")).toBe(
+      `Set this environment up by running exactly this command, nothing else, and keep it as the Install script: curl -fsSL ${backendUrl}c/builders/commons/codex-setup.sh | bash`,
+    );
+    expect(text()).not.toContain("cloud-setup.sh");
+    expect(environment.textContent).toContain("When it's done, press Publish.");
+
+    // the task: the member's own words about the key, then the loop prompt;
+    // run once, then hourly, without promising what OpenAI doesn't document
+    const prompt = boxed("the task's prompt");
+    expect(prompt.startsWith("Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community builders")).toBe(true);
+    expect(prompt.endsWith(pairing().loopPrompt)).toBe(true);
+    expect(prompt).not.toContain("COMMONS_FORK");
+    const schedule = [...document.querySelectorAll("li")].find((li) => li.querySelector("h3")?.textContent === "Schedule it")!;
+    expect(schedule.textContent).toContain("Start a new task in that environment (Work in > Cloud) with this prompt:");
+    expect(schedule.textContent).toContain("Its first round only looks around. Then make it repeat every hour, the most a plan allows");
+    expect(schedule.textContent).toContain("OpenAI's docs don't cover scheduling a cloud task yet, so check that the next run starts by itself.");
+
+    // kept nowhere: not on the device, and gone on coming back to the page
+    expect(stored()).toBe(before);
+    expect(stored()).not.toContain(secret);
+    const tab = (label: string) =>
+      [...document.querySelectorAll<HTMLAnchorElement>("nav a")].find((a) => a.textContent?.trim() === label)!;
+    await click(tab("People"));
+    await until(() => !text().includes("COMMONS_AGENT_KEY"));
+    await click(tab("Agents"));
+    await until(() => text().includes("Which agent?"));
+    expect(text()).not.toContain("COMMONS_AGENT_KEY");
+    expect(document.body.innerHTML).not.toContain(secret);
+    expect(stored()).toBe(before);
+  });
+
+  it("starts with the fork and Codex's GitHub connection when the project is on GitHub", async () => {
+    signedInAs(ada);
+    projectOnGithub();
+    cloudServer(codexKind);
+    approves(codexKind);
+    await pick();
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Connected."));
+
+    expect(stepTitles()).toEqual([
+      "Fork the project",
+      "Let Codex push to your fork",
+      "Give your agent its key",
+      "Make a cloud environment",
+      "Schedule it",
+    ]);
+    expect(linkTo("https://github.com/anthill-ai/agent-commons/fork")?.getAttribute("target")).toBe("_blank");
+    expect(linkTo("https://chatgpt.com/codex/cloud/settings/connectors")?.textContent).toContain("Codex Cloud's connectors");
+    expect(linkTo("https://github.com/apps/claude")).toBeNull();
+    expect(text()).toContain("give it only your fork");
+    // a push Codex can't make isn't the end: the commons takes the work anyway
+    expect(text()).toContain("If Codex still can't push, your agent's work is reviewed and merged the same way, only without a pull request.");
+
+    await act(async () => typeInto(inputLabelled("Your GitHub name"), "kelemeno"));
+    expect(envLines()).toEqual([keyLine(), "COMMONS_URL=https://coordinator.example", "COMMONS_FORK=https://github.com/kelemeno/agent-commons"]);
+    expect(boxed("the task's prompt")).toContain("COMMONS_FORK is my fork of the project");
+    // the fork is never the environment's repository
+    expect(text()).toContain("never your fork");
+    expect(text()).not.toContain("two repositories");
+  });
+
+  it("keeps the key and offers to approve again when approving gets no answer", async () => {
+    signedInAs(ada);
+    cloudServer(codexKind);
+    routes["c/builders/commons/pairings/p1/approve"] = () => ({ status: 502, body: { error: "Couldn't reach the commons' coordinator." } });
+    await pick();
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Couldn't approve it: Couldn't reach the commons' coordinator."));
+    const line = keyLine();
+    expect(line).toMatch(/^COMMONS_AGENT_KEY=/);
+    const approved = approves(codexKind);
+    await click(button("Try again"));
+    await until(() => text().includes("Connected."));
+    expect(approved()).toBe(1);
+    expect(keyLine()).toBe(line);
   });
 });
 

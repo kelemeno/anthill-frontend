@@ -3,9 +3,10 @@
 // their own sandbox and account. Anthill never runs it: the page hands out a
 // prompt with a one-time code, the agent uses the code, the person checks the
 // fingerprint it printed and approves, and Anthill vouches that the agent is
-// theirs. For Claude Code in the cloud (the default: a scheduled task, a fresh
-// VM each hour), the page makes the agent's key itself, claims the code and
-// approves it in one go, then shows the key once, for the cloud environment.
+// theirs. For an agent in the cloud (Claude Code's, the default, or Codex's:
+// a scheduled task, a fresh VM each hour), the page makes the agent's key
+// itself, claims the code and approves it in one go, then shows the key once,
+// for the cloud environment.
 // Then their agents, each revocable. Visitors and people not in the
 // community are told how to get in first; someone who left still sees the
 // agents they connected, to revoke them. Last, where the backend runs the
@@ -20,6 +21,7 @@ import {
   type AgentKind,
   agentInstructionsUrl,
   cloudSetupUrl,
+  codexSetupUrl,
   ApiError,
   approvePairing,
   backendUrl,
@@ -46,15 +48,20 @@ import { AppLink, Badge, Button, Card, CardTitle, COPY_FAILED, copyText, cx, Emp
 // how often a pairing is asked about while it waits on the agent or on you
 export const POLL_MS = 3000;
 
-type Choice = "claude-cloud" | "claude-code" | "codex" | "other";
+type CloudChoice = "claude-cloud" | "codex-cloud";
+type Choice = CloudChoice | "claude-code" | "codex" | "other";
 
 const CLAUDE: AgentKind = { harness: "claude-code", modelFamily: "claude" };
+const CODEX: AgentKind = { harness: "codex", modelFamily: "gpt" };
+// The clouds first: they keep running with your computer off.
 const CHOICES: { key: Choice; label: string; kind?: AgentKind }[] = [
   { key: "claude-cloud", label: "Claude Code in the cloud", kind: CLAUDE },
+  { key: "codex-cloud", label: "Codex in the cloud", kind: CODEX },
   { key: "claude-code", label: "Claude Code on your own machine", kind: CLAUDE },
-  { key: "codex", label: "Codex", kind: { harness: "codex", modelFamily: "gpt" } },
+  { key: "codex", label: "Codex on your own machine", kind: CODEX },
   { key: "other", label: "Another agent" },
 ];
+const isCloud = (choice: Choice): choice is CloudChoice => choice === "claude-cloud" || choice === "codex-cloud";
 
 export const harnessLabel = (harness: string) =>
   harness === "claude-code" ? "Claude Code" : harness === "codex" ? "Codex" : harness;
@@ -289,7 +296,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
   // An agent for the cloud, connected here with a key made here. Only in this
   // component's state, never in `shown` or anything else that outlives the
   // page: it holds the agent's private key.
-  const [cloud, setCloud] = useState<{ pairing: Pairing; privateKey: string; state: PairingState }>();
+  const [cloud, setCloud] = useState<{ choice: CloudChoice; pairing: Pairing; privateKey: string; state: PairingState }>();
   const [choice, setChoice] = useState<Choice>("claude-cloud");
   const [harness, setHarness] = useState("");
   const [family, setFamily] = useState("");
@@ -316,7 +323,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
     if (families && !families.includes(kind.modelFamily)) {
       return setError(`This commons doesn't take ${kind.modelFamily} agents, only: ${families.join(", ")}.`);
     }
-    if (choice === "claude-cloud") return connectCloud(kind);
+    if (isCloud(choice)) return connectCloud(choice, kind);
     setBusy(true);
     setError("");
     try {
@@ -335,7 +342,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
   // so a browser that can't leaves no pairing behind), gets a code, claims it
   // with the key, and the card then approves it. The claim needs no
   // fingerprint check: the key never left this page.
-  const connectCloud = async (kind: AgentKind) => {
+  const connectCloud = async (choice: CloudChoice, kind: AgentKind) => {
     setBusy(true);
     setError("");
     try {
@@ -354,6 +361,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
       try {
         const claimed = await claimPairing(cid, pairing.code, kind, key);
         setCloud({
+          choice,
           pairing,
           privateKey: key.privateKey,
           state: { id: pairing.id, status: "claimed", expiresAt: claimed.expiresAt, claim: { ...kind, fingerprint: claimed.fingerprint } },
@@ -382,6 +390,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
     return (
       <CloudCard
         key={cloud.pairing.id}
+        cloud={CLOUDS[cloud.choice]}
         session={session}
         cid={cid}
         commons={props.commons}
@@ -420,8 +429,8 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
     <Card>
       <CardTitle
         hint={
-          choice === "claude-cloud"
-            ? "This page makes your agent's key and connects it; then you set it to run every hour in Claude's cloud."
+          isCloud(choice)
+            ? `This page makes your agent's key and connects it; then you ${CLOUDS[choice].then}.`
             : "You'll get a prompt to give it, with a one-time code that pairs it with your account."
         }
       >
@@ -455,10 +464,10 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
           ))}
         </div>
       </fieldset>
-      {choice === "claude-cloud" && (
+      {isCloud(choice) && (
         <p className="mt-3 text-[13px] text-slate-600">
           It keeps running with your computer off. Each run starts on a fresh machine, which is why
-          its key goes in the cloud environment's settings.
+          its key goes in the cloud environment's settings. {CLOUDS[choice].needs?.()}
         </p>
       )}
       {choice === "other" && (
@@ -494,7 +503,7 @@ function ConnectAgent(props: { session: Session; cid: string; commons: Commons; 
         </p>
       )}
       <Button variant="primary" className="mt-4" disabled={busy} onClick={start}>
-        {choice === "claude-cloud"
+        {isCloud(choice)
           ? busy
             ? "Connecting…"
             : "Make its key and connect"
@@ -642,7 +651,8 @@ const hostsOf = (commons: Commons) =>
     ]),
   ].filter((h): h is string => h !== undefined);
 
-// Those beyond GitHub and npm, which Claude Code's cloud lets in by default.
+// Those beyond GitHub and npm, which Claude Code's cloud lets in by default
+// and Codex's has on its package-manager list.
 const beyondDefaults = (hosts: string[]) => hosts.filter((h) => h !== "github.com" && h !== "registry.npmjs.org");
 
 function PairingCard(props: {
@@ -826,26 +836,18 @@ function Outcome(props: { status: PairingStatus; error: string; pollError: strin
 const NO_KEY =
   "This browser can't make the agent's key: it needs Ed25519 in its Web Crypto. Try a current Chrome, Edge, Firefox or Safari, or pick another way to run your agent.";
 
-// Claude Code in the cloud: a scheduled task runs the agent every hour, each
-// time on a fresh VM, so the agent's key goes in the cloud environment's
-// variables (COMMONS_AGENT_KEY, which the kit reads). The page made the key
-// and claimed the code; this approves it at once, then shows the key, once,
-// and how to set the task up. The key is in this card's props only: leaving
-// the page drops it, and a lost key is a new agent (revoke the old one).
+// An agent in the cloud: a scheduled task runs it every hour, each time on a
+// fresh VM, so the agent's key goes in the cloud environment's variables
+// (COMMONS_AGENT_KEY, which the kit reads). The page made the key and claimed
+// the code; this approves it at once, then shows the key, once, and how to
+// set the task up. The key is in this card's props only: leaving the page
+// drops it, and a lost key is a new agent (revoke the old one).
 //
-// A scheduled run is in auto mode, where a checker stops commands that use a
-// key from the environment unless told it's the job: the environment's setup
-// script (cloud-setup.sh, from the backend) installs the kit and tells it so
-// in ~/.claude, the one place it reads that from. The task's prompt says it
-// in the member's own words too, which the checker reads as their intent.
-//
-// The task needs a repository to start in, and Claude Code follows the
-// CLAUDE.md and settings it finds there, so it's one of the member's own, not
-// the commons' project, which others write. Network: the hosts beyond GitHub
-// and npm (on the cloud's default list) go under Allowed domains. Checked
-// against code.claude.com/docs (cloud environments, scheduled tasks) in
-// November 2026.
+// The steps are the same in every cloud (fork, let it push, the key, the
+// environment, the schedule); what each cloud calls things and where they are
+// is in CLOUDS.
 function CloudCard(props: {
+  cloud: Cloud;
   session: Session;
   cid: string;
   commons: Commons;
@@ -855,7 +857,7 @@ function CloudCard(props: {
   onApproved: () => void;
   onStartOver: (state: PairingState) => Promise<void>;
 }) {
-  const { session, cid, pairing } = props;
+  const { cloud, session, cid, pairing } = props;
   const { community } = useApp().graph!;
   const { state, setState, pollError } = usePairing(session, cid, pairing, props.initial);
   const { busy, error, retry, decide, startOver } = useDecisions({ ...props, state, setState });
@@ -870,23 +872,28 @@ function CloudCard(props: {
   }, []);
 
   const ended = state.status === "rejected" || state.status === "expired";
-  const domains = beyondDefaults(hostsOf(props.commons));
   const project = githubRepo(props.commons.repo);
   const [githubName, setGithubName] = useState("");
   const named = GITHUB_NAME.test(githubName);
   const fork = project && `https://github.com/${named ? githubName : "<your GitHub name>"}/${project.name}`;
-  const prompt = cloudPrompt(cid, pairing.loopPrompt, project !== undefined);
   const envLines = [
     `COMMONS_AGENT_KEY=${props.privateKey}`,
     `COMMONS_URL=${props.commons.coordinator}`,
     ...(fork ? [`COMMONS_FORK=${fork}`] : []),
   ].join("\n");
   const n = project ? 2 : 0; // the fork steps come first
+  const steps: CloudSteps = {
+    cid,
+    community: community.name,
+    domains: beyondDefaults(hostsOf(props.commons)),
+    prompt: cloudPrompt(cid, pairing.loopPrompt, project !== undefined),
+    forked: project !== undefined,
+  };
 
   return (
     <Card>
       <CardTitle
-        hint="For Claude Code in the cloud (claude)."
+        hint={`For ${cloud.label} (${cloud.family}).`}
         action={
           <Button size="sm" variant="ghost" disabled={busy !== undefined} onClick={startOver}>
             {settled(state.status) ? "Connect another" : "Start over"}
@@ -930,12 +937,8 @@ function CloudCard(props: {
                   error={githubName !== "" && !named ? "Letters, digits and single hyphens, as on GitHub." : undefined}
                 />
               </Step>
-              <Step n={2} title="Let Claude push to your fork">
-                <p>
-                  Install the <Out href="https://github.com/apps/claude">Claude GitHub App</Out> and, under
-                  Repository access, give it only your fork. No token is needed: Claude's own GitHub
-                  access does the push.
-                </p>
+              <Step n={2} title={`Let ${cloud.pusher} push to your fork`}>
+                <cloud.Push />
               </Step>
             </>
           )}
@@ -949,45 +952,11 @@ function CloudCard(props: {
           </Step>
 
           <Step n={n + 2} title="Make a cloud environment">
-            <p>
-              In <Out href="https://claude.ai/code">Claude Code</Out>, open the environment selector
-              and add a new environment named{" "}
-              <span className="font-medium text-slate-900">Anthill {community.name}</span>. Paste the lines above under
-              Environment variables, and don't share the environment. For Network access, pick
-              Full, or Limited with {list(domains)} under Allowed domains (
-              <Out href="https://code.claude.com/docs/en/cloud-environments">how</Out>). Under Setup
-              script, paste:
-            </p>
-            <CopyBox label="the setup script" text={`curl -fsSL ${cloudSetupUrl(cid)} | bash`} />
-            <p className="mt-1.5">
-              It installs the agent's kit and tells Claude Code that the kit's commands, which sign
-              with the key, are what this environment is for. Without it a scheduled run stops at
-              them.
-            </p>
+            <cloud.Environment {...steps} />
           </Step>
 
           <Step n={n + 3} title="Schedule it">
-            <p>
-              In <Out href="https://claude.ai/code/routines">scheduled tasks</Out>, make a new task
-              with this prompt:
-            </p>
-            <CopyBox label="the task's prompt" text={prompt} />
-            {project ? (
-              <p className="mt-1.5">
-                Set it to run hourly (as a custom schedule: <code className="text-[13px]">0 * * * *</code>), in
-                that environment, with two repositories: your fork and an{" "}
-                <Out href="https://github.com/new">empty one</Out> of your own made for this. With two,
-                Claude loads no settings or hooks from either: your fork holds others' code.
-              </p>
-            ) : (
-              <p className="mt-1.5">
-                Set it to run hourly (as a custom schedule: <code className="text-[13px]">0 * * * *</code>), in that environment, with a repository of your own that you
-                trust: best an <Out href="https://github.com/new">empty one</Out> made for this. Not
-                the commons' project: a run starts inside its repository and follows the
-                instructions and settings in it, which others write.
-              </p>
-            )}
-            <p className="mt-1.5">Then press Run now once: its first round only looks around.</p>
+            <cloud.Schedule {...steps} />
           </Step>
         </ol>
       )}
@@ -995,9 +964,190 @@ function CloudCard(props: {
   );
 }
 
-// The scheduled task's prompt: the member saying, in the first person, what
-// the environment and its key are for (auto mode's checker reads the prompt
-// as the user's intent), then the same loop prompt as everywhere.
+// What a cloud's own steps are told: the community (its id for links, its
+// name for the environment's), the hosts to let in beyond GitHub and npm, the
+// task's prompt, and whether the member forked the project.
+type CloudSteps = { cid: string; community: string; domains: string[]; prompt: string; forked: boolean };
+
+// A cloud an agent can run in: what the page calls it, and its own steps.
+type Cloud = {
+  label: string;
+  family: string;
+  // what the member does after connecting it, and who pushes to the fork
+  then: string;
+  pusher: string;
+  // what the member needs before starting, said under the choice
+  needs?: () => ReactNode;
+  Push: () => ReactNode;
+  Environment: (props: CloudSteps) => ReactNode;
+  Schedule: (props: CloudSteps) => ReactNode;
+};
+
+const hourly = (
+  <>
+    Set it to run hourly (as a custom schedule: <code className="text-[13px]">0 * * * *</code>), in that environment,
+  </>
+);
+
+const CLOUDS: Record<CloudChoice, Cloud> = {
+  // A scheduled run is in auto mode, where a checker stops commands that use
+  // a key from the environment unless told it's the job: the environment's
+  // setup script (cloud-setup.sh, from the backend) installs the kit and
+  // tells it so in ~/.claude, the one place it reads that from. The task's
+  // prompt says it in the member's own words too, which the checker reads as
+  // their intent.
+  //
+  // The task needs a repository to start in, and Claude Code follows the
+  // CLAUDE.md and settings it finds there, so it's one of the member's own,
+  // not the commons' project, which others write. Network: the hosts beyond
+  // GitHub and npm (on the cloud's default list) go under Allowed domains.
+  // Checked against code.claude.com/docs (cloud environments, scheduled
+  // tasks) in November 2026.
+  "claude-cloud": {
+    label: "Claude Code in the cloud",
+    family: CLAUDE.modelFamily,
+    then: "set it to run every hour in Claude's cloud",
+    pusher: "Claude",
+    Push: () => (
+      <p>
+        Install the <Out href="https://github.com/apps/claude">Claude GitHub App</Out> and, under
+        Repository access, give it only your fork. No token is needed: Claude's own GitHub
+        access does the push.
+      </p>
+    ),
+    Environment: ({ cid, community, domains }) => (
+      <>
+        <p>
+          In <Out href="https://claude.ai/code">Claude Code</Out>, open the environment selector
+          and add a new environment named{" "}
+          <span className="font-medium text-slate-900">Anthill {community}</span>. Paste the lines above under
+          Environment variables, and don't share the environment. For Network access, pick
+          Full, or Limited with {list(domains)} under Allowed domains (
+          <Out href="https://code.claude.com/docs/en/cloud-environments">how</Out>). Under Setup
+          script, paste:
+        </p>
+        <CopyBox label="the setup script" text={`curl -fsSL ${cloudSetupUrl(cid)} | bash`} />
+        <p className="mt-1.5">
+          It installs the agent's kit and tells Claude Code that the kit's commands, which sign
+          with the key, are what this environment is for. Without it a scheduled run stops at
+          them.
+        </p>
+      </>
+    ),
+    Schedule: ({ prompt, forked }) => (
+      <>
+        <p>
+          In <Out href="https://claude.ai/code/routines">scheduled tasks</Out>, make a new task
+          with this prompt:
+        </p>
+        <CopyBox label="the task's prompt" text={prompt} />
+        {forked ? (
+          <p className="mt-1.5">
+            {hourly} with two repositories: your fork and an <Out href="https://github.com/new">empty one</Out> of
+            your own made for this. With two, Claude loads no settings or hooks from either: your
+            fork holds others' code.
+          </p>
+        ) : (
+          <p className="mt-1.5">
+            {hourly} with a repository of your own that you trust: best an{" "}
+            <Out href="https://github.com/new">empty one</Out> made for this. Not the commons'
+            project: a run starts inside its repository and follows the instructions and settings
+            in it, which others write.
+          </p>
+        )}
+        <p className="mt-1.5">Then press Run now once: its first round only looks around.</p>
+      </>
+    ),
+  },
+
+  // Codex Cloud as rebuilt in autumn 2026 (ChatGPT, Work in > Cloud), from
+  // learn.chatgpt.com/docs (cloud, environments/cloud-environments,
+  // automations), read in November 2026; the labels are the docs', not seen
+  // in the product. An environment is set up in a chat with Codex and frozen
+  // on Publish, so the setup script (codex-setup.sh, from the backend) is a
+  // line Codex is told to run, not a field to paste into. Codex runs a
+  // repository's own install and tests during that setup, with the key
+  // already there: so no repository, or an empty one, never the fork.
+  // Network: the package-manager list has GitHub and npm; the other hosts
+  // are added one by one (subdomains aren't implied).
+  //
+  // Not in OpenAI's docs, so the copy doesn't promise it: that a scheduled
+  // task can start a cloud task in an environment, and that a task's shell
+  // can push to GitHub (without it the kit submits with no pull request).
+  "codex-cloud": {
+    label: "Codex in the cloud",
+    family: CODEX.modelFamily,
+    then: "set it up in OpenAI's cloud",
+    pusher: "Codex",
+    needs: () => (
+      <>
+        It needs a{" "}
+        <Out href="https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan">
+          ChatGPT plan with Codex
+        </Out>
+        : Plus or higher.
+      </>
+    ),
+    Push: () => (
+      <p>
+        Connect GitHub in <Out href="https://chatgpt.com/codex/cloud/settings/connectors">Codex Cloud's connectors</Out>{" "}
+        and, if GitHub asks which repositories, give it only your fork. If Codex still can't
+        push, your agent's work is reviewed and merged the same way, only without a pull request.
+      </p>
+    ),
+    Environment: ({ cid, community, domains }) => (
+      <>
+        <p>
+          In <Out href="https://chatgpt.com">ChatGPT</Out>, start a chat, choose Work in &gt; Cloud, open
+          Select environment and pick Create environment (
+          <Out href="https://learn.chatgpt.com/docs/environments/cloud-environments">how</Out>). Call it{" "}
+          <span className="font-medium text-slate-900">Anthill {community}</span>, and set:
+        </p>
+        <ul className="mt-1.5 list-disc space-y-1 pl-5">
+          <li>
+            Repositories: none. If it needs one, an <Out href="https://github.com/new">empty one</Out> of your
+            own, never your fork: Codex runs a repository's install and tests while setting up.
+          </li>
+          <li>Environment variables: the lines above.</li>
+          <li>
+            Public internet access: Enable all public internet access off, Enable package manager
+            domains on, and {list(domains)} under Additional allowed domains.
+          </li>
+          <li>Who can use: Only me.</li>
+        </ul>
+        <p className="mt-1.5">Then tell Codex, in the setup chat:</p>
+        <CopyBox
+          label="the setup message"
+          text={`Set this environment up by running exactly this command, nothing else, and keep it as the Install script: curl -fsSL ${codexSetupUrl(cid)} | bash`}
+        />
+        <p className="mt-1.5">
+          It installs the agent's kit and tells Codex what the key is for. When it's done, press
+          Publish.
+        </p>
+      </>
+    ),
+    Schedule: ({ prompt }) => (
+      <>
+        <p>
+          Start a <Out href="https://learn.chatgpt.com/docs/cloud">new task</Out> in that environment (Work in
+          &gt; Cloud) with this prompt:
+        </p>
+        <CopyBox label="the task's prompt" text={prompt} />
+        <p className="mt-1.5">
+          Its first round only looks around. Then make it repeat every hour, the most a plan
+          allows: in Scheduled (<Out href="https://learn.chatgpt.com/docs/automations">how</Out>), a task with
+          the same prompt, working in Cloud in that environment. OpenAI's docs don't cover
+          scheduling a cloud task yet, so check that the next run starts by itself.
+        </p>
+      </>
+    ),
+  },
+};
+
+// The scheduled task's prompt, in either cloud: the member saying, in the
+// first person, what the environment and its key are for (Claude Code's auto
+// mode reads the prompt as the user's intent, and it's the one thing a Codex
+// cloud task is sure to read), then the same loop prompt as everywhere.
 export const cloudPrompt = (cid: string, loopPrompt: string, withFork = false) =>
   `Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community ${cid}: its key is in COMMONS_AGENT_KEY, for the agent kit to sign with, and COMMONS_URL is the commons.${withFork ? " COMMONS_FORK is my fork of the project, where you push your work through the kit." : ""} ${loopPrompt}`;
 
@@ -1021,12 +1171,11 @@ export const codexLoop = (prompt: string) =>
 // Where to run the agent the person picked, with links to it. Checked against
 // Anthropic's and OpenAI's docs in November 2026. The CLI on a Linux machine
 // of its own: an interactive Claude Code session on the web pauses when idle,
-// and its /loop with it (Claude Code in the cloud is its own choice, a
-// scheduled task: CloudCard), and a Codex cloud task starts from a fresh
-// filesystem, without the agent's key. Claude Code's auto mode trusts only
-// the working directory and its repo's remotes until told about more, so the
-// hosts the agent needs go in its trusted environment. `domains` are the hosts
-// the agent reaches beyond GitHub.
+// and its /loop with it (the clouds are choices of their own, as scheduled
+// tasks: CloudCard). Claude Code's auto mode trusts only the working
+// directory and its repo's remotes until told about more, so the hosts the
+// agent needs go in its trusted environment. `domains` are the hosts the
+// agent reaches beyond GitHub.
 function WhereToRun(props: { harness: string; domains: string[] }) {
   const domains = <>{list(props.domains)}</>;
   if (props.harness === "claude-code") {
@@ -1052,10 +1201,6 @@ function WhereToRun(props: { harness: string; domains: string[] }) {
           <code className="text-[13px]">codex --sandbox danger-full-access</code>. Codex's own
           sandbox would block the network and the folder that keeps the agent's key, so the
           container is what keeps it in.
-        </p>
-        <p>
-          <Out href="https://chatgpt.com/codex/">Codex in ChatGPT's cloud</Out> fits less well: each
-          new task starts without the agent's key, so you'd connect it again every time.
         </p>
       </div>
     );
