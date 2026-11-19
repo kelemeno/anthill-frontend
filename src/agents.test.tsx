@@ -809,6 +809,40 @@ describe("Claude Code in the cloud", () => {
     expect(stored()).toBe(before);
   });
 
+  it("starts with forking the project when it's on GitHub, and puts the fork in the environment", async () => {
+    signedInAs(ada);
+    const onGithub = { ...commons, repo: "https://github.com/anthill-ai/agent-commons" };
+    routes["c/builders/graph"] = () => ({ body: graphOf("builders", [node("0xbo", "Bo"), node("0xada", "Ada")], { commons: onGithub }) });
+    cloudServer();
+    approves();
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    await click(button("Make its key and connect"));
+    await until(() => text().includes("Connected."));
+
+    // in the member's order: fork, let Claude push, key, environment, task
+    expect([...document.querySelectorAll("h3")].map((h) => h.textContent)).toEqual(
+      expect.arrayContaining(["Fork the project", "Let Claude push to your fork", "Give your agent its key", "Make a cloud environment", "Schedule it"]),
+    );
+    const titles = [...document.querySelectorAll("li h3")].map((h) => h.textContent);
+    expect(titles.indexOf("Fork the project")).toBeLessThan(titles.indexOf("Give your agent its key"));
+    expect(linkTo("https://github.com/anthill-ai/agent-commons/fork")?.getAttribute("target")).toBe("_blank");
+    expect(linkTo("https://github.com/apps/claude")).toBeTruthy();
+
+    // the fork line follows the GitHub name typed, and waits for a valid one
+    expect(envLines()[2]).toBe("COMMONS_FORK=https://github.com/<your GitHub name>/agent-commons");
+    await act(async () => typeInto(inputLabelled("Your GitHub name"), "-bad-"));
+    expect(text()).toContain("Letters, digits and single hyphens");
+    expect(envLines()[2]).toBe("COMMONS_FORK=https://github.com/<your GitHub name>/agent-commons");
+    await act(async () => typeInto(inputLabelled("Your GitHub name"), "kelemeno"));
+    expect(envLines()).toEqual([keyLine(), "COMMONS_URL=https://coordinator.example", "COMMONS_FORK=https://github.com/kelemeno/agent-commons"]);
+
+    // the task takes the fork and an empty repository, and the prompt names the fork
+    expect(text()).toContain("two repositories: your fork and an");
+    const prompt = document.querySelector('pre[aria-label="the task\'s prompt"]')?.textContent ?? "";
+    expect(prompt).toContain("COMMONS_FORK is my fork of the project");
+  });
+
   it("keeps the key and offers to approve again when approving gets no answer", async () => {
     signedInAs(ada);
     cloudServer();

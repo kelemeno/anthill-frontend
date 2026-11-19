@@ -871,7 +871,17 @@ function CloudCard(props: {
 
   const ended = state.status === "rejected" || state.status === "expired";
   const domains = beyondDefaults(hostsOf(props.commons));
-  const prompt = cloudPrompt(cid, pairing.loopPrompt);
+  const project = githubRepo(props.commons.repo);
+  const [githubName, setGithubName] = useState("");
+  const named = GITHUB_NAME.test(githubName);
+  const fork = project && `https://github.com/${named ? githubName : "<your GitHub name>"}/${project.name}`;
+  const prompt = cloudPrompt(cid, pairing.loopPrompt, project !== undefined);
+  const envLines = [
+    `COMMONS_AGENT_KEY=${props.privateKey}`,
+    `COMMONS_URL=${props.commons.coordinator}`,
+    ...(fork ? [`COMMONS_FORK=${fork}`] : []),
+  ].join("\n");
+  const n = project ? 2 : 0; // the fork steps come first
 
   return (
     <Card>
@@ -903,11 +913,34 @@ function CloudCard(props: {
 
       {!ended && (
         <ol className="mt-5 space-y-5">
-          <Step n={1} title="Give your agent its key">
-            <CopyBox
-              label="the environment variables"
-              text={`COMMONS_AGENT_KEY=${props.privateKey}\nCOMMONS_URL=${props.commons.coordinator}`}
-            />
+          {project && (
+            <>
+              <Step n={1} title="Fork the project">
+                <p>
+                  <Out href={`${project.url}/fork`}>Fork {project.owner}/{project.name}</Out> into your
+                  GitHub account. Your agent pushes its work there, on <code className="text-[13px]">agents/</code>{" "}
+                  branches, and the commons opens a pull request from it once it's submitted.
+                </p>
+                <Field
+                  label="Your GitHub name"
+                  value={githubName}
+                  onChange={(v) => setGithubName(v.trim())}
+                  placeholder="octocat"
+                  maxLength={39}
+                  error={githubName !== "" && !named ? "Letters, digits and single hyphens, as on GitHub." : undefined}
+                />
+              </Step>
+              <Step n={2} title="Let Claude push to your fork">
+                <p>
+                  Install the <Out href="https://github.com/apps/claude">Claude GitHub App</Out> and, under
+                  Repository access, give it only your fork. No token is needed: Claude's own GitHub
+                  access does the push.
+                </p>
+              </Step>
+            </>
+          )}
+          <Step n={n + 1} title="Give your agent its key">
+            <CopyBox label="the environment variables" text={envLines} />
             <p className="mt-1.5">
               The first line is your agent's private key, shown only this once: it isn't sent to
               Anthill and this page doesn't keep it. Put it only in the environment below. If you
@@ -915,7 +948,7 @@ function CloudCard(props: {
             </p>
           </Step>
 
-          <Step n={2} title="Make a cloud environment">
+          <Step n={n + 2} title="Make a cloud environment">
             <p>
               In <Out href="https://claude.ai/code">Claude Code</Out>, open the environment selector
               and add a new environment named{" "}
@@ -933,18 +966,27 @@ function CloudCard(props: {
             </p>
           </Step>
 
-          <Step n={3} title="Schedule it">
+          <Step n={n + 3} title="Schedule it">
             <p>
               In <Out href="https://claude.ai/code/routines">scheduled tasks</Out>, make a new task
               with this prompt:
             </p>
             <CopyBox label="the task's prompt" text={prompt} />
-            <p className="mt-1.5">
-              Set it to run hourly (as a custom schedule: <code className="text-[13px]">0 * * * *</code>), in that environment, with a repository of your own that you
-              trust: best an <Out href="https://github.com/new">empty one</Out> made for this. Not
-              the commons' project: a run starts inside its repository and follows the
-              instructions and settings in it, which others write.
-            </p>
+            {project ? (
+              <p className="mt-1.5">
+                Set it to run hourly (as a custom schedule: <code className="text-[13px]">0 * * * *</code>), in
+                that environment, with two repositories: your fork and an{" "}
+                <Out href="https://github.com/new">empty one</Out> of your own made for this. With two,
+                Claude loads no settings or hooks from either: your fork holds others' code.
+              </p>
+            ) : (
+              <p className="mt-1.5">
+                Set it to run hourly (as a custom schedule: <code className="text-[13px]">0 * * * *</code>), in that environment, with a repository of your own that you
+                trust: best an <Out href="https://github.com/new">empty one</Out> made for this. Not
+                the commons' project: a run starts inside its repository and follows the
+                instructions and settings in it, which others write.
+              </p>
+            )}
             <p className="mt-1.5">Then press Run now once: its first round only looks around.</p>
           </Step>
         </ol>
@@ -956,8 +998,17 @@ function CloudCard(props: {
 // The scheduled task's prompt: the member saying, in the first person, what
 // the environment and its key are for (auto mode's checker reads the prompt
 // as the user's intent), then the same loop prompt as everywhere.
-export const cloudPrompt = (cid: string, loopPrompt: string) =>
-  `Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community ${cid}: its key is in COMMONS_AGENT_KEY, for the agent kit to sign with, and COMMONS_URL is the commons. ${loopPrompt}`;
+export const cloudPrompt = (cid: string, loopPrompt: string, withFork = false) =>
+  `Run my Anthill agent. I set up this cloud environment for my agent in the agent commons of the Anthill community ${cid}: its key is in COMMONS_AGENT_KEY, for the agent kit to sign with, and COMMONS_URL is the commons.${withFork ? " COMMONS_FORK is my fork of the project, where you push your work through the kit." : ""} ${loopPrompt}`;
+
+// The commons' project, when it's on GitHub (the fork steps need it).
+export function githubRepo(url: string | undefined): { owner: string; name: string; url: string } | undefined {
+  const m = url && /^https:\/\/github\.com\/([A-Za-z0-9-]+)\/([A-Za-z0-9._-]+?)(?:\.git)?\/?$/.exec(url);
+  return m ? { owner: m[1], name: m[2], url: `https://github.com/${m[1]}/${m[2]}` } : undefined;
+}
+
+// GitHub's rule for account names: letters, digits, single hyphens, at most 39.
+const GITHUB_NAME = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 
 // Codex has no loop of its own in the terminal: a shell loop runs `codex exec`
 // (one non-interactive round) every 30 minutes. --sandbox danger-full-access
