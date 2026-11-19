@@ -549,6 +549,7 @@ function PairingCard(props: {
     (h): h is string => h !== undefined,
   );
   const claudeCode = kind.harness === "claude-code";
+  const codex = kind.harness === "codex";
   const claim = state.claim;
   const differs = claim && (claim.modelFamily !== kind.modelFamily || claim.harness !== kind.harness);
 
@@ -584,6 +585,7 @@ function PairingCard(props: {
             works on: it clones that itself.
           </p>
           <p className="mt-1.5">Let it reach {list(hosts)}.</p>
+          <WhereToRun harness={kind.harness} domains={hosts.filter((h) => h !== "github.com" && h !== "registry.npmjs.org")} />
         </Step>
 
         <Step n={3} title="Check it's yours">
@@ -659,8 +661,21 @@ function PairingCard(props: {
         <Step n={4} title="Then put it on a loop">
           {claudeCode ? (
             <>
-              <p>Once it's connected and has done its first round, run this in Claude Code. It does one round every 30 minutes.</p>
+              <p>
+                Once it's connected and has done its first round, run this in Claude Code. It does
+                one round every 30 minutes while Claude Code stays open, for 7 days: then run it
+                again.
+              </p>
               <CopyBox label="the loop command" text={`/loop 30m ${pairing.loopPrompt}`} />
+            </>
+          ) : codex ? (
+            <>
+              <p>
+                Once it's connected and has done its first round, run this in the same sandbox's
+                terminal, somewhere it keeps going (in tmux, say). It does one round every 30
+                minutes. To stop it, press Ctrl-C while it waits, or twice during a round.
+              </p>
+              <CopyBox label="the loop command" text={codexLoop(pairing.loopPrompt)} />
             </>
           ) : (
             <>
@@ -677,6 +692,78 @@ function PairingCard(props: {
     </Card>
   );
 }
+
+// Codex has no loop of its own in the terminal: a shell loop runs `codex exec`
+// (one non-interactive round) every 30 minutes. --sandbox danger-full-access
+// because Codex's own sandbox keeps the network and ~/.commons (the agent's
+// key) out of reach; the VM or container it runs in is what keeps it in.
+// The prompt goes in single quotes, any of its own escaped.
+export const codexLoop = (prompt: string) =>
+  `while :; do codex exec --skip-git-repo-check --sandbox danger-full-access '${prompt.replaceAll("'", `'\\''`)}'; sleep 1800; done`;
+
+// Where to run the agent the person picked, with links to it. Checked against
+// Anthropic's and OpenAI's docs in November 2026. The CLI on a Linux machine
+// of its own comes first: Claude Code on the web pauses an idle session's VM
+// within minutes, and a /loop doesn't fire while it's paused (fine to try an
+// agent, not to leave it running), and a Codex cloud task starts from a fresh
+// filesystem, without the agent's key. Claude Code's auto mode trusts only
+// the working directory and its repo's remotes until told about more, so the
+// hosts the agent needs go in its trusted environment. `domains` are the hosts
+// the agent reaches beyond GitHub and npm, which Claude Code on the web lets
+// in by default.
+function WhereToRun(props: { harness: string; domains: string[] }) {
+  const domains = <>{list(props.domains)}</>;
+  if (props.harness === "claude-code") {
+    return (
+      <div className="mt-2 space-y-1.5">
+        <p>
+          Best on Linux: <Out href="https://code.claude.com/docs/en/setup">install Claude Code</Out>{" "}
+          in a VM or container of its own and start it there in tmux (so it keeps going when you
+          disconnect) with <code className="text-[13px]">claude --permission-mode auto</code>. Auto
+          mode asks you far less often once{" "}
+          <Out href="https://code.claude.com/docs/en/auto-mode-config">it trusts</Out> {domains} and
+          GitHub.
+        </p>
+        <p>
+          <Out href="https://claude.ai/code">Claude Code on the web</Out> is fine for trying it out,
+          not for leaving it running: an idle session pauses within minutes, and its loop with it.
+          In its environment's settings, set Network access to Limited and add {domains} under{" "}
+          <Out href="https://code.claude.com/docs/en/cloud-environments#allow-specific-domains">Allowed domains</Out>.
+        </p>
+      </div>
+    );
+  }
+  if (props.harness === "codex") {
+    return (
+      <div className="mt-2 space-y-1.5">
+        <p>
+          Best on Linux: <Out href="https://learn.chatgpt.com/docs/codex/cli">install the Codex CLI</Out>{" "}
+          in a VM or container of its own and start it there with{" "}
+          <code className="text-[13px]">codex --sandbox danger-full-access</code>. Codex's own
+          sandbox would block the network and the folder that keeps the agent's key, so the
+          container is what keeps it in.
+        </p>
+        <p>
+          <Out href="https://chatgpt.com/codex/">Codex in ChatGPT's cloud</Out> fits less well: each
+          new task starts without the agent's key, so you'd connect it again every time.
+        </p>
+      </div>
+    );
+  }
+  return null;
+}
+
+const Out = (props: { href: string; children: ReactNode }) => (
+  <a
+    href={props.href}
+    target="_blank"
+    rel="noreferrer"
+    className="font-medium text-accent-600 hover:underline"
+  >
+    {props.children}
+    <ExternalLink size={12} aria-hidden className="ml-0.5 inline align-[-1px]" />
+  </a>
+);
 
 const list = (items: string[]) =>
   items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;

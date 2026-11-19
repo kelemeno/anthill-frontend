@@ -172,6 +172,7 @@ async function until(check: () => boolean, ms = 3000) {
 // moves the page's clock on (the poll's timer), letting answers arrive
 const later = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
 const text = () => document.body.textContent ?? "";
+const linkTo = (href: string) => document.querySelector<HTMLAnchorElement>(`a[href="${href}"]`);
 const button = (label: string) => {
   const found = [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === label);
   if (!found) throw new Error(`no button "${label}"; page says: ${text().slice(0, 400)}`);
@@ -303,6 +304,17 @@ describe("the Agents page", () => {
     expect(text()).toContain("/loop 30m Fetch the instructions and do one iteration.");
     expect(text()).toContain("coordinator.example");
     expect(text()).toContain("Waiting for your agent");
+    // where to run Claude Code, with links to it
+    expect(linkTo("https://claude.ai/code")?.textContent).toContain("Claude Code on the web");
+    expect(linkTo("https://code.claude.com/docs/en/setup")?.getAttribute("target")).toBe("_blank");
+    expect(text()).toContain("claude --permission-mode auto");
+    // the web lets in GitHub and npm itself; the rest are to add, the
+    // coordinator too when it's on a host of its own
+    const web = [...document.querySelectorAll("p")].find((p) => p.textContent?.includes("Network access"))!;
+    expect(web.textContent).toContain(`${new URL(backendUrl).host} and coordinator.example under Allowed domains`);
+    expect(web.textContent).not.toContain("github.com");
+    expect(text()).toContain("for 7 days: then run it again");
+    expect(linkTo("https://chatgpt.com/codex/")).toBeNull();
 
     // copying says so
     await click(document.querySelector<HTMLButtonElement>('button[aria-label="Copy the prompt"]')!);
@@ -594,6 +606,31 @@ describe("the Agents page", () => {
     // no /loop outside Claude Code, and the loop prompt made here
     expect(text()).not.toContain("/loop");
     expect(text()).toContain(`Read your instructions verbatim: run \`curl -fsSL ${backendUrl}c/builders/commons/agent.md\` in your shell and follow the page exactly as printed (not through a web-fetch or summarizing tool, which would reword its commands and rules), and do one iteration as it says.`);
+  });
+
+  it("links to Codex, with a loop that runs in its terminal, when Codex is picked", async () => {
+    signedInAs(ada);
+    let made: unknown;
+    routes["c/builders/commons/pairings"] = (init) => {
+      made = bodyOf(init);
+      return { body: { ...pairing(), loopPrompt: "Do one 'iteration'." } };
+    };
+    await show("/c/builders/agents");
+    await until(() => text().includes("None yet."));
+    await click(document.querySelector<HTMLInputElement>('input[value="codex"]')!);
+    await click(button("Get a prompt"));
+    await until(() => text().includes("Pairing code"));
+    expect(made).toEqual({ harness: "codex", modelFamily: "gpt" });
+
+    expect(linkTo("https://learn.chatgpt.com/docs/codex/cli")?.textContent).toContain("install the Codex CLI");
+    expect(linkTo("https://chatgpt.com/codex/")?.getAttribute("rel")).toBe("noreferrer");
+    expect(linkTo("https://claude.ai/code")).toBeNull();
+    expect(text()).not.toContain("/loop");
+    expect(text()).toContain("press Ctrl-C while it waits");
+    // the prompt's own quotes can't end the shell's
+    expect(text()).toContain(
+      `while :; do codex exec --skip-git-repo-check --sandbox danger-full-access 'Do one '\\''iteration'\\''.'; sleep 1800; done`,
+    );
   });
 
   it("revokes an agent after asking, with a reason", async () => {
