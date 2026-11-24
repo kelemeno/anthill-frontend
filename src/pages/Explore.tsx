@@ -169,7 +169,10 @@ function Explore() {
 
   const current = replaying && history && graph ? history[step] : undefined;
   // whoever the replay follows: the selected person (none: it frames the tree)
-  const following = replaying ? selected : undefined;
+  // (clicking someone in the replay selects them: their endorsements show in
+  // the whole tree; double-clicking goes into them)
+  const [inside, setInside] = useState<string | undefined>(params.get("follow") ?? undefined);
+  const following = replaying ? inside : undefined;
   // the steps played: every one, or, following someone, only their story
   const order = useMemo(() => (history ? storyOf(history, following) : []), [history, following]);
   // where `step` is in them (a step outside the story: the last one before it)
@@ -267,7 +270,7 @@ function Explore() {
   }, [graph, target, selected, centreOn, fit, replaying]);
 
   // replay: load the history when it opens, then play from the start, or
-  // from where the selected person joins
+  // from where the person it follows joins
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per opening
   useEffect(() => {
     if (!replaying) return;
@@ -280,7 +283,7 @@ function Explore() {
         // (one copy of each unchanged person, not one per step)
         const steps = compact(loaded);
         setHistory(steps);
-        setStep(joinedAt(steps, selected));
+        setStep(joinedAt(steps, inside));
         // a long history starts faster (the interesting steps still linger)
         setSpeed(steps.length > 100 ? 4 : 2);
         follow.current = true;
@@ -410,14 +413,22 @@ function Explore() {
     else next.delete("focus");
     setParams(next, { replace: true });
   };
-  // clicking someone: open them, or in the replay follow them (from where
-  // they join, if that's still to come)
-  const pick = (id: string) => {
-    if (replaying) {
-      follow.current = true;
-      if (history) setStep((s) => Math.max(s, joinedAt(history, id)));
-    }
-    choose(id);
+  // clicking someone: open them (in the replay: show their endorsements)
+  const pick = (id: string) => choose(id);
+  // going into someone in the replay (double-click): only their story, in
+  // their part of the tree, from where they join if that's still to come;
+  // undefined: back to the whole tree
+  const goInto = (id: string | undefined) => {
+    follow.current = true;
+    setInside(id);
+    if (id && history) setStep((s) => Math.max(s, joinedAt(history, id)));
+    const next = new URLSearchParams(params);
+    if (id) {
+      next.set("follow", id);
+      next.set("focus", id);
+      setSelected(id);
+    } else next.delete("follow");
+    setParams(next, { replace: true });
   };
 
   if (!graph) {
@@ -460,8 +471,9 @@ function Explore() {
     for (const v of sel.recDagVotes) arcs.push({ from: v.id, to: sel.id, kind: "in" });
     for (const v of sel.sentDagVotes) arcs.push({ from: sel.id, to: v.id, kind: "out" });
   }
-  // following someone in the replay: their endorsements, given and received
-  const them = following ? shownNodes[following] : undefined;
+  // in the replay: the endorsements, given and received, of whoever is
+  // selected (or else followed)
+  const them = replaying ? (selected && shownNodes[selected]) || (following && shownNodes[following]) || undefined : undefined;
   if (them) {
     for (const v of them.recDagVotes) arcs.push({ from: v.id, to: them.id, kind: "in" });
     for (const v of them.sentDagVotes) arcs.push({ from: them.id, to: v.id, kind: "out" });
@@ -472,7 +484,7 @@ function Explore() {
     arcs.push({ from: acting.voter, to: acting.recipient, kind });
   }
   const emphasised = new Set(
-    [hovered, acting?.voter, acting?.recipient].filter((id): id is string => id !== undefined),
+    [hovered, acting?.voter, acting?.recipient, replaying ? selected : undefined].filter((id): id is string => id !== undefined),
   );
   const shareUrl = `${window.location.origin}${import.meta.env.BASE_URL}c/${encodeURIComponent(cid)}/explore?replay=1`;
 
@@ -543,17 +555,14 @@ function Explore() {
               </span>
               <button
                 type="button"
-                onClick={() => {
-                  follow.current = true;
-                  choose(undefined);
-                }}
+                onClick={() => goInto(undefined)}
                 className="shrink-0 font-medium text-accent-600 hover:underline"
               >
                 Show the whole tree
               </button>
             </>
           ) : (
-            <span>Click someone to follow them</span>
+            <span>Click someone to see their endorsements, double-click to follow them</span>
           )}
         </div>
       )}
@@ -569,7 +578,7 @@ function Explore() {
           // zooming by hand stops the replay following the tree; fitting resumes it
           { label: "Zoom in", icon: <Plus size={16} />, run: () => zoomBy(1.3) },
           { label: "Zoom out", icon: <Minus size={16} />, run: () => zoomBy(1 / 1.3) },
-          { label: "Fit the whole tree", icon: <Maximize size={15} />, run: () => { follow.current = true; if (replaying) choose(undefined); fit(replaying && frame ? frame : target, 450, replaying); } },
+          { label: "Fit the whole tree", icon: <Maximize size={15} />, run: () => { follow.current = true; if (replaying) { goInto(undefined); choose(undefined); } fit(replaying && frame ? frame : target, 450, replaying); } },
           ...(viewer && !replaying ? [{ label: "Go to me", icon: <Crosshair size={16} />, run: () => { choose(viewer.id); centreOn(viewer.id); } }] : []),
         ].map((b) => (
           <button key={b.label} type="button" title={b.label} aria-label={b.label} onClick={b.run} className="flex h-9 w-9 items-center justify-center text-slate-600 hover:bg-slate-50 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-slate-100">
@@ -582,10 +591,7 @@ function Explore() {
         ref={svgRef}
         data-tour="explore-tree"
         className="h-full w-full touch-none select-none"
-        onClick={() => {
-          if (replaying) follow.current = true;
-          choose(undefined);
-        }}
+        onClick={() => choose(undefined)}
       >
         <g transform={t.toString()}>
           {/* tree links */}
@@ -649,14 +655,24 @@ function Explore() {
                 transform={`translate(${at.x} ${at.y})`}
                 className="cursor-pointer"
                 opacity={dim ? 0.35 : 1}
-                // focusable and opened with Enter or Space (in the replay: followed)
+                // focusable and opened with Enter or Space (in the replay:
+                // selected, and gone into with a double-click or Shift+Enter)
                 tabIndex={0}
                 role="button"
-                aria-label={replaying ? `Follow ${p.name}` : p.name}
-                onKeyDown={(e) => opensOnKey(e, () => pick(p.id))}
+                aria-label={replaying ? `${p.name} (double-click or Shift+Enter to follow)` : p.name}
+                onKeyDown={(e) => {
+                  if (replaying && e.key === "Enter" && e.shiftKey) {
+                    e.preventDefault();
+                    goInto(p.id);
+                  } else opensOnKey(e, () => pick(p.id));
+                }}
                 onClick={(e) => {
                   e.stopPropagation();
                   pick(p.id);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  if (replaying) goInto(p.id);
                 }}
                 onMouseEnter={() => setHovered(p.id)}
                 onMouseLeave={() => setHovered((h) => (h === p.id ? undefined : h))}
