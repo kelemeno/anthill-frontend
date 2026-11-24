@@ -425,8 +425,9 @@ function Explore() {
     else next.delete("focus");
     setParams(next, { replace: true });
   };
-  // clicking someone: open them (in the replay: show their endorsements)
-  const pick = (id: string) => choose(id);
+  // clicking someone: open them (in the replay: show their endorsements), or,
+  // again, close them
+  const pick = (id: string) => choose(id === selected ? undefined : id);
   // going into someone in the replay (double-click): only their story, in
   // their part of the tree, from where they join if that's still to come;
   // undefined: back to the whole tree
@@ -487,8 +488,8 @@ function Explore() {
     for (const v of sel.sentDagVotes) arcs.push({ from: sel.id, to: v.id, kind: "out" });
   }
   // in the replay: the endorsements, given and received, of whoever is
-  // selected (or else followed)
-  const them = replaying ? (selected && shownNodes[selected]) || (following && shownNodes[following]) || undefined : undefined;
+  // selected
+  const them = replaying && selected ? shownNodes[selected] : undefined;
   if (them) {
     for (const v of them.recDagVotes) arcs.push({ from: v.id, to: them.id, kind: "in" });
     for (const v of them.sentDagVotes) arcs.push({ from: them.id, to: v.id, kind: "out" });
