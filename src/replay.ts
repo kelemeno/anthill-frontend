@@ -76,9 +76,9 @@ export function storyOf(steps: HistoryStep[], id: string | undefined): number[] 
 }
 
 // `id`'s part of the tree: their line up to the root, their children, and
-// whoever they endorse or is endorsed by them, each with their own line up to
-// the root (so it's still one tree, a small one). The whole tree if they
-// aren't in it.
+// whoever they endorse, each with their own line up to the root (so it's still
+// one tree, a small one). Who endorses them shows only if they're in it
+// anyway. The whole tree if they aren't in it.
 export function worldOf(graph: Graph, id: string | undefined): Graph {
   const me = id === undefined ? undefined : graph.nodes[id];
   if (!me || me.name === "") return graph;
@@ -90,7 +90,7 @@ export function worldOf(graph: Graph, id: string | undefined): Graph {
   };
   upFrom(me.id);
   for (const k of me.recTreeVotes) if (graph.nodes[k]) keep.add(k);
-  for (const v of [...me.sentDagVotes, ...me.recDagVotes]) upFrom(v.id);
+  for (const v of me.sentDagVotes) upFrom(v.id);
   const nodes: Record<string, Person> = {};
   for (const k of keep) {
     const p = graph.nodes[k];

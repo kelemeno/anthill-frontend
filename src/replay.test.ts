@@ -107,6 +107,8 @@ describe("following someone", () => {
     expect(worldOf(g, "c").nodes.a.recTreeVotes).toEqual(["c"]);
     // whoever they endorse, with their line up to the root
     expect(Object.keys(worldOf(graphAt(steps[3], live), "c").nodes).sort()).toEqual(["a", "b", "c"]);
+    // but not whoever endorses them
+    expect(Object.keys(worldOf(graphAt(steps[3], live), "b").nodes).sort()).toEqual(["a", "b"]);
     expect(worldOf(g, undefined)).toBe(g);
   });
 });

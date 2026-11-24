@@ -452,6 +452,7 @@ function Explore() {
   }
 
   const people = members(shown ?? graph);
+  const drawnIds = new Set(people.map((p) => p.id));
   if (!drawn) {
     return (
       <div className={cx(BLEED, "flex items-center justify-center px-6")}>
@@ -625,8 +626,10 @@ function Explore() {
           })}
           {/* endorsement arcs */}
           {arcs.map(({ from, to, kind }) => {
-            const a = display.get(from);
-            const b = display.get(to);
+            // (only between people drawn: someone leaving, or outside the
+            // layers shown, has no arrow)
+            const a = drawnIds.has(from) ? display.get(from) : undefined;
+            const b = drawnIds.has(to) ? display.get(to) : undefined;
             if (!a || !b) return null;
             const bend = (b.x - a.x) * 0.25 + 40;
             return (
@@ -670,14 +673,19 @@ function Explore() {
                 className="cursor-pointer"
                 opacity={dim ? 0.35 : 1}
                 // focusable and opened with Enter or Space (in the replay:
-                // selected, and gone into with a double-click or Shift+Enter)
+                // selected, and gone into, or out of, with a double-click or
+                // Shift+Enter)
                 tabIndex={0}
                 role="button"
-                aria-label={replaying ? `${p.name} (double-click or Shift+Enter to follow)` : p.name}
+                aria-label={
+                  replaying
+                    ? `${p.name} (double-click or Shift+Enter to ${p.id === following ? "go back to the whole tree" : "follow"})`
+                    : p.name
+                }
                 onKeyDown={(e) => {
                   if (replaying && e.key === "Enter" && e.shiftKey) {
                     e.preventDefault();
-                    goInto(p.id);
+                    goInto(p.id === following ? undefined : p.id);
                   } else opensOnKey(e, () => pick(p.id));
                 }}
                 onClick={(e) => {
@@ -686,7 +694,8 @@ function Explore() {
                 }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
-                  if (replaying) goInto(p.id);
+                  // (again on whoever it follows: back to the whole tree)
+                  if (replaying) goInto(p.id === following ? undefined : p.id);
                 }}
                 onMouseEnter={() => setHovered(p.id)}
                 onMouseLeave={() => setHovered((h) => (h === p.id ? undefined : h))}
