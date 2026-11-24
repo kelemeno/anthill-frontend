@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Graph, HistoryNode, HistoryStep } from "./api";
-import { actors, caption, compact, graphAt, joinedAt } from "./replay";
+import { actors, caption, compact, graphAt, joinedAt, storyOf, worldOf } from "./replay";
 
 const SENTINEL = "0x0000000000000000000000000000000000000001";
 const node = (id: string, name: string, parent: string, kids: string[] = [], dagVotes: string[] = []): HistoryNode => ({
@@ -83,5 +83,30 @@ describe("joinedAt", () => {
   it("is the start for nobody, or someone who never joins", () => {
     expect(joinedAt(steps, undefined)).toBe(0);
     expect(joinedAt(steps, "z")).toBe(0);
+  });
+});
+
+describe("following someone", () => {
+  // Ada at the root, Bo and Cy under her; Cy joins, then Bo endorses Ada,
+  // then Cy endorses Bo
+  const a2 = node("a", "Ada", SENTINEL, ["b", "c"]);
+  const steps = compact([
+    step(0, "JoinTreeEvent", "b", "a", [ada, node("b", "Bo", "a")], "Bo"),
+    step(1, "JoinTreeEvent", "c", "a", [a2, node("b", "Bo", "a"), node("c", "Cy", "a")], "Cy"),
+    step(2, "AddDagVoteEvent", "b", "a", [a2, node("b", "Bo", "a", [], ["a"]), node("c", "Cy", "a")]),
+    step(3, "AddDagVoteEvent", "c", "b", [a2, node("b", "Bo", "a", [], ["a"]), node("c", "Cy", "a", [], ["b"])]),
+  ]);
+  it("plays only the steps of their story, from where they join", () => {
+    expect(storyOf(steps, "c")).toEqual([1, 3]);
+    expect(storyOf(steps, "b")).toEqual([0, 2, 3]);
+    expect(storyOf(steps, undefined)).toEqual([0, 1, 2, 3]);
+  });
+  it("draws only their part of the tree", () => {
+    const g = graphAt(steps[2], live);
+    expect(Object.keys(worldOf(g, "c").nodes).sort()).toEqual(["a", "c"]);
+    expect(worldOf(g, "c").nodes.a.recTreeVotes).toEqual(["c"]);
+    // whoever they endorse, with their line up to the root
+    expect(Object.keys(worldOf(graphAt(steps[3], live), "c").nodes).sort()).toEqual(["a", "b", "c"]);
+    expect(worldOf(g, undefined)).toBe(g);
   });
 });

@@ -56,6 +56,54 @@ export function joinedAt(steps: HistoryStep[], id: string | undefined): number {
   return Math.max(0, i);
 }
 
+// The steps of `id`'s story: where they join, and from then on each step that
+// changes something for them (they act, someone acts on them, or their place,
+// reputation, children or endorsements change), up to the step they leave.
+// Indices into `steps`; every step when following nobody.
+export function storyOf(steps: HistoryStep[], id: string | undefined): number[] {
+  if (id === undefined) return steps.map((_, i) => i);
+  const story: number[] = [];
+  let before: HistoryNode | undefined;
+  steps.forEach((step, i) => {
+    const now = step.nodes.find((n) => n.id === id && n.name !== "");
+    const changed = now !== undefined && (before === undefined || (now !== before && !sameNode(now, before)));
+    if (changed || (before !== undefined && now === undefined) || (now && (step.voter === id || step.recipient === id))) {
+      story.push(i);
+    }
+    before = now;
+  });
+  return story.length > 0 ? story : steps.map((_, i) => i);
+}
+
+// `id`'s part of the tree: their line up to the root, their children, and
+// whoever they endorse or is endorsed by them, each with their own line up to
+// the root (so it's still one tree, a small one). The whole tree if they
+// aren't in it.
+export function worldOf(graph: Graph, id: string | undefined): Graph {
+  const me = id === undefined ? undefined : graph.nodes[id];
+  if (!me || me.name === "") return graph;
+  const keep = new Set<string>();
+  const upFrom = (from: string) => {
+    for (let at: string | undefined = from; at && graph.nodes[at] && !keep.has(at); at = graph.nodes[at].sentTreeVote) {
+      keep.add(at);
+    }
+  };
+  upFrom(me.id);
+  for (const k of me.recTreeVotes) if (graph.nodes[k]) keep.add(k);
+  for (const v of [...me.sentDagVotes, ...me.recDagVotes]) upFrom(v.id);
+  const nodes: Record<string, Person> = {};
+  for (const k of keep) {
+    const p = graph.nodes[k];
+    nodes[k] = {
+      ...p,
+      recTreeVotes: p.recTreeVotes.filter((c) => keep.has(c)),
+      sentDagVotes: p.sentDagVotes.filter((v) => keep.has(v.id)),
+      recDagVotes: p.recDagVotes.filter((v) => keep.has(v.id)),
+    };
+  }
+  return { ...graph, nodes };
+}
+
 function sameNode(a: HistoryNode, b: HistoryNode): boolean {
   const same = (x: string[], y: string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
   return (

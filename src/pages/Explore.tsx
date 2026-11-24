@@ -22,7 +22,7 @@ import { ReplayBar } from "../components/ReplayBar";
 import { GhostTree } from "../components/Skeletons";
 import { PersonActions } from "../components/PersonActions";
 import { avatarStyle, formatRep, initials, level, members, person, rankOf, relation, rep } from "../model";
-import { actors, caption, compact, dwell, graphAt, joinedAt } from "../replay";
+import { actors, caption, compact, dwell, graphAt, joinedAt, storyOf, worldOf } from "../replay";
 import { useApp } from "../state";
 import { AppLink, Avatar, Badge, Button, cx, FIELD_FOCUS, opensOnKey } from "../ui";
 
@@ -170,7 +170,15 @@ function Explore() {
   const current = replaying && history && graph ? history[step] : undefined;
   // whoever the replay follows: the selected person (none: it frames the tree)
   const following = replaying ? selected : undefined;
-  const shown = useMemo(() => (current && graph ? graphAt(current, graph) : graph), [current, graph]);
+  // the steps played: every one, or, following someone, only their story
+  const order = useMemo(() => (history ? storyOf(history, following) : []), [history, following]);
+  // where `step` is in them (a step outside the story: the last one before it)
+  const pos = Math.max(0, order.filter((i) => i <= step).length - 1);
+  // the tree at this step: all of it, or, following someone, their part of it
+  const shown = useMemo(
+    () => (current && graph ? worldOf(graphAt(current, graph), following) : graph),
+    [current, graph, following],
+  );
   const target = useMemo(() => (shown ? targetsOf(shown) : new Map<string, Pt>()), [shown]);
   // climbs, moves and the like play slower than people joining
   const tween = playing ? Math.min(900, (STEP_MS / speed) * 0.8 * dwell(current)) : 350;
@@ -288,13 +296,13 @@ function Explore() {
   // the next step, at the chosen speed
   useEffect(() => {
     if (!playing || !history) return;
-    if (step >= history.length - 1) {
+    if (pos >= order.length - 1) {
       setPlaying(false);
       return;
     }
-    const timer = setTimeout(() => setStep((s) => s + 1), (STEP_MS / speed) * dwell(history[step]));
+    const timer = setTimeout(() => setStep(order[pos + 1]), (STEP_MS / speed) * dwell(history[step]));
     return () => clearTimeout(timer);
-  }, [playing, step, history, speed]);
+  }, [playing, step, history, speed, order, pos]);
 
   // the replay's view: still, with the whole history in it, or following the
   // selected person (the whole view until they've joined). It stops when you
@@ -307,14 +315,19 @@ function Explore() {
     if (!replaying || !history || !frame || !follow.current || followed) return;
     fit(frame, 450);
   }, [replaying, history, frame, following, followed, fit]);
+  // following someone, the view holds their part of the tree (again only when
+  // its bounds change)
+  const bounds = followed
+    ? (() => {
+        const ps = [...target.values()];
+        return [Math.min(...ps.map((p) => p.x)), Math.max(...ps.map((p) => p.x)), Math.max(...ps.map((p) => p.y))].join();
+      })()
+    : "";
+  // biome-ignore lint/correctness/useExhaustiveDependencies: on new bounds, not each new map
   useEffect(() => {
-    const svg = svgRef.current;
-    if (!replaying || !followAt || !follow.current || !svg || !zoomRef.current) return;
-    const { width, height } = svg.getBoundingClientRect();
-    const room = height - (width < SM ? 150 : 130);
-    const to = zoomIdentity.translate(width / 2 - followAt.x, room / 2 - followAt.y);
-    select(svg).transition().duration(tween).call(zoomRef.current.transform, to);
-  }, [replaying, followAt, tween]);
+    if (!replaying || !followed || !follow.current) return;
+    fit(target, 450);
+  }, [replaying, followed, bounds, fit]);
 
   // (whoever is selected stays so: the replay follows them)
   const openReplay = () => {
@@ -334,7 +347,7 @@ function Explore() {
     setParams(next, { replace: true });
   };
   const play = () => {
-    if (history && step >= history.length - 1) setStep(joinedAt(history, following));
+    if (pos >= order.length - 1) setStep(order[0] ?? 0);
     follow.current = true;
     setPlaying(true);
   };
@@ -342,7 +355,7 @@ function Explore() {
   // stepping by hand pauses, as the bar's buttons do
   const seek = (i: number) => {
     setPlaying(false);
-    setStep(Math.max(0, Math.min((history?.length ?? 1) - 1, i)));
+    setStep(order[Math.max(0, Math.min(order.length - 1, i))] ?? 0);
   };
 
   // space plays or pauses, arrows step. A focused field keeps its keys, and a
@@ -358,8 +371,8 @@ function Explore() {
       if (e.repeat) return;
       if (playing) setPlaying(false);
       else play();
-    } else if (e.key === "ArrowRight") seek(step + 1);
-    else if (e.key === "ArrowLeft") seek(step - 1);
+    } else if (e.key === "ArrowRight") seek(pos + 1);
+    else if (e.key === "ArrowLeft") seek(pos - 1);
   };
   useEffect(() => {
     if (!replaying) return;
@@ -446,6 +459,12 @@ function Explore() {
   if (sel) {
     for (const v of sel.recDagVotes) arcs.push({ from: v.id, to: sel.id, kind: "in" });
     for (const v of sel.sentDagVotes) arcs.push({ from: sel.id, to: v.id, kind: "out" });
+  }
+  // following someone in the replay: their endorsements, given and received
+  const them = following ? shownNodes[following] : undefined;
+  if (them) {
+    for (const v of them.recDagVotes) arcs.push({ from: v.id, to: them.id, kind: "in" });
+    for (const v of them.sentDagVotes) arcs.push({ from: them.id, to: v.id, kind: "out" });
   }
   const acting = current ? actors(current) : undefined;
   if (acting?.endorsement && acting.recipient) {
@@ -714,10 +733,10 @@ function Explore() {
 
       {replaying && (
         <ReplayBar
-          steps={history?.length}
+          steps={history ? order.length : undefined}
           error={historyError}
           onRetry={() => setHistoryTry((n) => n + 1)}
-          step={step}
+          step={pos}
           playing={playing}
           speed={speed}
           caption={current ? caption(current, history?.[step - 1]) : ""}
