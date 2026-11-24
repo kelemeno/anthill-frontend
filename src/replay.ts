@@ -48,6 +48,14 @@ export function compact(steps: HistoryStep[]): HistoryStep[] {
   });
 }
 
+// The step where `id` joins (the first one they're in), or 0 if they never
+// do: a replay that follows someone starts there, not from an empty tree.
+export function joinedAt(steps: HistoryStep[], id: string | undefined): number {
+  if (id === undefined) return 0;
+  const i = steps.findIndex((s) => s.nodes.some((n) => n.id === id && n.name !== ""));
+  return Math.max(0, i);
+}
+
 function sameNode(a: HistoryNode, b: HistoryNode): boolean {
   const same = (x: string[], y: string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
   return (

@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Graph, HistoryNode, HistoryStep } from "./api";
-import { actors, caption, compact, graphAt } from "./replay";
+import { actors, caption, compact, graphAt, joinedAt } from "./replay";
 
 const SENTINEL = "0x0000000000000000000000000000000000000001";
 const node = (id: string, name: string, parent: string, kids: string[] = [], dagVotes: string[] = []): HistoryNode => ({
@@ -70,5 +70,18 @@ describe("replay pacing", () => {
     expect(dwell(joined)).toBe(1);
     expect(dwell(step(5, "SwitchPositionWithParentEvent", "b", "", []))).toBeGreaterThan(1);
     expect(dwell(undefined)).toBe(1);
+  });
+});
+
+describe("joinedAt", () => {
+  const started = step(0, "joinTreeAsRoot", "a", "", [node("a", "Ada", SENTINEL)], "Ada");
+  const steps = [started, step(1, "JoinTreeEvent", "b", "a", [ada, node("b", "Bo", "a")], "Bo"), endorsed];
+  it("is the step where someone joins", () => {
+    expect(joinedAt(steps, "a")).toBe(0);
+    expect(joinedAt(steps, "b")).toBe(1);
+  });
+  it("is the start for nobody, or someone who never joins", () => {
+    expect(joinedAt(steps, undefined)).toBe(0);
+    expect(joinedAt(steps, "z")).toBe(0);
   });
 });

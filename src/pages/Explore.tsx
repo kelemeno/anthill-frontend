@@ -22,7 +22,7 @@ import { ReplayBar } from "../components/ReplayBar";
 import { GhostTree } from "../components/Skeletons";
 import { PersonActions } from "../components/PersonActions";
 import { avatarStyle, formatRep, initials, level, members, person, rankOf, relation, rep } from "../model";
-import { actors, caption, compact, dwell, graphAt } from "../replay";
+import { actors, caption, compact, dwell, graphAt, joinedAt } from "../replay";
 import { useApp } from "../state";
 import { AppLink, Avatar, Badge, Button, cx, FIELD_FOCUS, opensOnKey } from "../ui";
 
@@ -258,7 +258,8 @@ function Explore() {
     else fit(target, 0, replaying);
   }, [graph, target, selected, centreOn, fit, replaying]);
 
-  // replay: load the history when it opens, then play from the start
+  // replay: load the history when it opens, then play from the start, or
+  // from where the selected person joins
   // biome-ignore lint/correctness/useExhaustiveDependencies: once per opening
   useEffect(() => {
     if (!replaying) return;
@@ -271,7 +272,7 @@ function Explore() {
         // (one copy of each unchanged person, not one per step)
         const steps = compact(loaded);
         setHistory(steps);
-        setStep(0);
+        setStep(joinedAt(steps, selected));
         // a long history starts faster (the interesting steps still linger)
         setSpeed(steps.length > 100 ? 4 : 2);
         follow.current = true;
@@ -333,7 +334,7 @@ function Explore() {
     setParams(next, { replace: true });
   };
   const play = () => {
-    if (history && step >= history.length - 1) setStep(0);
+    if (history && step >= history.length - 1) setStep(joinedAt(history, following));
     follow.current = true;
     setPlaying(true);
   };
@@ -396,9 +397,13 @@ function Explore() {
     else next.delete("focus");
     setParams(next, { replace: true });
   };
-  // clicking someone: open them, or in the replay follow them
+  // clicking someone: open them, or in the replay follow them (from where
+  // they join, if that's still to come)
   const pick = (id: string) => {
-    if (replaying) follow.current = true;
+    if (replaying) {
+      follow.current = true;
+      if (history) setStep((s) => Math.max(s, joinedAt(history, id)));
+    }
     choose(id);
   };
 
