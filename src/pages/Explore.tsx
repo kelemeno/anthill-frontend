@@ -490,6 +490,14 @@ function Explore() {
   // in the replay: the endorsements, given and received, of whoever is
   // selected
   const them = replaying && selected ? shownNodes[selected] : undefined;
+  // and how many of the selected person's endorsements, either way, are with
+  // people not drawn (outside the five layers, or not in whoever's followed
+  // part of the tree)
+  const whole = selected ? full?.nodes[selected] : undefined;
+  const offView = (votes: { id: string }[]) =>
+    votes.filter((v) => !drawnIds.has(v.id) && (full?.nodes[v.id]?.name ?? "") !== "").length;
+  const hiddenIn = whole && drawnIds.has(whole.id) ? offView(whole.recDagVotes) : 0;
+  const hiddenOut = whole && drawnIds.has(whole.id) ? offView(whole.sentDagVotes) : 0;
   if (them) {
     for (const v of them.recDagVotes) arcs.push({ from: v.id, to: them.id, kind: "in" });
     for (const v of them.sentDagVotes) arcs.push({ from: them.id, to: v.id, kind: "out" });
@@ -758,6 +766,32 @@ function Explore() {
               </text>
             );
           })}
+          {/* the selected person's endorsements with people not drawn */}
+          {whole &&
+            (hiddenIn > 0 || hiddenOut > 0) &&
+            (() => {
+              const at = display.get(whole.id);
+              if (!at) return null;
+              return (
+                <text
+                  x={at.x}
+                  y={at.y + at.r + 30 / zoomFix}
+                  textAnchor="middle"
+                  paintOrder="stroke"
+                  strokeWidth={4 / zoomFix}
+                  strokeLinejoin="round"
+                  className="pointer-events-none fill-slate-500 stroke-canvas"
+                  style={{ fontSize: 11 / zoomFix }}
+                >
+                  {[
+                    hiddenIn > 0 && `+${hiddenIn} more ${hiddenIn === 1 ? "endorses" : "endorse"} them`,
+                    hiddenOut > 0 && `endorses ${hiddenOut} more`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </text>
+              );
+            })()}
         </g>
       </svg>
 
