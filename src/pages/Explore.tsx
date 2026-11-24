@@ -6,8 +6,10 @@
 // near one of them (green, amber, rose) would make two meanings look alike.
 //
 // "Watch it grow" replays the community's history step by step (?replay=1
-// opens it, so the link can be shared): people glide to their new places,
-// newcomers grow out of their parent, and the view follows the tree.
+// opens it, so the link can be shared): people glide to their new places and
+// newcomers grow out of their parent. The view holds still, framing the tree
+// at every step of its history at once, unless someone is selected (?focus=,
+// or click them while it plays): then it follows them.
 import { Crosshair, ExternalLink, Maximize, Minus, Play, Plus, Search, X } from "lucide-react";
 import { select } from "d3-selection";
 import "d3-transition";
@@ -64,6 +66,16 @@ function targetsOf(graph: Graph): Map<string, Pt> {
     if (p) targets.set(id, { x, y, r: radius(p) });
   }
   return targets;
+}
+
+// Everyone at every step of the replay, so one view holds the whole history.
+function frameOf(history: HistoryStep[], live: Graph): Map<string, Pt> {
+  const all = new Map<string, Pt>();
+  let i = 0;
+  for (const step of history) {
+    for (const p of targetsOf(graphAt(step, live)).values()) all.set(String(i++), p);
+  }
+  return all;
 }
 
 const reducedMotion =
@@ -156,10 +168,18 @@ function Explore() {
   const follow = useRef(true);
 
   const current = replaying && history && graph ? history[step] : undefined;
+  // whoever the replay follows: the selected person (none: it frames the tree)
+  const following = replaying ? selected : undefined;
   const shown = useMemo(() => (current && graph ? graphAt(current, graph) : graph), [current, graph]);
   const target = useMemo(() => (shown ? targetsOf(shown) : new Map<string, Pt>()), [shown]);
   // climbs, moves and the like play slower than people joining
   const tween = playing ? Math.min(900, (STEP_MS / speed) * 0.8 * dwell(current)) : 350;
+  // the replay's whole history, for the still view (worked out once per load)
+  // (once the tree is there too, whichever came first; not again for each new
+  // version of the tree)
+  const hasGraph = graph !== undefined;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the history's layout, not every new graph version
+  const frame = useMemo(() => (history && graph ? frameOf(history, graph) : undefined), [history, hasGraph]);
   const display = useTweened(target, (id) => shown?.nodes[id]?.sentTreeVote, tween);
 
   // pan & zoom, bound whenever the tree's svg is on the page (not while
@@ -231,6 +251,8 @@ function Explore() {
   useEffect(() => {
     if (!graph || centredFor.current === graph.community.id || target.size === 0 || !zoomRef.current) return;
     centredFor.current = graph.community.id;
+    // (the replay places the view itself)
+    if (replaying) return;
     const start = selected && target.has(selected) ? selected : graph.rootId;
     if (target.has(start)) centreOn(start, false);
     else fit(target, 0, replaying);
@@ -273,16 +295,31 @@ function Explore() {
     return () => clearTimeout(timer);
   }, [playing, step, history, speed]);
 
-  // keep the growing tree in view
+  // the replay's view: still, with the whole history in it, or following the
+  // selected person (the whole view until they've joined). It stops when you
+  // pan or zoom yourself, and "Fit", or choosing someone, starts it again.
+  const followAt = following ? target.get(following) : undefined;
+  const followed = followAt !== undefined;
+  // (only when what it frames changes: restarting the move at every step
+  // would leave it halfway, zoomed out)
   useEffect(() => {
-    if (replaying && history && follow.current) fit(target, tween);
-  }, [replaying, history, target, tween, fit]);
+    if (!replaying || !history || !frame || !follow.current || followed) return;
+    fit(frame, 450);
+  }, [replaying, history, frame, following, followed, fit]);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!replaying || !followAt || !follow.current || !svg || !zoomRef.current) return;
+    const { width, height } = svg.getBoundingClientRect();
+    const room = height - (width < SM ? 150 : 130);
+    const to = zoomIdentity.translate(width / 2 - followAt.x, room / 2 - followAt.y);
+    select(svg).transition().duration(tween).call(zoomRef.current.transform, to);
+  }, [replaying, followAt, tween]);
 
+  // (whoever is selected stays so: the replay follows them)
   const openReplay = () => {
-    choose(undefined);
+    follow.current = true;
     setReplaying(true);
     const next = new URLSearchParams(params);
-    next.delete("focus");
     next.set("replay", "1");
     setParams(next, { replace: true });
   };
@@ -358,6 +395,11 @@ function Explore() {
     if (id) next.set("focus", id);
     else next.delete("focus");
     setParams(next, { replace: true });
+  };
+  // clicking someone: open them, or in the replay follow them
+  const pick = (id: string) => {
+    if (replaying) follow.current = true;
+    choose(id);
   };
 
   if (!graph) {
@@ -467,6 +509,31 @@ function Explore() {
         </div>
       )}
 
+      {/* in the replay: who the view follows, or how to follow someone */}
+      {replaying && history && history.length > 0 && (
+        <div className="absolute top-3 left-3 z-10 inline-flex max-w-[calc(100%-80px)] items-center gap-2 rounded-xl border border-slate-200 bg-surface/90 px-3 py-2 text-[13px] text-slate-600 shadow-sm">
+          {following ? (
+            <>
+              <span className="truncate">
+                Following <span className="font-semibold text-slate-900">{shownNodes[following]?.name ?? graph.nodes[following]?.name ?? "them"}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  follow.current = true;
+                  choose(undefined);
+                }}
+                className="shrink-0 font-medium text-accent-600 hover:underline"
+              >
+                Show the whole tree
+              </button>
+            </>
+          ) : (
+            <span>Click someone to follow them</span>
+          )}
+        </div>
+      )}
+
       {/* zoom */}
       <div
         className={cx(
@@ -478,7 +545,7 @@ function Explore() {
           // zooming by hand stops the replay following the tree; fitting resumes it
           { label: "Zoom in", icon: <Plus size={16} />, run: () => zoomBy(1.3) },
           { label: "Zoom out", icon: <Minus size={16} />, run: () => zoomBy(1 / 1.3) },
-          { label: "Fit the whole tree", icon: <Maximize size={15} />, run: () => { follow.current = true; fit(target, 450, replaying); } },
+          { label: "Fit the whole tree", icon: <Maximize size={15} />, run: () => { follow.current = true; if (replaying) choose(undefined); fit(replaying && frame ? frame : target, 450, replaying); } },
           ...(viewer && !replaying ? [{ label: "Go to me", icon: <Crosshair size={16} />, run: () => { choose(viewer.id); centreOn(viewer.id); } }] : []),
         ].map((b) => (
           <button key={b.label} type="button" title={b.label} aria-label={b.label} onClick={b.run} className="flex h-9 w-9 items-center justify-center text-slate-600 hover:bg-slate-50 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-slate-100">
@@ -491,7 +558,10 @@ function Explore() {
         ref={svgRef}
         data-tour="explore-tree"
         className="h-full w-full touch-none select-none"
-        onClick={() => !replaying && choose(undefined)}
+        onClick={() => {
+          if (replaying) follow.current = true;
+          choose(undefined);
+        }}
       >
         <g transform={t.toString()}>
           {/* tree links */}
@@ -545,7 +615,7 @@ function Explore() {
             if (!at) return null;
             const r = at.r;
             const isMe = p.id === viewer?.id;
-            const isSel = p.id === selected && !replaying;
+            const isSel = p.id === selected;
             const isActor = acting !== undefined && (p.id === acting.voter || p.id === acting.recipient);
             const inReach = reach.has(p.id);
             const dim = showReach && reach.size > 0 && !inReach && !isMe && !isSel;
@@ -553,16 +623,16 @@ function Explore() {
               <g
                 key={p.id}
                 transform={`translate(${at.x} ${at.y})`}
-                className={replaying ? undefined : "cursor-pointer"}
+                className="cursor-pointer"
                 opacity={dim ? 0.35 : 1}
-                // focusable and opened with Enter or Space, except in the replay
-                tabIndex={replaying ? undefined : 0}
-                role={replaying ? undefined : "button"}
-                aria-label={replaying ? undefined : p.name}
-                onKeyDown={(e) => !replaying && opensOnKey(e, () => choose(p.id))}
+                // focusable and opened with Enter or Space (in the replay: followed)
+                tabIndex={0}
+                role="button"
+                aria-label={replaying ? `Follow ${p.name}` : p.name}
+                onKeyDown={(e) => opensOnKey(e, () => pick(p.id))}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!replaying) choose(p.id);
+                  pick(p.id);
                 }}
                 onMouseEnter={() => setHovered(p.id)}
                 onMouseLeave={() => setHovered((h) => (h === p.id ? undefined : h))}

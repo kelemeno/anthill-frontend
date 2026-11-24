@@ -31,8 +31,9 @@ export type Person = {
 
 // The public community every server has, open to everyone.
 export const DEFAULT_COMMUNITY = "commons";
-// The original Anthill tree, kept to show how it works.
-export const DEMO_COMMUNITY = "demo";
+// The demo the front page shows: the small one, 15 people built to show how
+// it works. The original Anthill tree, 65 people, is the "demo" community.
+export const DEMO_COMMUNITY = "mini-demo";
 
 export type Visibility = "public" | "private";
 export type JoinPolicy = "open" | "invite" | "closed";

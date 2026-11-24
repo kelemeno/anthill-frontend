@@ -677,10 +677,10 @@ describe("the home page", () => {
   it("links to the demo's replay only when the demo shows Explore", async () => {
     const demo = (explore: boolean) => {
       const graph = graphOf("club");
-      graph.community = { ...graph.community, id: "demo", name: "Demo", site: { pages: { ...allOn, explore, agents: false }, accent: "indigo", hasAbout: false } };
+      graph.community = { ...graph.community, id: "mini-demo", name: "Mini Demo", site: { pages: { ...allOn, explore, agents: false }, accent: "indigo", hasAbout: false } };
       return { body: graph };
     };
-    routes["c/demo/graph"] = () => demo(false);
+    routes["c/mini-demo/graph"] = () => demo(false);
     await show("/");
     await until(() => text().includes("The top of the demo community"));
     expect(text()).not.toContain("watch it grow");
@@ -688,11 +688,11 @@ describe("the home page", () => {
 
     localStorage.clear();
     localStorage.setItem("anthill.tourSeen", "1");
-    routes["c/demo/graph"] = () => demo(true);
+    routes["c/mini-demo/graph"] = () => demo(true);
     await show("/");
     await until(() => text().includes("watch it grow"));
     const link = [...document.querySelectorAll("a")].find((a) => a.textContent === "watch it grow");
-    expect(link?.getAttribute("href")).toBe("/c/demo/explore?replay=1");
+    expect(link?.getAttribute("href")).toBe("/c/mini-demo/explore?replay=1");
   });
 });
 
