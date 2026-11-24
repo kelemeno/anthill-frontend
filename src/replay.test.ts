@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Graph, HistoryNode, HistoryStep } from "./api";
-import { actors, caption, compact, graphAt, joinedAt, storyOf, worldOf } from "./replay";
+import { actors, caption, compact, graphAt, joinedAt, storyOf, windowOf, worldOf } from "./replay";
 
 const SENTINEL = "0x0000000000000000000000000000000000000001";
 const node = (id: string, name: string, parent: string, kids: string[] = [], dagVotes: string[] = []): HistoryNode => ({
@@ -108,5 +108,26 @@ describe("following someone", () => {
     // whoever they endorse, with their line up to the root
     expect(Object.keys(worldOf(graphAt(steps[3], live), "c").nodes).sort()).toEqual(["a", "b", "c"]);
     expect(worldOf(g, undefined)).toBe(g);
+  });
+});
+
+describe("five layers at a time", () => {
+  // a line of seven, a to g, each under the one before, and x beside b
+  const names = ["a", "b", "c", "d", "e", "f", "g"];
+  const chain = names.map((id, i) =>
+    node(id, id.toUpperCase(), i === 0 ? SENTINEL : names[i - 1], [names[i + 1], ...(id === "a" ? ["x"] : [])].filter(Boolean) as string[]),
+  );
+  const g = graphAt(step(0, "JoinTreeEvent", "g", "f", [...chain, node("x", "X", "a")]), live);
+  const ids = (graph: Graph) => Object.keys(graph.nodes).sort();
+  it("shows the top five with nobody selected", () => {
+    expect(ids(windowOf(g, undefined))).toEqual(["a", "b", "c", "d", "e", "x"]);
+  });
+  it("shows the three above someone and the one below", () => {
+    const w = windowOf(g, "f");
+    expect(ids(w)).toEqual(["c", "d", "e", "f", "g"]);
+    expect(w.rootId).toBe("c");
+  });
+  it("shows more below near the top", () => {
+    expect(ids(windowOf(g, "b"))).toEqual(["a", "b", "c", "d", "e", "x"]);
   });
 });

@@ -22,7 +22,7 @@ import { ReplayBar } from "../components/ReplayBar";
 import { GhostTree } from "../components/Skeletons";
 import { PersonActions } from "../components/PersonActions";
 import { avatarStyle, formatRep, initials, level, members, person, rankOf, relation, rep } from "../model";
-import { actors, caption, compact, dwell, graphAt, joinedAt, storyOf, worldOf } from "../replay";
+import { actors, caption, compact, dwell, graphAt, joinedAt, storyOf, windowOf, worldOf } from "../replay";
 import { useApp } from "../state";
 import { AppLink, Avatar, Badge, Button, cx, FIELD_FOCUS, opensOnKey } from "../ui";
 
@@ -68,12 +68,13 @@ function targetsOf(graph: Graph): Map<string, Pt> {
   return targets;
 }
 
-// Everyone at every step of the replay, so one view holds the whole history.
-function frameOf(history: HistoryStep[], live: Graph): Map<string, Pt> {
+// Everyone at every step of the replay (in the layers shown around
+// `around`), so one view holds the whole history.
+function frameOf(history: HistoryStep[], live: Graph, around: string | undefined): Map<string, Pt> {
   const all = new Map<string, Pt>();
   let i = 0;
   for (const step of history) {
-    for (const p of targetsOf(graphAt(step, live)).values()) all.set(String(i++), p);
+    for (const p of targetsOf(windowOf(graphAt(step, live), around)).values()) all.set(String(i++), p);
   }
   return all;
 }
@@ -177,10 +178,13 @@ function Explore() {
   const order = useMemo(() => (history ? storyOf(history, following) : []), [history, following]);
   // where `step` is in them (a step outside the story: the last one before it)
   const pos = Math.max(0, order.filter((i) => i <= step).length - 1);
-  // the tree at this step: all of it, or, following someone, their part of it
+  // the tree (at this step, in the replay)
+  const full = useMemo(() => (current && graph ? graphAt(current, graph) : graph), [current, graph]);
+  // what's drawn of it: five layers around whoever is selected (the top five
+  // when nobody is), or, following someone, their part of it
   const shown = useMemo(
-    () => (current && graph ? worldOf(graphAt(current, graph), following) : graph),
-    [current, graph, following],
+    () => (full ? (following ? worldOf(full, following) : windowOf(full, selected)) : undefined),
+    [full, following, selected],
   );
   const target = useMemo(() => (shown ? targetsOf(shown) : new Map<string, Pt>()), [shown]);
   // climbs, moves and the like play slower than people joining
@@ -190,7 +194,7 @@ function Explore() {
   // version of the tree)
   const hasGraph = graph !== undefined;
   // biome-ignore lint/correctness/useExhaustiveDependencies: the history's layout, not every new graph version
-  const frame = useMemo(() => (history && graph ? frameOf(history, graph) : undefined), [history, hasGraph]);
+  const frame = useMemo(() => (history && graph ? frameOf(history, graph, selected) : undefined), [history, hasGraph, selected]);
   const display = useTweened(target, (id) => shown?.nodes[id]?.sentTreeVote, tween);
 
   // pan & zoom, bound whenever the tree's svg is on the page (not while
@@ -268,6 +272,14 @@ function Explore() {
     if (target.has(start)) centreOn(start, false);
     else fit(target, 0, replaying);
   }, [graph, target, selected, centreOn, fit, replaying]);
+
+  // a new five layers (someone selected further up or down): back to them
+  const anchor = shown?.rootId;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when the window moves, not on each change of the tree
+  useEffect(() => {
+    if (replaying || centredFor.current === undefined || !selected || !target.has(selected)) return;
+    centreOn(selected);
+  }, [anchor]);
 
   // replay: load the history when it opens, then play from the start, or
   // from where the person it follows joins
@@ -456,7 +468,9 @@ function Explore() {
   // (person() never returns the sentinel above the root)
   const sel = selected && !replaying ? person(graph, selected) : undefined;
   const matches = query.trim()
-    ? people.filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 8)
+    ? members(full ?? graph)
+        .filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
+        .slice(0, 8)
     : [];
   const showLabels = t.k > 0.55;
   // names that show whatever the zoom: whoever is hovered, and in the replay

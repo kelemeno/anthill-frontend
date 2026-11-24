@@ -104,6 +104,44 @@ export function worldOf(graph: Graph, id: string | undefined): Graph {
   return { ...graph, nodes };
 }
 
+// How many layers of the tree show at once, and how many of them are above
+// the selected person (whom they endorse is up there).
+export const LAYERS = 5;
+const ABOVE = 3;
+
+// Five layers of the tree: with someone selected, their layer, the three above
+// it (the subtree of the person three up from them) and the one below; with
+// nobody (or someone not in it), the top five. Near the top, more below.
+export function windowOf(graph: Graph, around: string | undefined): Graph {
+  const up = (id: string) => graph.nodes[id]?.sentTreeVote;
+  let anchor = graph.rootId;
+  if (around && graph.nodes[around] && graph.nodes[around].name !== "") {
+    anchor = around;
+    for (let i = 0; i < ABOVE && anchor !== graph.rootId && graph.nodes[up(anchor) ?? ""]; i++) anchor = up(anchor) as string;
+  }
+  if (!graph.nodes[anchor]) return graph;
+  const keep = new Set<string>();
+  const visit = (id: string, layer: number) => {
+    const p = graph.nodes[id];
+    if (!p || layer >= LAYERS) return;
+    keep.add(id);
+    for (const k of p.recTreeVotes) visit(k, layer + 1);
+  };
+  visit(anchor, 0);
+  if (keep.size === Object.keys(graph.nodes).filter((id) => graph.nodes[id].name !== "").length) return graph;
+  const nodes: Record<string, Person> = {};
+  for (const k of keep) {
+    const p = graph.nodes[k];
+    nodes[k] = {
+      ...p,
+      recTreeVotes: p.recTreeVotes.filter((c) => keep.has(c)),
+      sentDagVotes: p.sentDagVotes.filter((v) => keep.has(v.id)),
+      recDagVotes: p.recDagVotes.filter((v) => keep.has(v.id)),
+    };
+  }
+  return { ...graph, rootId: anchor, nodes };
+}
+
 function sameNode(a: HistoryNode, b: HistoryNode): boolean {
   const same = (x: string[], y: string[]) => x.length === y.length && x.every((v, i) => v === y[i]);
   return (
