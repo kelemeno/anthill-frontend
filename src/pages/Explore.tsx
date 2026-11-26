@@ -132,6 +132,7 @@ function useTweened(target: Map<string, Pt>, parentOf: (id: string) => string | 
 }
 
 const STEP_MS = 1100; // one step at 1×
+const DOUBLE_CLICK_MS = 250; // how long a click waits to see if it's a double-click
 const SM = 640; // Tailwind's sm: the person panel is a side card from here, a sheet below
 
 // Full-bleed under the header: cancel main's padding (its bottom padding too,
@@ -425,17 +426,24 @@ function Explore() {
     else next.delete("focus");
     setParams(next, { replace: true });
   };
+  const clickTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(clickTimer.current), []);
   // clicking someone: open them (in the replay: show their endorsements), or,
   // again, close them
   const pick = (id: string) => choose(id === selected ? undefined : id);
   // going into someone in the replay (double-click): only their story, in
   // their part of the tree, from where they join if that's still to come;
   // undefined: back to the whole tree
+  // (from the tree itself, it opens the replay)
   const goInto = (id: string | undefined) => {
     follow.current = true;
     setInside(id);
     if (id && history) setStep((s) => Math.max(s, joinedAt(history, id)));
     const next = new URLSearchParams(params);
+    if (id && !replaying) {
+      setReplaying(true);
+      next.set("replay", "1");
+    }
     if (id) {
       next.set("follow", id);
       next.set("focus", id);
@@ -686,25 +694,27 @@ function Explore() {
                 // Shift+Enter)
                 tabIndex={0}
                 role="button"
-                aria-label={
-                  replaying
-                    ? `${p.name} (double-click or Shift+Enter to ${p.id === following ? "go back to the whole tree" : "follow"})`
-                    : p.name
-                }
+                aria-label={`${p.name} (double-click or Shift+Enter to ${p.id === following ? "go back to the whole tree" : "follow"})`}
                 onKeyDown={(e) => {
-                  if (replaying && e.key === "Enter" && e.shiftKey) {
+                  if (e.key === "Enter" && e.shiftKey) {
                     e.preventDefault();
                     goInto(p.id === following ? undefined : p.id);
                   } else opensOnKey(e, () => pick(p.id));
                 }}
+                // a click waits a moment for a second one: selecting someone
+                // can move the five layers, and with them who's under the
+                // pointer, so a double-click must not select first
                 onClick={(e) => {
                   e.stopPropagation();
-                  pick(p.id);
+                  clearTimeout(clickTimer.current);
+                  if (e.detail > 1) return;
+                  clickTimer.current = setTimeout(() => pick(p.id), DOUBLE_CLICK_MS);
                 }}
                 onDoubleClick={(e) => {
                   e.stopPropagation();
+                  clearTimeout(clickTimer.current);
                   // (again on whoever it follows: back to the whole tree)
-                  if (replaying) goInto(p.id === following ? undefined : p.id);
+                  goInto(p.id === following ? undefined : p.id);
                 }}
                 onMouseEnter={() => setHovered(p.id)}
                 onMouseLeave={() => setHovered((h) => (h === p.id ? undefined : h))}
