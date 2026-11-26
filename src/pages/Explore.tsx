@@ -174,7 +174,8 @@ function Explore() {
   // (clicking someone in the replay selects them: their endorsements show in
   // the whole tree; double-clicking goes into them)
   const [inside, setInside] = useState<string | undefined>(params.get("follow") ?? undefined);
-  const following = replaying ? inside : undefined;
+  // (in the tree as it is now too: their part of it)
+  const following = inside;
   // the steps played: every one, or, following someone, only their story
   const order = useMemo(() => (history ? storyOf(history, following) : []), [history, following]);
   // where `step` is in them (a step outside the story: the last one before it)
@@ -267,8 +268,13 @@ function Explore() {
   useEffect(() => {
     if (!graph || centredFor.current === graph.community.id || target.size === 0 || !zoomRef.current) return;
     centredFor.current = graph.community.id;
-    // (the replay places the view itself)
+    // (the replay places the view itself, and following someone it's their
+    // part of the tree)
     if (replaying) return;
+    if (following && target.has(following)) {
+      fit(target, 0, false);
+      return;
+    }
     const start = selected && target.has(selected) ? selected : graph.rootId;
     if (target.has(start)) centreOn(start, false);
     else fit(target, 0, replaying);
@@ -278,7 +284,7 @@ function Explore() {
   const anchor = shown?.rootId;
   // biome-ignore lint/correctness/useExhaustiveDependencies: when the window moves, not on each change of the tree
   useEffect(() => {
-    if (replaying || centredFor.current === undefined || !selected || !target.has(selected)) return;
+    if (replaying || following || centredFor.current === undefined || !selected || !target.has(selected)) return;
     centreOn(selected);
   }, [anchor]);
 
@@ -341,9 +347,19 @@ function Explore() {
     : "";
   // biome-ignore lint/correctness/useExhaustiveDependencies: on new bounds, not each new map
   useEffect(() => {
-    if (!replaying || !followed || !follow.current) return;
-    fit(target, 450);
+    if (!followed || !follow.current) return;
+    fit(target, 450, replaying);
   }, [replaying, followed, bounds, fit]);
+  // back out of someone in the tree as it is: to whoever is selected
+  const wasFollowing = useRef(following);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: when following stops, not on each change of the tree
+  useEffect(() => {
+    const was = wasFollowing.current;
+    wasFollowing.current = following;
+    if (replaying || following || !was) return;
+    if (selected && target.has(selected)) centreOn(selected);
+    else fit(target, 450, false);
+  }, [following]);
 
   // (whoever is selected stays so: the replay follows them)
   const openReplay = () => {
@@ -434,16 +450,11 @@ function Explore() {
   // going into someone in the replay (double-click): only their story, in
   // their part of the tree, from where they join if that's still to come;
   // undefined: back to the whole tree
-  // (from the tree itself, it opens the replay)
   const goInto = (id: string | undefined) => {
     follow.current = true;
     setInside(id);
     if (id && history) setStep((s) => Math.max(s, joinedAt(history, id)));
     const next = new URLSearchParams(params);
-    if (id && !replaying) {
-      setReplaying(true);
-      next.set("replay", "1");
-    }
     if (id) {
       next.set("follow", id);
       next.set("focus", id);
@@ -525,7 +536,7 @@ function Explore() {
 
       {/* search + toggles, and the zoom (before the tree, so they come first
           for the keyboard) */}
-      {!replaying && (
+      {!replaying && !following && (
         // on phones, short of the zoom buttons at the top right
         <div className="absolute top-3 left-3 w-[min(320px,calc(100%-24px))] max-sm:w-[calc(100%-72px)]" data-tour="explore-search">
           <div className="relative">
@@ -577,14 +588,19 @@ function Explore() {
         </div>
       )}
 
-      {/* in the replay: who the view follows, or how to follow someone */}
-      {replaying && history && history.length > 0 && (
+      {/* who the view follows, or in the replay how to follow someone */}
+      {(replaying ? history !== undefined && history.length > 0 : following !== undefined) && (
         <div className="absolute top-3 left-3 z-10 inline-flex max-w-[calc(100%-80px)] items-center gap-2 rounded-xl border border-slate-200 bg-surface/90 px-3 py-2 text-[13px] text-slate-600 shadow-sm">
           {following ? (
             <>
               <span className="truncate">
                 Following <span className="font-semibold text-slate-900">{shownNodes[following]?.name ?? graph.nodes[following]?.name ?? "them"}</span>
               </span>
+              {!replaying && (
+                <button type="button" onClick={openReplay} className="shrink-0 font-medium text-accent-600 hover:underline">
+                  Watch their story
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => goInto(undefined)}
