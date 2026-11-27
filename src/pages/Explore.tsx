@@ -133,6 +133,9 @@ function useTweened(target: Map<string, Pt>, parentOf: (id: string) => string | 
 
 const STEP_MS = 1100; // one step at 1×
 const DOUBLE_CLICK_MS = 250; // how long a click waits to see if it's a double-click
+// one person's story plays at 2×, the whole tree's long history at 4× (the
+// interesting steps still linger)
+const speedFor = (steps: unknown[], id: string | undefined) => (id === undefined && steps.length > 100 ? 4 : 2);
 const SM = 640; // Tailwind's sm: the person panel is a side card from here, a sheet below
 
 // Full-bleed under the header: cancel main's padding (its bottom padding too,
@@ -303,8 +306,7 @@ function Explore() {
         const steps = compact(loaded);
         setHistory(steps);
         setStep(joinedAt(steps, inside));
-        // a long history starts faster (the interesting steps still linger)
-        setSpeed(steps.length > 100 ? 4 : 2);
+        setSpeed(speedFor(steps, inside));
         follow.current = true;
         setPlaying(steps.length > 1);
       },
@@ -453,6 +455,7 @@ function Explore() {
   const goInto = (id: string | undefined) => {
     follow.current = true;
     setInside(id);
+    if (history) setSpeed(speedFor(history, id));
     if (id && history) setStep((s) => Math.max(s, joinedAt(history, id)));
     const next = new URLSearchParams(params);
     if (id) {
